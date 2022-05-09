@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/GamePage.dart';
 import 'package:game_member_generator/MemberPage.dart';
-import 'package:flutter/widgets.dart';
 
 void main() => runApp(const MyApp());
 
@@ -10,13 +9,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       home: MainScreen(),
     );
   }
 }
 
 class MainScreen extends StatefulWidget {
+  const MainScreen({Key? key}) : super(key: key);
+
   @override
   _MainScreenState createState() => _MainScreenState();
 }
@@ -24,12 +25,12 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selected_index = 0;
 
-  List<Widget> _widgetOptions = <Widget>[MemberPage(), GamePage()];
+  final List<Widget> _widgetOptions = <Widget>[MemberPage(), GamePage()];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blueGrey,
+      backgroundColor: Colors.blue,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selected_index,
         showSelectedLabels: false,

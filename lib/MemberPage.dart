@@ -11,12 +11,22 @@ class MemberPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white24,
+      appBar: AppBar(
+        title: const Text("メンバー"),
+        leading: IconButton(
+            onPressed: () => {},
+            icon: const Icon(Icons.add, color: Colors.white)),
+      ),
+      backgroundColor: Colors.white,
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: ListView(
           children: memberList
-              .map((member) => ListTile(
+              .map((member) => Card(
+                      shadowColor: Colors.grey,
+                      child: ListTile(
+                    onTap: () => {},
+                    onLongPress: () => {},
                     tileColor: Colors.white,
                     title: Text(
                       member.name,
@@ -26,7 +36,7 @@ class MemberPage extends StatelessWidget {
                       ),
                     ),
                     leading: member.getGenderIcon(),
-                  ))
+                  )))
               .toList(),
         ),
       ),
