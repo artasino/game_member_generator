@@ -1,24 +1,60 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:game_member_generator/TabPage.dart';
+import 'package:game_member_generator/GamePage.dart';
+import 'package:game_member_generator/MemberPage.dart';
+import 'package:flutter/widgets.dart';
 
-void main() {
-  runApp(const GameMemberGenerator());
-}
+void main() => runApp(const MyApp());
 
-class GameMemberGenerator extends StatelessWidget {
-  const GameMemberGenerator({Key? key}) : super(key: key);
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ダブルス組み合わせ生成',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+      home: MainScreen(),
+    );
+  }
+}
+
+class MainScreen extends StatefulWidget {
+  @override
+  _MainScreenState createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  int _selected_index = 0;
+
+  List<Widget> _widgetOptions = <Widget>[MemberPage(), GamePage()];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.blueGrey,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selected_index,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(IconData(0xe042, fontFamily: 'MaterialIcons'),
+                color: Colors.black12),
+            label: 'メンバー',
+            activeIcon: Icon(IconData(0xe042, fontFamily: 'MaterialIcons'),
+                color: Colors.blueAccent),
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.sports_tennis, color: Colors.black12),
+            label: '組み合わせ',
+            activeIcon: Icon(Icons.sports_tennis, color: Colors.blueAccent),
+          ),
+        ],
+        onTap: (index) {
+          setState(() {
+            _selected_index = index;
+          });
+        },
       ),
-      home: TabPage(),
+      body: _widgetOptions.elementAt(_selected_index),
     );
   }
 }
