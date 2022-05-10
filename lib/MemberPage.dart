@@ -14,7 +14,13 @@ class MemberPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text("メンバー"),
         leading: IconButton(
-            onPressed: () => {},
+            onPressed: () {
+              showDialog(context: context, builder: (context) {
+                return const AlertDialog(
+                  title: Text("Test"),
+                );
+              });
+            },
             icon: const Icon(Icons.add, color: Colors.white)),
       ),
       backgroundColor: Colors.white,
@@ -22,9 +28,10 @@ class MemberPage extends StatelessWidget {
         padding: const EdgeInsets.all(8.0),
         child: ListView(
           children: memberList
-              .map((member) => Card(
-                      shadowColor: Colors.grey,
-                      child: ListTile(
+              .map((member) =>
+              Card(
+                  shadowColor: Colors.grey,
+                  child: ListTile(
                     onTap: () => {},
                     onLongPress: () => {},
                     tileColor: Colors.white,
@@ -63,3 +70,33 @@ class Member {
 }
 
 enum Gender { male, female }
+
+// class TextEditDialog extends StatefulWidget{
+//   const TextEditDialog({Key? key}) : super(key: key);
+//
+//   @override
+//   State<StatefulWidget> createState() => _TextEditDialogState();
+// }
+
+// class _TextEditDialogState extends State<TextEditDialog>{
+//   final dateTextController = TextEditingController();
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     MaterialLocalizations localizations = MaterialLocalizations.of(context);
+//     final AlertDialog dialog = AlertDialog(
+//       title: Text("Set Timer"),
+//       content: TextField(
+//         controller: dateTextController,
+//         decoration: InputDecoration(
+//           hintText: "sec",
+//         ),
+//         autofocus: true,
+//         keyboardType: TextInputType.number,
+//       ),
+//       actions: actions,
+//     );
+//     return dialog;
+//   }
+//
+// }
