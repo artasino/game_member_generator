@@ -10,6 +10,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: MainScreen(),
     );
   }
@@ -23,16 +24,16 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selected_index = 0;
+  int _selectedIndex = 0;
 
-  final List<Widget> _widgetOptions = <Widget>[MemberPage(), GamePage()];
+  final List<Widget> _widgetOptions = <Widget>[MemberPage(), const GamePage()];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.blue,
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selected_index,
+        currentIndex: _selectedIndex,
         showSelectedLabels: false,
         showUnselectedLabels: false,
         items: const [
@@ -51,11 +52,11 @@ class _MainScreenState extends State<MainScreen> {
         ],
         onTap: (index) {
           setState(() {
-            _selected_index = index;
+            _selectedIndex = index;
           });
         },
       ),
-      body: _widgetOptions.elementAt(_selected_index),
+      body: _widgetOptions.elementAt(_selectedIndex),
     );
   }
 }
