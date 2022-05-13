@@ -12,6 +12,7 @@ class _MemberPageState extends State<MemberPage> {
 
   @override
   Widget build(BuildContext context) {
+    loadMemberList();
     return Scaffold(
       appBar: AppBar(
         title: const Text("メンバー"),
