@@ -1,35 +1,44 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class MemberPage extends StatelessWidget {
-  MemberPage({Key? key}) : super(key: key);
+class MemberPage extends StatefulWidget {
+  @override
+  _MemberPageState createState() => _MemberPageState();
+}
 
-  final List<Member> memberList = [
-    const Member(name: "篠原", gender: Gender.male),
-    const Member(name: "菜南", gender: Gender.female)
-  ];
+class _MemberPageState extends State<MemberPage> {
+  List<Member> memberList = [];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("メンバー"),
-        leading: IconButton(
-            onPressed: () {
-              showDialog(context: context, builder: (context) {
-                return const AlertDialog(
-                  title: Text("Test"),
-                );
-              });
-            },
-            icon: const Icon(Icons.add, color: Colors.white)),
+        actions: [
+          IconButton(onPressed: saveMemberList, icon: const Icon(Icons.save))
+        ],
       ),
+      floatingActionButton: FloatingActionButton(
+          onPressed: () async {
+            var newMember = await Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) {
+                return const AddMemberPage();
+              }),
+            );
+            if (newMember != null) {
+              setState(() {
+                memberList.add(newMember);
+              });
+            }
+          },
+          child: const Icon(Icons.add, color: Colors.white)),
       backgroundColor: Colors.white,
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: ListView(
           children: memberList
-              .map((member) =>
-              Card(
+              .map((member) => Card(
                   shadowColor: Colors.grey,
                   child: ListTile(
                     onTap: () => {},
@@ -49,13 +58,118 @@ class MemberPage extends StatelessWidget {
       ),
     );
   }
+
+  void saveMemberList() async {
+    // List<String> list = "{}"
+    final member = memberList.map((f) => json.encode(f.toJson())).toList();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('MEMBER_LIST', member);
+  }
+
+  void loadMemberList() async {
+    final prefs = await SharedPreferences.getInstance();
+    final member = prefs.getStringList('MEMBER_LIST');
+    if (member != null) {
+      List<Member> result =
+          member.map((f) => Member.fromJson(json.decode(f))).toList();
+      memberList.addAll(result);
+      memberList = memberList.toSet().toList();
+    }
+  }
 }
 
-class Member {
+class AddMemberPage extends StatefulWidget {
+  const AddMemberPage({Key? key}) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() => _AddMemberPageState();
+}
+
+enum RadioValue { FIRST, SECOND }
+
+class _AddMemberPageState extends State<AddMemberPage> {
+  final dateTextController = TextEditingController();
+
+  RadioValue _gValue = RadioValue.FIRST;
+  String name = "";
+
+  Member createMember(String name, RadioValue rValue) {
+    return rValue == RadioValue.FIRST
+        ? Member(name: name, gender: Gender.male)
+        : Member(name: name, gender: Gender.female);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("追加するメンバー"),
+      ),
+      body: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(children: <Widget>[
+            TextField(
+              decoration: const InputDecoration(
+                  labelText: "名前", icon: Icon(Icons.list, color: Colors.blue)),
+              onChanged: (text) {
+                name = text;
+              },
+            ),
+            Container(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Row(
+                  children: [
+                    Radio(
+                      value: RadioValue.FIRST,
+                      groupValue: _gValue,
+                      onChanged: (value) => _onRadioSelected(value),
+                    ),
+                    const Text("男")
+                  ],
+                ),
+                Row(
+                  children: [
+                    Radio(
+                      value: RadioValue.SECOND,
+                      groupValue: _gValue,
+                      onChanged: (value) => _onRadioSelected(value),
+                    ),
+                    const Text("女")
+                  ],
+                ),
+              ],
+            ),
+            Container(height: 200),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+              ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(createMember(name, _gValue));
+                  },
+                  child: Text("追加")),
+              ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(null);
+                  },
+                  child: Text("キャンセル")),
+            ]),
+          ])),
+    );
+  }
+
+  void _onRadioSelected(value) {
+    setState(() {
+      _gValue = value;
+    });
+  }
+}
+
+class Member implements Comparable<Member> {
   final String name;
   final Gender gender;
 
-  const Member({
+  Member({
     required this.name,
     required this.gender,
   });
@@ -67,36 +181,50 @@ class Member {
       return const Icon(Icons.female, color: Colors.pink);
     }
   }
+
+  Map toJson() => {
+        "name": name,
+        "gender": gender.name,
+      };
+
+  Member.fromJson(Map json)
+      : name = json["name"],
+        gender = stringToGender(json["gender"]);
+
+  @override
+  int compareTo(Member member) {
+    if (name == member.name && gender == member.gender) {
+      return 0;
+    }
+    return name.compareTo(member.name);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Member &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          gender == other.gender;
+
+  @override
+  int get hashCode => name.hashCode ^ gender.hashCode;
+
+  @override
+  String toString() {
+    return 'Member{name: $name, gender: $gender}';
+  }
 }
 
 enum Gender { male, female }
 
-// class TextEditDialog extends StatefulWidget{
-//   const TextEditDialog({Key? key}) : super(key: key);
-//
-//   @override
-//   State<StatefulWidget> createState() => _TextEditDialogState();
-// }
+extension on Gender {
+  String get name => toString().split(".").last;
+}
 
-// class _TextEditDialogState extends State<TextEditDialog>{
-//   final dateTextController = TextEditingController();
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     MaterialLocalizations localizations = MaterialLocalizations.of(context);
-//     final AlertDialog dialog = AlertDialog(
-//       title: Text("Set Timer"),
-//       content: TextField(
-//         controller: dateTextController,
-//         decoration: InputDecoration(
-//           hintText: "sec",
-//         ),
-//         autofocus: true,
-//         keyboardType: TextInputType.number,
-//       ),
-//       actions: actions,
-//     );
-//     return dialog;
-//   }
-//
-// }
+Gender stringToGender(String genderSt) {
+  if (genderSt == "male") {
+    return Gender.male;
+  }
+  return Gender.female;
+}
