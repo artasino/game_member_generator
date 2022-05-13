@@ -30,6 +30,7 @@ class _MemberPageState extends State<MemberPage> {
             if (newMember != null) {
               setState(() {
                 memberList.add(newMember);
+                memberList = memberList.toSet().toList();
               });
             }
           },
