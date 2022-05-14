@@ -1,14 +1,20 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:game_member_generator/Gender.dart';
+import 'package:game_member_generator/Member.dart';
+import 'package:game_member_generator/MemberList.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MemberPage extends StatefulWidget {
+  const MemberPage({Key? key}) : super(key: key);
+
   @override
   _MemberPageState createState() => _MemberPageState();
 }
 
 class _MemberPageState extends State<MemberPage> {
-  List<Member> memberList = [];
+  var memberList = MemberListSingleton().memberList;
 
   @override
   Widget build(BuildContext context) {
@@ -17,6 +23,12 @@ class _MemberPageState extends State<MemberPage> {
       appBar: AppBar(
         title: const Text("メンバー"),
         actions: [
+          IconButton(
+              onPressed: () {
+                loadMemberList();
+                build(context);
+              },
+              icon: const Icon(Icons.update)),
           IconButton(onPressed: saveMemberList, icon: const Icon(Icons.save))
         ],
       ),
@@ -149,12 +161,12 @@ class _AddMemberPageState extends State<AddMemberPage> {
                   onPressed: () {
                     Navigator.of(context).pop(createMember(name, _gValue));
                   },
-                  child: Text("追加")),
+                  child: const Text("追加")),
               ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop(null);
                   },
-                  child: Text("キャンセル")),
+                  child: const Text("キャンセル")),
             ]),
           ])),
     );
@@ -165,68 +177,4 @@ class _AddMemberPageState extends State<AddMemberPage> {
       _gValue = value;
     });
   }
-}
-
-class Member implements Comparable<Member> {
-  final String name;
-  final Gender gender;
-
-  Member({
-    required this.name,
-    required this.gender,
-  });
-
-  Icon getGenderIcon() {
-    if (gender == Gender.male) {
-      return const Icon(Icons.male, color: Colors.blue);
-    } else {
-      return const Icon(Icons.female, color: Colors.pink);
-    }
-  }
-
-  Map toJson() => {
-        "name": name,
-        "gender": gender.name,
-      };
-
-  Member.fromJson(Map json)
-      : name = json["name"],
-        gender = stringToGender(json["gender"]);
-
-  @override
-  int compareTo(Member member) {
-    if (name == member.name && gender == member.gender) {
-      return 0;
-    }
-    return name.compareTo(member.name);
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Member &&
-          runtimeType == other.runtimeType &&
-          name == other.name &&
-          gender == other.gender;
-
-  @override
-  int get hashCode => name.hashCode ^ gender.hashCode;
-
-  @override
-  String toString() {
-    return 'Member{name: $name, gender: $gender}';
-  }
-}
-
-enum Gender { male, female }
-
-extension on Gender {
-  String get name => toString().split(".").last;
-}
-
-Gender stringToGender(String genderSt) {
-  if (genderSt == "male") {
-    return Gender.male;
-  }
-  return Gender.female;
 }

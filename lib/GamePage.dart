@@ -5,9 +5,15 @@ class GamePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("対戦表"),
+        leading: IconButton(
+            onPressed: () => {},
+            icon: const Icon(Icons.add, color: Colors.white)),
+      ),
       backgroundColor: Colors.white,
-      body: Center(
+      body: const Center(
         child: Text(
           "対戦表",
           style: TextStyle(fontSize: 20),
