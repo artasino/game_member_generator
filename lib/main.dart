@@ -1,62 +1,81 @@
 import 'package:flutter/material.dart';
-import 'package:game_member_generator/GamePage.dart';
-import 'package:game_member_generator/MemberPage.dart';
+import 'package:game_member_generator/domain/entities/gender.dart';
+import 'domain/algorithm/random_match_algorithm.dart';
+import 'domain/entities/match_type.dart';
+import 'domain/entities/player.dart';
+import 'domain/services/match_making_service.dart';
 
-void main() => runApp(const MyApp());
+void main() {
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({Key? key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: MainScreen(),
+    return MaterialApp(
+      title: 'Match App',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+      ),
+      home: const HomePage(),
     );
   }
 }
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({Key? key}) : super(key: key);
-
-  @override
-  _MainScreenState createState() => _MainScreenState();
-}
-
-class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
-
-  final List<Widget> _widgetOptions = <Widget>[MemberPage(), const GamePage()];
+class HomePage extends StatelessWidget {
+  const HomePage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // 仮データ
+    final players = List.generate(
+      10,
+          (index) => Player(
+        id: '$index',
+        name: 'Player $index', gender: Gender.male,
+      ),
+    );
+
+    final matchTypes = [
+      MatchType.menDoubles,
+      MatchType.menDoubles,
+    ];
+
+    final service = MatchMakingService(
+      RandomMatchAlgorithm(),
+    );
+
+    final matches = service.generateMatches(
+      players: players,
+      matchTypes: matchTypes,
+    );
+
     return Scaffold(
-      backgroundColor: Colors.blue,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(IconData(0xe042, fontFamily: 'MaterialIcons'),
-                color: Colors.black12),
-            label: 'メンバー',
-            activeIcon: Icon(IconData(0xe042, fontFamily: 'MaterialIcons'),
-                color: Colors.blueAccent),
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.sports_tennis, color: Colors.black12),
-            label: '組み合わせ',
-            activeIcon: Icon(Icons.sports_tennis, color: Colors.blueAccent),
-          ),
-        ],
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
+      appBar: AppBar(
+        title: const Text('Match Result'),
+      ),
+      body: ListView.builder(
+        itemCount: matches.length,
+        itemBuilder: (context, index) {
+          final match = matches[index];
+
+          return Card(
+            margin: const EdgeInsets.all(8),
+            child: ListTile(
+              title: Text(
+                'Court ${match.type.name}',
+              ),
+              subtitle: Text(
+                '${match.teamA.player1.name}, ${match.teamA.player2.name} '
+                    'vs ${match.teamB.player1.name}, ${match.teamB.player2.name}',
+              ),
+            ),
+          );
         },
       ),
-      body: _widgetOptions.elementAt(_selectedIndex),
     );
   }
 }
