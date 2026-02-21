@@ -4,10 +4,17 @@ import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../notifiers/session_notifier.dart';
 
-class MatchHistoryScreen extends StatelessWidget {
+class MatchHistoryScreen extends StatefulWidget {
   final SessionNotifier notifier;
 
   const MatchHistoryScreen({Key? key, required this.notifier}) : super(key: key);
+
+  @override
+  State<MatchHistoryScreen> createState() => _MatchHistoryScreenState();
+}
+
+class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
+  int? _currentIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -27,9 +34,9 @@ class MatchHistoryScreen extends StatelessWidget {
         ],
       ),
       body: AnimatedBuilder(
-        animation: notifier,
+        animation: widget.notifier,
         builder: (context, _) {
-          final sessions = notifier.sessions.reversed.toList();
+          final sessions = widget.notifier.sessions;
 
           if (sessions.isEmpty) {
             return const Center(
@@ -44,62 +51,98 @@ class MatchHistoryScreen extends StatelessWidget {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
-            itemCount: sessions.length,
-            itemBuilder: (context, index) {
-              final session = sessions[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+          // 初期表示や、新しいセッションが追加された場合に最新を表示するように調整
+          if (_currentIndex == null || _currentIndex! >= sessions.length) {
+            _currentIndex = sessions.length - 1;
+          }
+
+          final session = sessions[_currentIndex!];
+
+          return Column(
+            children: [
+              // ページナビゲーション
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_left, size: 40),
+                      onPressed: _currentIndex! > 0
+                          ? () => setState(() => _currentIndex = _currentIndex! - 1)
+                          : null,
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
                         '第 ${session.index} 試合',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
+                          color: theme.colorScheme.onPrimaryContainer,
                         ),
                       ),
-                      const Divider(),
-                      ...session.games.map((game) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    _PlayerTag(name: game.teamA.player1.name, gender: game.teamA.player1.gender),
-                                    const SizedBox(height: 4),
-                                    _PlayerTag(name: game.teamA.player2.name, gender: game.teamA.player2.gender),
-                                  ],
-                                ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_right, size: 40),
+                      onPressed: _currentIndex! < sessions.length - 1
+                          ? () => setState(() => _currentIndex = _currentIndex! + 1)
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
+              // セッション内容のカード
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 88),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ...session.games.map((game) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        _PlayerTag(name: game.teamA.player1.name, gender: game.teamA.player1.gender),
+                                        const SizedBox(height: 4),
+                                        _PlayerTag(name: game.teamA.player2.name, gender: game.teamA.player2.gender),
+                                      ],
+                                    ),
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.0),
+                                    child: Text('vs', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                  ),
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        _PlayerTag(name: game.teamB.player1.name, gender: game.teamB.player1.gender),
+                                        const SizedBox(height: 4),
+                                        _PlayerTag(name: game.teamB.player2.name, gender: game.teamB.player2.gender),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                child: Text('vs', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    _PlayerTag(name: game.teamB.player1.name, gender: game.teamB.player1.gender),
-                                    const SizedBox(height: 4),
-                                    _PlayerTag(name: game.teamB.player2.name, gender: game.teamB.player2.gender),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ],
+                            );
+                          }).toList(),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              );
-            },
+              ),
+            ],
           );
         },
       ),
@@ -112,7 +155,7 @@ class MatchHistoryScreen extends StatelessWidget {
   }
 
   void _showSettingsAndGenerate(BuildContext context) {
-    final currentSettings = notifier.getCurrentSettings();
+    final currentSettings = widget.notifier.getCurrentSettings();
     List<MatchType> selectedTypes = List.from(currentSettings.matchTypes);
 
     showDialog(
@@ -202,7 +245,11 @@ class MatchHistoryScreen extends StatelessWidget {
 
   Future<void> _generateWithSettings(BuildContext context, CourtSettings settings) async {
     try {
-      await notifier.generateSessionWithSettings(settings);
+      await widget.notifier.generateSessionWithSettings(settings);
+      // 生成後は自動的に最新のセッションを表示するようにインデックスを更新
+      setState(() {
+        _currentIndex = widget.notifier.sessions.length - 1;
+      });
     } catch (e) {
       showDialog(
         context: context,
@@ -227,7 +274,10 @@ class MatchHistoryScreen extends StatelessWidget {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル')),
           TextButton(
             onPressed: () {
-              notifier.clearHistory();
+              widget.notifier.clearHistory();
+              setState(() {
+                _currentIndex = null;
+              });
               Navigator.pop(ctx);
             },
             child: const Text('クリア', style: TextStyle(color: Colors.red)),
