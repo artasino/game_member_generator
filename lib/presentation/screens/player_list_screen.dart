@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/gender.dart';
+import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../notifiers/player_notifier.dart';
+import '../notifiers/session_notifier.dart';
 
 class PlayerListScreen extends StatelessWidget {
   final PlayerNotifier notifier;
+  final SessionNotifier sessionNotifier;
 
-  const PlayerListScreen({Key? key, required this.notifier}) : super(key: key);
+  const PlayerListScreen({
+    Key? key,
+    required this.notifier,
+    required this.sessionNotifier,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -19,9 +26,11 @@ class PlayerListScreen extends StatelessWidget {
         foregroundColor: theme.colorScheme.onPrimary,
       ),
       body: AnimatedBuilder(
-        animation: notifier,
+        animation: Listenable.merge([notifier, sessionNotifier]),
         builder: (context, _) {
           final players = notifier.players;
+          final statsMap = sessionNotifier.playerStats;
+
           if (players.isEmpty) {
             return const Center(
               child: Column(
@@ -41,6 +50,8 @@ class PlayerListScreen extends StatelessWidget {
               runSpacing: 8,
               children: players.map((player) {
                 final genderColor = player.gender == Gender.male ? Colors.blue : Colors.pink;
+                // statsMap は全プレイヤーを包含しているため、必ず取得できる
+                final stats = statsMap[player.id] ?? PlayerStats(totalMatches: 0, typeCounts: {});
                 
                 return InkWell(
                   onTap: () => notifier.toggleActive(player),
@@ -53,7 +64,7 @@ class PlayerListScreen extends StatelessWidget {
                           ? genderColor.withOpacity(0.1) 
                           : theme.colorScheme.onSurface.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all( // BorderSideではなくBorder.allを使用
+                      border: Border.all(
                         color: player.isActive 
                             ? genderColor.withOpacity(0.5) 
                             : theme.colorScheme.outlineVariant,
@@ -68,14 +79,30 @@ class PlayerListScreen extends StatelessWidget {
                           color: player.isActive ? genderColor : Colors.grey,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          player.name,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: player.isActive ? FontWeight.bold : FontWeight.normal,
-                            decoration: player.isActive ? null : TextDecoration.lineThrough,
-                            color: player.isActive ? Colors.black87 : Colors.grey,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              player.name,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: player.isActive ? FontWeight.bold : FontWeight.normal,
+                                decoration: player.isActive ? null : TextDecoration.lineThrough,
+                                color: player.isActive ? Colors.black87 : Colors.grey,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                _buildStatsString(player, stats),
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: player.isActive ? Colors.black54 : Colors.grey,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -92,6 +119,22 @@ class PlayerListScreen extends StatelessWidget {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  String _buildStatsString(Player player, PlayerStats stats) {
+    final m = stats.typeCounts[MatchType.menDoubles] ?? 0;
+    final w = stats.typeCounts[MatchType.womenDoubles] ?? 0;
+    final x = stats.typeCounts[MatchType.mixedDoubles] ?? 0;
+    
+    final List<String> details = [];
+    if (player.gender == Gender.male) {
+      details.add('男$m');
+    } else {
+      details.add('女$w');
+    }
+    details.add('混$x');
+    
+    return '計${stats.totalMatches} (${details.join(' ')})';
   }
 
   void _showAddEditDialog(BuildContext context, {Player? player}) {

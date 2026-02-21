@@ -27,7 +27,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     _screens = [
-      PlayerListScreen(notifier: widget.playerNotifier),
+      PlayerListScreen(
+        notifier: widget.playerNotifier,
+        sessionNotifier: widget.sessionNotifier, // ここで渡す
+      ),
       MatchHistoryScreen(notifier: widget.sessionNotifier),
     ];
   }

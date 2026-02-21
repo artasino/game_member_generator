@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/court_settings.dart';
+import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/repository/court_settings_repository.dart';
 import '../../domain/repository/session_repository/session_history_repository.dart';
 import '../../domain/services/match_making_service.dart';
+
+/// プレイヤーの出場統計を保持するクラス
+class PlayerStats {
+  final int totalMatches;
+  final Map<MatchType, int> typeCounts;
+
+  PlayerStats({required this.totalMatches, required this.typeCounts});
+}
 
 class SessionNotifier extends ChangeNotifier {
   final SessionHistoryRepository sessionRepository;
@@ -22,23 +31,58 @@ class SessionNotifier extends ChangeNotifier {
     _refresh();
   }
 
+  /// 全プレイヤーの出場統計を計算する
+  /// key: Player.id, value: PlayerStats
+  Map<String, PlayerStats> get playerStats {
+    final Map<String, int> totals = {};
+    final Map<String, Map<MatchType, int>> breakdown = {};
+
+    // 最初に全プレイヤーを 0 で初期化する
+    final allPlayers = matchMakingService.playerRepository.getAll();
+    for (final player in allPlayers) {
+      totals[player.id] = 0;
+      breakdown[player.id] = {};
+    }
+
+    for (final session in _sessions) {
+      for (final game in session.games) {
+        final playersInGame = [
+          game.teamA.player1,
+          game.teamA.player2,
+          game.teamB.player1,
+          game.teamB.player2,
+        ];
+        
+        for (final player in playersInGame) {
+          // 削除されたプレイヤーがセッションに残っている場合も考慮
+          totals[player.id] = (totals[player.id] ?? 0) + 1;
+          
+          final playerBreakdown = breakdown.putIfAbsent(player.id, () => {});
+          playerBreakdown[game.type] = (playerBreakdown[game.type] ?? 0) + 1;
+        }
+      }
+    }
+
+    return totals.map((playerId, total) => MapEntry(
+      playerId,
+      PlayerStats(
+        totalMatches: total,
+        typeCounts: breakdown[playerId] ?? {},
+      ),
+    ));
+  }
+
   Future<void> _refresh() async {
-    // リポジトリが UnmodifiableList を返す可能性があるため、変更可能なリストに変換する
     final fetchedSessions = await sessionRepository.getAll();
     _sessions = List.from(fetchedSessions);
     notifyListeners();
   }
 
-  // 特定のセッションを更新する（入れ替え用）
   Future<void> updateSession(Session session) async {
     final index = _sessions.indexWhere((s) => s.index == session.index);
     if (index != -1) {
-      // 変更可能なリストであることを保証して更新
       _sessions[index] = session;
       notifyListeners();
-      
-      // 注意: 永続化が必要な場合はここで repository.update() などを呼ぶべきですが、
-      // 現在のリポジトリインターフェースには add/clear しかないため、メモリ上のみの更新となります。
     }
   }
 
