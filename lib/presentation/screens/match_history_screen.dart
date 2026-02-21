@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/court_settings.dart';
+import '../../domain/entities/game.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
+import '../../domain/entities/player.dart';
+import '../../domain/entities/session.dart';
+import '../../domain/entities/team.dart';
 import '../notifiers/session_notifier.dart';
 
 class MatchHistoryScreen extends StatefulWidget {
@@ -15,6 +19,7 @@ class MatchHistoryScreen extends StatefulWidget {
 
 class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   int? _currentIndex;
+  Player? _selectedPlayer; // 入れ替えのために選択されたプレイヤー
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +72,12 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                     IconButton(
                       icon: const Icon(Icons.arrow_left, size: 40),
                       onPressed: _currentIndex! > 0
-                          ? () => setState(() => _currentIndex = _currentIndex! - 1)
+                          ? () {
+                              setState(() {
+                                _currentIndex = _currentIndex! - 1;
+                                _selectedPlayer = null;
+                              });
+                            }
                           : null,
                     ),
                     Container(
@@ -87,12 +97,25 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                     IconButton(
                       icon: const Icon(Icons.arrow_right, size: 40),
                       onPressed: _currentIndex! < sessions.length - 1
-                          ? () => setState(() => _currentIndex = _currentIndex! + 1)
+                          ? () {
+                              setState(() {
+                                _currentIndex = _currentIndex! + 1;
+                                _selectedPlayer = null;
+                              });
+                            }
                           : null,
                     ),
                   ],
                 ),
               ),
+              if (_selectedPlayer != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(
+                    '${_selectedPlayer!.name} と入れ替えるメンバを選択してください',
+                    style: const TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.bold),
+                  ),
+                ),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 88),
@@ -102,7 +125,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ...session.games.map((game) {
+                          ...session.games.asMap().entries.map((entry) {
+                            final gameIndex = entry.key;
+                            final game = entry.value;
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               child: Row(
@@ -110,9 +135,19 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                                   Expanded(
                                     child: Column(
                                       children: [
-                                        _PlayerTag(name: game.teamA.player1.name, gender: game.teamA.player1.gender),
+                                        _PlayerTag(
+                                          player: game.teamA.player1,
+                                          isSelected: _selectedPlayer?.id == game.teamA.player1.id,
+                                          onTap: () => _handlePlayerTap(session, game.teamA.player1),
+                                          onLongPress: () => _handlePlayerLongPress(game.teamA.player1),
+                                        ),
                                         const SizedBox(height: 4),
-                                        _PlayerTag(name: game.teamA.player2.name, gender: game.teamA.player2.gender),
+                                        _PlayerTag(
+                                          player: game.teamA.player2,
+                                          isSelected: _selectedPlayer?.id == game.teamA.player2.id,
+                                          onTap: () => _handlePlayerTap(session, game.teamA.player2),
+                                          onLongPress: () => _handlePlayerLongPress(game.teamA.player2),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -123,9 +158,19 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                                   Expanded(
                                     child: Column(
                                       children: [
-                                        _PlayerTag(name: game.teamB.player1.name, gender: game.teamB.player1.gender),
+                                        _PlayerTag(
+                                          player: game.teamB.player1,
+                                          isSelected: _selectedPlayer?.id == game.teamB.player1.id,
+                                          onTap: () => _handlePlayerTap(session, game.teamB.player1),
+                                          onLongPress: () => _handlePlayerLongPress(game.teamB.player1),
+                                        ),
                                         const SizedBox(height: 4),
-                                        _PlayerTag(name: game.teamB.player2.name, gender: game.teamB.player2.gender),
+                                        _PlayerTag(
+                                          player: game.teamB.player2,
+                                          isSelected: _selectedPlayer?.id == game.teamB.player2.id,
+                                          onTap: () => _handlePlayerTap(session, game.teamB.player2),
+                                          onLongPress: () => _handlePlayerLongPress(game.teamB.player2),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -133,7 +178,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                               ),
                             );
                           }).toList(),
-                          
                           if (session.restingPlayers.isNotEmpty) ...[
                             const Divider(height: 32),
                             const Text(
@@ -145,7 +189,12 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                               spacing: 8,
                               runSpacing: 8,
                               children: session.restingPlayers.map((p) {
-                                return _RestingChip(name: p.name, gender: p.gender);
+                                return _RestingChip(
+                                  player: p,
+                                  isSelected: _selectedPlayer?.id == p.id,
+                                  onTap: () => _handlePlayerTap(session, p),
+                                  onLongPress: () => _handlePlayerLongPress(p),
+                                );
                               }).toList(),
                             ),
                           ],
@@ -165,6 +214,62 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  void _handlePlayerLongPress(Player player) {
+    setState(() {
+      _selectedPlayer = player;
+    });
+  }
+
+  void _handlePlayerTap(Session currentSession, Player clickedPlayer) {
+    if (_selectedPlayer == null) return;
+
+    if (_selectedPlayer!.id == clickedPlayer.id) {
+      setState(() {
+        _selectedPlayer = null;
+      });
+      return;
+    }
+
+    // 入れ替え処理
+    _swapPlayers(currentSession, _selectedPlayer!, clickedPlayer);
+    setState(() {
+      _selectedPlayer = null;
+    });
+  }
+
+  void _swapPlayers(Session session, Player p1, Player p2) {
+    // Session内の全てのPlayerを走査して入れ替える
+    List<Game> newGames = session.games.map((game) {
+      Team newTeamA = _swapInTeam(game.teamA, p1, p2);
+      Team newTeamB = _swapInTeam(game.teamB, p1, p2);
+      return game.copyWith(teamA: newTeamA, teamB: newTeamB);
+    }).toList();
+
+    List<Player> newResting = session.restingPlayers.map((p) {
+      if (p.id == p1.id) return p2;
+      if (p.id == p2.id) return p1;
+      return p;
+    }).toList();
+
+    widget.notifier.updateSession(session.copyWith(
+      games: newGames,
+      restingPlayers: newResting,
+    ));
+  }
+
+  Team _swapInTeam(Team team, Player p1, Player p2) {
+    Player newP1 = team.player1;
+    Player newP2 = team.player2;
+
+    if (team.player1.id == p1.id) newP1 = p2;
+    else if (team.player1.id == p2.id) newP1 = p1;
+
+    if (team.player2.id == p1.id) newP2 = p2;
+    else if (team.player2.id == p2.id) newP2 = p1;
+
+    return team.copyWith(player1: newP1, player2: newP2);
   }
 
   void _showSettingsAndGenerate(BuildContext context) {
@@ -261,6 +366,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
       await widget.notifier.generateSessionWithSettings(settings);
       setState(() {
         _currentIndex = widget.notifier.sessions.length - 1;
+        _selectedPlayer = null;
       });
     } catch (e) {
       showDialog(
@@ -289,6 +395,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               widget.notifier.clearHistory();
               setState(() {
                 _currentIndex = null;
+                _selectedPlayer = null;
               });
               Navigator.pop(ctx);
             },
@@ -301,31 +408,49 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
 }
 
 class _RestingChip extends StatelessWidget {
-  final String name;
-  final Gender gender;
+  final Player player;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
-  const _RestingChip({required this.name, required this.gender});
+  const _RestingChip({
+    required this.player,
+    required this.isSelected,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final color = gender == Gender.male ? Colors.blue : Colors.pink;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(gender == Gender.male ? Icons.male : Icons.female, size: 14, color: color.withOpacity(0.5)),
-          const SizedBox(width: 4),
-          Text(
-            name,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+    final color = player.gender == Gender.male ? Colors.blue : Colors.pink;
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.orange.withOpacity(0.2) : color.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? Colors.orange : color.withOpacity(0.2),
+            width: isSelected ? 2 : 1,
           ),
-        ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(player.gender == Gender.male ? Icons.male : Icons.female, size: 14, color: isSelected ? Colors.orange : color.withOpacity(0.5)),
+            const SizedBox(width: 4),
+            Text(
+              player.name,
+              style: TextStyle(
+                fontSize: 12,
+                color: isSelected ? Colors.orange.shade900 : Colors.grey.shade700,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -354,27 +479,45 @@ class _TypeButton extends StatelessWidget {
 }
 
 class _PlayerTag extends StatelessWidget {
-  final String name;
-  final Gender gender;
+  final Player player;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
-  const _PlayerTag({required this.name, required this.gender});
+  const _PlayerTag({
+    required this.player,
+    required this.isSelected,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final color = gender == Gender.male ? Colors.blue : Colors.pink;
-    return Container(
-      width: double.infinity,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Text(
-        name,
-        style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold),
-        overflow: TextOverflow.ellipsis,
+    final color = player.gender == Gender.male ? Colors.blue : Colors.pink;
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Container(
+        width: double.infinity,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.orange.withOpacity(0.2) : color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isSelected ? Colors.orange : color.withOpacity(0.5),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Text(
+          player.name,
+          style: TextStyle(
+            fontSize: 12,
+            color: isSelected ? Colors.orange.shade900 : color,
+            fontWeight: FontWeight.bold,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }

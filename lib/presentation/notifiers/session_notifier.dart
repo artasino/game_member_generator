@@ -23,22 +23,32 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   Future<void> _refresh() async {
-    _sessions = await sessionRepository.getAll();
+    // リポジトリが UnmodifiableList を返す可能性があるため、変更可能なリストに変換する
+    final fetchedSessions = await sessionRepository.getAll();
+    _sessions = List.from(fetchedSessions);
     notifyListeners();
+  }
+
+  // 特定のセッションを更新する（入れ替え用）
+  Future<void> updateSession(Session session) async {
+    final index = _sessions.indexWhere((s) => s.index == session.index);
+    if (index != -1) {
+      // 変更可能なリストであることを保証して更新
+      _sessions[index] = session;
+      notifyListeners();
+      
+      // 注意: 永続化が必要な場合はここで repository.update() などを呼ぶべきですが、
+      // 現在のリポジトリインターフェースには add/clear しかないため、メモリ上のみの更新となります。
+    }
   }
 
   Future<void> generateSessionWithSettings(CourtSettings settings) async {
     courtSettingsRepository.update(settings);
-    
-    // 全てのアクティブプレイヤーを取得
     final allActivePlayers = matchMakingService.playerRepository.getActive();
-    
-    // 試合を生成
     final games = matchMakingService.generateMatches(
       matchTypes: settings.matchTypes,
     );
 
-    // 試合に出るプレイヤーのIDを抽出
     final playingPlayerIds = <String>{};
     for (var game in games) {
       playingPlayerIds.add(game.teamA.player1.id);
@@ -47,7 +57,6 @@ class SessionNotifier extends ChangeNotifier {
       playingPlayerIds.add(game.teamB.player2.id);
     }
 
-    // お休みのプレイヤーを特定
     final restingPlayers = allActivePlayers
         .where((p) => !playingPlayerIds.contains(p.id))
         .toList();
