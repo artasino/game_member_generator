@@ -3,6 +3,7 @@ import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/session.dart';
+import '../../domain/entities/team.dart';
 import '../../domain/repository/court_settings_repository.dart';
 import '../../domain/repository/session_repository/session_history_repository.dart';
 import '../../domain/services/match_making_service.dart';
@@ -32,12 +33,10 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   /// 全プレイヤーの出場統計を計算する
-  /// key: Player.id, value: PlayerStats
   Map<String, PlayerStats> get playerStats {
     final Map<String, int> totals = {};
     final Map<String, Map<MatchType, int>> breakdown = {};
 
-    // 最初に全プレイヤーを 0 で初期化する
     final allPlayers = matchMakingService.playerRepository.getAll();
     for (final player in allPlayers) {
       totals[player.id] = 0;
@@ -54,9 +53,7 @@ class SessionNotifier extends ChangeNotifier {
         ];
         
         for (final player in playersInGame) {
-          // 削除されたプレイヤーがセッションに残っている場合も考慮
           totals[player.id] = (totals[player.id] ?? 0) + 1;
-          
           final playerBreakdown = breakdown.putIfAbsent(player.id, () => {});
           playerBreakdown[game.type] = (playerBreakdown[game.type] ?? 0) + 1;
         }
@@ -70,6 +67,31 @@ class SessionNotifier extends ChangeNotifier {
         typeCounts: breakdown[playerId] ?? {},
       ),
     ));
+  }
+
+  /// 指定されたペア（Team）がこれまでに組んだ回数を計算する
+  /// そのセッションまでの回数を返すために、オプションで截止セッションインデックスを受け取る
+  int getPairCount(Team team, {int? upToIndex}) {
+    int count = 0;
+    final id1 = team.player1.id;
+    final id2 = team.player2.id;
+
+    for (final session in _sessions) {
+      if (upToIndex != null && session.index > upToIndex) break;
+
+      for (final game in session.games) {
+        if (_isMatch(game.teamA, id1, id2) || _isMatch(game.teamB, id1, id2)) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  bool _isMatch(Team team, String id1, String id2) {
+    final tId1 = team.player1.id;
+    final tId2 = team.player2.id;
+    return (tId1 == id1 && tId2 == id2) || (tId1 == id2 && tId2 == id1);
   }
 
   Future<void> _refresh() async {
