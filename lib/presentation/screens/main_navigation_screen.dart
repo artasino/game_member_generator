@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import '../notifiers/player_notifier.dart';
+import '../notifiers/session_notifier.dart';
 import 'player_list_screen.dart';
-import 'match_setup_screen.dart';
+import 'match_history_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final PlayerNotifier playerNotifier;
+  final SessionNotifier sessionNotifier;
 
-  const MainNavigationScreen({Key? key, required this.playerNotifier}) : super(key: key);
+  const MainNavigationScreen({
+    Key? key,
+    required this.playerNotifier,
+    required this.sessionNotifier,
+  }) : super(key: key);
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -22,7 +28,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     super.initState();
     _screens = [
       PlayerListScreen(notifier: widget.playerNotifier),
-      const MatchSetupScreen(),
+      MatchHistoryScreen(notifier: widget.sessionNotifier),
     ];
   }
 
@@ -42,7 +48,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             label: 'メンバ',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
+            icon: Icon(Icons.sports_tennis),
             label: '試合履歴',
           ),
         ],
