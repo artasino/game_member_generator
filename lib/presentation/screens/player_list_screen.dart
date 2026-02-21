@@ -50,7 +50,6 @@ class PlayerListScreen extends StatelessWidget {
               runSpacing: 8,
               children: players.map((player) {
                 final genderColor = player.gender == Gender.male ? Colors.blue : Colors.pink;
-                // statsMap は全プレイヤーを包含しているため、必ず取得できる
                 final stats = statsMap[player.id] ?? PlayerStats(totalMatches: 0, typeCounts: {});
                 
                 return InkWell(
@@ -95,7 +94,7 @@ class PlayerListScreen extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
                               child: Text(
-                                _buildStatsString(player, stats),
+                                _buildStatsString(stats),
                                 style: TextStyle(
                                   fontSize: 9,
                                   color: player.isActive ? Colors.black54 : Colors.grey,
@@ -121,20 +120,12 @@ class PlayerListScreen extends StatelessWidget {
     );
   }
 
-  String _buildStatsString(Player player, PlayerStats stats) {
+  String _buildStatsString(PlayerStats stats) {
     final m = stats.typeCounts[MatchType.menDoubles] ?? 0;
     final w = stats.typeCounts[MatchType.womenDoubles] ?? 0;
     final x = stats.typeCounts[MatchType.mixedDoubles] ?? 0;
     
-    final List<String> details = [];
-    if (player.gender == Gender.male) {
-      details.add('男$m');
-    } else {
-      details.add('女$w');
-    }
-    details.add('混$x');
-    
-    return '計${stats.totalMatches} (${details.join(' ')})';
+    return '計${stats.totalMatches} (男$m 女$w 混$x)';
   }
 
   void _showAddEditDialog(BuildContext context, {Player? player}) {
