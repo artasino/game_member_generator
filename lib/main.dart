@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'domain/repository/in_memory_repository.dart';
+import 'domain/repository/player_repository/in_memory_repository.dart';
 import 'presentation/notifiers/player_notifier.dart';
 import 'presentation/screens/main_navigation_screen.dart';
 

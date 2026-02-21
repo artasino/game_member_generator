@@ -1,6 +1,6 @@
-import 'package:game_member_generator/domain/repository/player_repository.dart';
+import 'package:game_member_generator/domain/repository/player_repository/player_repository.dart';
 
-import '../entities/player.dart';
+import '../../entities/player.dart';
 
 class InMemoryPlayerRepository implements PlayerRepository {
   final List<Player> _players = [];

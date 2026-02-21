@@ -3,7 +3,7 @@ import 'package:game_member_generator/domain/algorithm/random_match_algorithm.da
 import 'package:game_member_generator/domain/entities/gender.dart';
 import 'package:game_member_generator/domain/entities/match_type.dart';
 import 'package:game_member_generator/domain/entities/player.dart';
-import 'package:game_member_generator/domain/repository/player_repository.dart';
+import 'package:game_member_generator/domain/repository/player_repository/player_repository.dart';
 import 'package:game_member_generator/domain/services/match_making_service.dart';
 
 // テスト用のモックリポジトリ

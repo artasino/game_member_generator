@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/player.dart';
-import '../../domain/repository/player_repository.dart';
+import '../../domain/repository/player_repository/player_repository.dart';
 
 class PlayerNotifier extends ChangeNotifier {
   final PlayerRepository repository;

@@ -43,7 +43,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
-            label: '試合設定',
+            label: '試合履歴',
           ),
         ],
       ),

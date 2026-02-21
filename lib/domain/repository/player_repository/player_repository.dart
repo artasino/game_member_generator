@@ -1,4 +1,4 @@
-import '../entities/player.dart';
+import '../../entities/player.dart';
 
 abstract class PlayerRepository {
   List<Player> getAll();
