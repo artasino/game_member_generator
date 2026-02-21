@@ -11,23 +11,20 @@ import 'presentation/notifiers/session_notifier.dart';
 import 'presentation/screens/main_navigation_screen.dart';
 
 void main() {
-  // 1. 各リポジトリの準備
   final playerRepo = InMemoryPlayerRepository();
 
   // 初期データの投入（男女5人ずつ）
   for (int i = 1; i <= 5; i++) {
-    playerRepo.add(Player(id: 'M$i', name: '男子$i', gender: Gender.male));
-    playerRepo.add(Player(id: 'F$i', name: '女子$i', gender: Gender.female));
+    playerRepo.add(Player(id: 'M$i', name: '男子$i', yomigana: 'だんし$i', gender: Gender.male));
+    playerRepo.add(Player(id: 'F$i', name: '女子$i', yomigana: 'じょし$i', gender: Gender.female));
   }
 
   final sessionRepo = InMemorySessionRepository();
   final courtSettingsRepo = InMemoryCourtSettingsRepository();
 
-  // 2. サービスの準備
   final algorithm = RandomMatchAlgorithm();
   final matchService = MatchMakingService(algorithm, playerRepo);
 
-  // 3. 各Notifierの準備
   final playerNotifier = PlayerNotifier(playerRepo);
   final sessionNotifier = SessionNotifier(
     sessionRepository: sessionRepo,
