@@ -121,15 +121,14 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 88),
                   child: Card(
                     child: Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           ...session.games.asMap().entries.map((entry) {
-                            final gameIndex = entry.key;
                             final game = entry.value;
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               child: Row(
                                 children: [
                                   Expanded(
@@ -141,7 +140,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                                           onTap: () => _handlePlayerTap(session, game.teamA.player1),
                                           onLongPress: () => _handlePlayerLongPress(game.teamA.player1),
                                         ),
-                                        const SizedBox(height: 4),
+                                        const SizedBox(height: 8),
                                         _PlayerTag(
                                           player: game.teamA.player2,
                                           isSelected: _selectedPlayer?.id == game.teamA.player2.id,
@@ -152,8 +151,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                                     ),
                                   ),
                                   const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                    child: Text('vs', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                    padding: EdgeInsets.symmetric(horizontal: 12.0),
+                                    child: Text('vs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey)),
                                   ),
                                   Expanded(
                                     child: Column(
@@ -164,7 +163,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                                           onTap: () => _handlePlayerTap(session, game.teamB.player1),
                                           onLongPress: () => _handlePlayerLongPress(game.teamB.player1),
                                         ),
-                                        const SizedBox(height: 4),
+                                        const SizedBox(height: 8),
                                         _PlayerTag(
                                           player: game.teamB.player2,
                                           isSelected: _selectedPlayer?.id == game.teamB.player2.id,
@@ -179,15 +178,15 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                             );
                           }).toList(),
                           if (session.restingPlayers.isNotEmpty) ...[
-                            const Divider(height: 32),
+                            const Divider(height: 48),
                             const Text(
                               'お休み',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             Wrap(
                               spacing: 8,
-                              runSpacing: 8,
+                              runSpacing: 10,
                               children: session.restingPlayers.map((p) {
                                 return _RestingChip(
                                   player: p,
@@ -232,7 +231,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
       return;
     }
 
-    // 入れ替え処理
     _swapPlayers(currentSession, _selectedPlayer!, clickedPlayer);
     setState(() {
       _selectedPlayer = null;
@@ -240,7 +238,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   }
 
   void _swapPlayers(Session session, Player p1, Player p2) {
-    // Session内の全てのPlayerを走査して入れ替える
     List<Game> newGames = session.games.map((game) {
       Team newTeamA = _swapInTeam(game.teamA, p1, p2);
       Team newTeamB = _swapInTeam(game.teamB, p1, p2);
@@ -427,26 +424,26 @@ class _RestingChip extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.orange.withOpacity(0.2) : color.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(16),
+          color: isSelected ? Colors.orange.withOpacity(0.2) : color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? Colors.orange : color.withOpacity(0.2),
+            color: isSelected ? Colors.orange : color.withOpacity(0.3),
             width: isSelected ? 2 : 1,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(player.gender == Gender.male ? Icons.male : Icons.female, size: 14, color: isSelected ? Colors.orange : color.withOpacity(0.5)),
-            const SizedBox(width: 4),
+            Icon(player.gender == Gender.male ? Icons.male : Icons.female, size: 16, color: isSelected ? Colors.orange : color),
+            const SizedBox(width: 6),
             Text(
               player.name,
               style: TextStyle(
-                fontSize: 12,
-                color: isSelected ? Colors.orange.shade900 : Colors.grey.shade700,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 15,
+                color: isSelected ? Colors.orange.shade900 : Colors.black87,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
             ),
           ],
@@ -500,20 +497,20 @@ class _PlayerTag extends StatelessWidget {
       child: Container(
         width: double.infinity,
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.orange.withOpacity(0.2) : color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(4),
+          color: isSelected ? Colors.orange.withOpacity(0.2) : color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? Colors.orange : color.withOpacity(0.5),
+            color: isSelected ? Colors.orange : color.withOpacity(0.4),
             width: isSelected ? 2 : 1,
           ),
         ),
         child: Text(
           player.name,
           style: TextStyle(
-            fontSize: 12,
-            color: isSelected ? Colors.orange.shade900 : color,
+            fontSize: 16,
+            color: isSelected ? Colors.orange.shade900 : Colors.black87,
             fontWeight: FontWeight.bold,
           ),
           overflow: TextOverflow.ellipsis,

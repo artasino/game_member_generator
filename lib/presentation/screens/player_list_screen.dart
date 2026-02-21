@@ -63,7 +63,7 @@ class PlayerListScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (activePlayers.isNotEmpty) ...[
-                  _buildSectionTitle(context, '本日の参加メンバ (${activePlayers.length}名)'),
+                  _buildSectionTitle(context, _buildActiveMemberTitle(activePlayers)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -111,6 +111,12 @@ class PlayerListScreen extends StatelessWidget {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  String _buildActiveMemberTitle(List<Player> activePlayers) {
+    final maleCount = activePlayers.where((p) => p.gender == Gender.male).length;
+    final femaleCount = activePlayers.where((p) => p.gender == Gender.female).length;
+    return '本日の参加メンバ (計${activePlayers.length}名: 男$maleCount 女$femaleCount)';
   }
 
   /// 名前の先頭文字からインデックスラベル（あ、か、さ...）を返す
