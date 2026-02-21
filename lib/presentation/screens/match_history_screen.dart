@@ -51,7 +51,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             );
           }
 
-          // 初期表示や、新しいセッションが追加された場合に最新を表示するように調整
           if (_currentIndex == null || _currentIndex! >= sessions.length) {
             _currentIndex = sessions.length - 1;
           }
@@ -60,7 +59,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
 
           return Column(
             children: [
-              // ページナビゲーション
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: Row(
@@ -95,7 +93,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                   ],
                 ),
               ),
-              // セッション内容のカード
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 88),
@@ -136,6 +133,22 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                               ),
                             );
                           }).toList(),
+                          
+                          if (session.restingPlayers.isNotEmpty) ...[
+                            const Divider(height: 32),
+                            const Text(
+                              'お休み',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: session.restingPlayers.map((p) {
+                                return _RestingChip(name: p.name, gender: p.gender);
+                              }).toList(),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -246,7 +259,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   Future<void> _generateWithSettings(BuildContext context, CourtSettings settings) async {
     try {
       await widget.notifier.generateSessionWithSettings(settings);
-      // 生成後は自動的に最新のセッションを表示するようにインデックスを更新
       setState(() {
         _currentIndex = widget.notifier.sessions.length - 1;
       });
@@ -281,6 +293,37 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               Navigator.pop(ctx);
             },
             child: const Text('クリア', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RestingChip extends StatelessWidget {
+  final String name;
+  final Gender gender;
+
+  const _RestingChip({required this.name, required this.gender});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = gender == Gender.male ? Colors.blue : Colors.pink;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(gender == Gender.male ? Icons.male : Icons.female, size: 14, color: color.withOpacity(0.5)),
+          const SizedBox(width: 4),
+          Text(
+            name,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
           ),
         ],
       ),

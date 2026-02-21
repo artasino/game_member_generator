@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'domain/algorithm/random_match_algorithm.dart';
+import 'domain/entities/gender.dart';
+import 'domain/entities/player.dart';
 import 'domain/repository/court_settings_repository.dart';
 import 'domain/repository/player_repository/in_memory_repository.dart';
 import 'domain/repository/session_repository/in_memory_session_repository.dart';
@@ -11,6 +13,13 @@ import 'presentation/screens/main_navigation_screen.dart';
 void main() {
   // 1. 各リポジトリの準備
   final playerRepo = InMemoryPlayerRepository();
+
+  // 初期データの投入（男女5人ずつ）
+  for (int i = 1; i <= 5; i++) {
+    playerRepo.add(Player(id: 'M$i', name: '男子$i', gender: Gender.male));
+    playerRepo.add(Player(id: 'F$i', name: '女子$i', gender: Gender.female));
+  }
+
   final sessionRepo = InMemorySessionRepository();
   final courtSettingsRepo = InMemoryCourtSettingsRepository();
 

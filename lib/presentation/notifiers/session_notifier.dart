@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/court_settings.dart';
+import '../../domain/entities/player.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/repository/court_settings_repository.dart';
 import '../../domain/repository/session_repository/session_history_repository.dart';
@@ -26,18 +27,33 @@ class SessionNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 設定を保存し、その設定で試合を生成する
   Future<void> generateSessionWithSettings(CourtSettings settings) async {
-    // リポジトリの設定も更新しておく（次回のデフォルトになる）
     courtSettingsRepository.update(settings);
     
-    // 現在のアクティブプレイヤーを元に試合を生成
+    // 全てのアクティブプレイヤーを取得
+    final allActivePlayers = matchMakingService.playerRepository.getActive();
+    
+    // 試合を生成
     final games = matchMakingService.generateMatches(
       matchTypes: settings.matchTypes,
     );
 
+    // 試合に出るプレイヤーのIDを抽出
+    final playingPlayerIds = <String>{};
+    for (var game in games) {
+      playingPlayerIds.add(game.teamA.player1.id);
+      playingPlayerIds.add(game.teamA.player2.id);
+      playingPlayerIds.add(game.teamB.player1.id);
+      playingPlayerIds.add(game.teamB.player2.id);
+    }
+
+    // お休みのプレイヤーを特定
+    final restingPlayers = allActivePlayers
+        .where((p) => !playingPlayerIds.contains(p.id))
+        .toList();
+
     final nextIndex = _sessions.length + 1;
-    final newSession = Session(nextIndex, games);
+    final newSession = Session(nextIndex, games, restingPlayers: restingPlayers);
 
     await sessionRepository.add(newSession);
     await _refresh();
