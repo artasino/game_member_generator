@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/domain/entities/gender.dart';
+import 'package:game_member_generator/domain/repository/player_repository.dart';
 import 'domain/algorithm/random_match_algorithm.dart';
 import 'domain/entities/match_type.dart';
 import 'domain/entities/player.dart';
+import 'domain/repository/in_memory_repository.dart';
 import 'domain/services/match_making_service.dart';
 
 void main() {
@@ -44,12 +46,16 @@ class HomePage extends StatelessWidget {
       MatchType.menDoubles,
     ];
 
+    PlayerRepository playerRepository = InMemoryPlayerRepository();
+    players.forEach(playerRepository.add);
+
+
     final service = MatchMakingService(
       RandomMatchAlgorithm(),
+      playerRepository,
     );
 
     final matches = service.generateMatches(
-      players: players,
       matchTypes: matchTypes,
     );
 
