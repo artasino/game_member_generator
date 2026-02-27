@@ -14,6 +14,7 @@ class MatchMakingService {
   }) async {
     // 保存されている「アクティブな」プレイヤーを取得してマッチングに利用する
     final players = playerRepository.getActive();
-    return algorithm.generateMatches(players: await players, matchTypes: matchTypes);
+    return algorithm.generateMatches(
+        players: await players, matchTypes: matchTypes);
   }
 }

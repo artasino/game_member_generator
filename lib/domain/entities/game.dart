@@ -9,7 +9,7 @@ class Game {
   Game(this.type, this.teamA, this.teamB);
 
   Game copyWith({Team? teamA, Team? teamB}) {
-    return Game(this.type, teamA ?? this.teamA, teamB ?? this.teamB);
+    return Game(type, teamA ?? this.teamA, teamB ?? this.teamB);
   }
 
   Map<String, dynamic> toJson() {

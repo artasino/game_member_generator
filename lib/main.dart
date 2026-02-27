@@ -22,15 +22,6 @@ void main() async {
   final sessionRepo = SqliteSessionHistoryRepository();
   final courtSettingsRepo = SqliteCourtSettingsRepository();
 
-  // 3. 初回起動時のみサンプルデータを投入するロジック
-  final players = await playerRepo.getAll();
-  // if (players.isEmpty) {
-  //   for (int i = 1; i <= 5; i++) {
-  //     await playerRepo.add(Player(id: 'M$i', name: '男子$i', yomigana: 'だんし$i', gender: Gender.male));
-  //     await playerRepo.add(Player(id: 'F$i', name: '女子$i', yomigana: 'じょし$i', gender: Gender.female));
-  //   }
-  // }
-
   // 4. サービスとNotifierの準備
   final algorithm = RandomMatchAlgorithm();
   final matchService = MatchMakingService(algorithm, playerRepo);

@@ -13,15 +13,15 @@ class SqliteCourtSettingsRepository implements CourtSettingsRepository {
   Future<CourtSettings> get() async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      'settings', 
-      where: 'key = ?', 
+      'settings',
+      where: 'key = ?',
       whereArgs: [_settingsKey],
     );
-    
+
     if (maps.isEmpty) {
       return CourtSettings([MatchType.menDoubles]);
     }
-    
+
     final List<dynamic> types = jsonDecode(maps.first['value']);
     return CourtSettings(types.map((t) => MatchType.values[t as int]).toList());
   }

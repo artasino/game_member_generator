@@ -1,7 +1,7 @@
 import 'package:game_member_generator/domain/entities/session.dart';
 import 'package:game_member_generator/domain/repository/session_repository/session_history_repository.dart';
 
-class InMemorySessionRepository implements SessionHistoryRepository{
+class InMemorySessionRepository implements SessionHistoryRepository {
   final List<Session> _sessions = [];
 
   @override
@@ -15,7 +15,7 @@ class InMemorySessionRepository implements SessionHistoryRepository{
   }
 
   @override
-  Future<List<Session>> getAll() async{
+  Future<List<Session>> getAll() async {
     return List.unmodifiable(_sessions);
   }
 

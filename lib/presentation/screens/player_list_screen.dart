@@ -18,7 +18,7 @@ class PlayerListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('メンバ一覧'),
@@ -55,7 +55,8 @@ class PlayerListScreen extends StatelessWidget {
             final indexLabel = _getIndexLabel(player.yomigana);
             groupedPlayers.putIfAbsent(indexLabel, () => []).add(player);
           }
-          final sortedLabels = groupedPlayers.keys.toList()..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
+          final sortedLabels = groupedPlayers.keys.toList()
+            ..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
 
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
@@ -63,12 +64,16 @@ class PlayerListScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (activePlayers.isNotEmpty) ...[
-                  _buildSectionTitle(context, _buildActiveMemberTitle(activePlayers)),
+                  _buildSectionTitle(
+                      context, _buildActiveMemberTitle(activePlayers)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: activePlayers.map((player) => _buildPlayerChip(context, player, statsMap, theme)).toList(),
+                    children: activePlayers
+                        .map((player) =>
+                            _buildPlayerChip(context, player, statsMap, theme))
+                        .toList(),
                   ),
                   const SizedBox(height: 24),
                   const Divider(),
@@ -94,7 +99,10 @@ class PlayerListScreen extends StatelessWidget {
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: groupedPlayers[label]!.map((player) => _buildPlayerChip(context, player, statsMap, theme)).toList(),
+                        children: groupedPlayers[label]!
+                            .map((player) => _buildPlayerChip(
+                                context, player, statsMap, theme))
+                            .toList(),
                       ),
                       const SizedBox(height: 20),
                     ],
@@ -114,8 +122,10 @@ class PlayerListScreen extends StatelessWidget {
   }
 
   String _buildActiveMemberTitle(List<Player> activePlayers) {
-    final maleCount = activePlayers.where((p) => p.gender == Gender.male).length;
-    final femaleCount = activePlayers.where((p) => p.gender == Gender.female).length;
+    final maleCount =
+        activePlayers.where((p) => p.gender == Gender.male).length;
+    final femaleCount =
+        activePlayers.where((p) => p.gender == Gender.female).length;
     return '本日の参加メンバ (計${activePlayers.length}名: 男$maleCount 女$femaleCount)';
   }
 
@@ -123,26 +133,84 @@ class PlayerListScreen extends StatelessWidget {
   String _getIndexLabel(String yomigana) {
     if (yomigana.isEmpty) return '#';
     final firstChar = yomigana.substring(0, 1);
-    
+
     const mapping = {
-      'あ': 'あ', 'い': 'あ', 'う': 'あ', 'え': 'あ', 'お': 'あ',
-      'か': 'か', 'き': 'か', 'く': 'か', 'け': 'か', 'こ': 'か',
-      'さ': 'さ', 'し': 'さ', 'す': 'さ', 'せ': 'さ', 'そ': 'さ',
-      'た': 'た', 'ち': 'た', 'つ': 'た', 'て': 'た', 'と': 'た',
-      'な': 'な', 'に': 'な', 'ぬ': 'な', 'ね': 'な', 'の': 'な',
-      'は': 'は', 'ひ': 'は', 'ふ': 'は', 'へ': 'は', 'ほ': 'は',
-      'ま': 'ま', 'み': 'ま', 'む': 'ま', 'め': 'ま', 'も': 'ま',
-      'や': 'や', 'ゆ': 'や', 'よ': 'や',
-      'ら': 'ら', 'り': 'ら', 'る': 'ら', 'れ': 'ら', 'ろ': 'ら',
-      'わ': 'わ', 'を': 'わ', 'ん': 'わ',
-      'が': 'か', 'ぎ': 'か', 'ぐ': 'か', 'げ': 'か', 'ご': 'か',
-      'ざ': 'さ', 'じ': 'さ', 'ず': 'さ', 'ぜ': 'さ', 'ぞ': 'さ',
-      'だ': 'た', 'ぢ': 'た', 'づ': 'た', 'で': 'た', 'ど': 'た',
-      'ば': 'は', 'び': 'は', 'ぶ': 'は', 'べ': 'は',
-      'ぱ': 'は', 'ぴ': 'は', 'ぷ': 'は', 'ぺ': 'は', 'ぽ': 'は',
+      'あ': 'あ',
+      'い': 'あ',
+      'う': 'あ',
+      'え': 'あ',
+      'お': 'あ',
+      'か': 'か',
+      'き': 'か',
+      'く': 'か',
+      'け': 'か',
+      'こ': 'か',
+      'さ': 'さ',
+      'し': 'さ',
+      'す': 'さ',
+      'せ': 'さ',
+      'そ': 'さ',
+      'た': 'た',
+      'ち': 'た',
+      'つ': 'た',
+      'て': 'た',
+      'と': 'た',
+      'な': 'な',
+      'に': 'な',
+      'ぬ': 'な',
+      'ね': 'な',
+      'の': 'な',
+      'は': 'は',
+      'ひ': 'は',
+      'ふ': 'は',
+      'へ': 'は',
+      'ほ': 'は',
+      'ま': 'ま',
+      'み': 'ま',
+      'む': 'ま',
+      'め': 'ま',
+      'も': 'ま',
+      'や': 'や',
+      'ゆ': 'や',
+      'よ': 'や',
+      'ら': 'ら',
+      'り': 'ら',
+      'る': 'ら',
+      'れ': 'ら',
+      'ろ': 'ら',
+      'わ': 'わ',
+      'を': 'わ',
+      'ん': 'わ',
+      'が': 'か',
+      'ぎ': 'か',
+      'ぐ': 'か',
+      'げ': 'か',
+      'ご': 'か',
+      'ざ': 'さ',
+      'じ': 'さ',
+      'ず': 'さ',
+      'ぜ': 'さ',
+      'ぞ': 'さ',
+      'だ': 'た',
+      'ぢ': 'た',
+      'づ': 'た',
+      'で': 'た',
+      'ど': 'た',
+      'ば': 'は',
+      'び': 'は',
+      'ぶ': 'は',
+      'べ': 'は',
+      'ぱ': 'は',
+      'ぴ': 'は',
+      'ぷ': 'は',
+      'ぺ': 'は',
+      'ぽ': 'は',
     };
 
-    return mapping[firstChar] ?? (RegExp(r'^[a-zA-Z]').hasMatch(firstChar) ? firstChar.toUpperCase() : '#');
+    return mapping[firstChar] ??
+        (RegExp(r'^[a-zA-Z]').hasMatch(firstChar)
+            ? firstChar.toUpperCase()
+            : '#');
   }
 
   int _labelOrder(String label) {
@@ -163,9 +231,12 @@ class PlayerListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPlayerChip(BuildContext context, Player player, Map<String, PlayerStats> statsMap, ThemeData theme) {
-    final genderColor = player.gender == Gender.male ? Colors.blue : Colors.pink;
-    final stats = statsMap[player.id] ?? PlayerStats(totalMatches: 0, typeCounts: {});
+  Widget _buildPlayerChip(BuildContext context, Player player,
+      Map<String, PlayerStats> statsMap, ThemeData theme) {
+    final genderColor =
+        player.gender == Gender.male ? Colors.blue : Colors.pink;
+    final stats =
+        statsMap[player.id] ?? PlayerStats(totalMatches: 0, typeCounts: {});
 
     return InkWell(
       onTap: () => notifier.toggleActive(player),
@@ -174,13 +245,13 @@ class PlayerListScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: player.isActive 
-              ? genderColor.withOpacity(0.1) 
+          color: player.isActive
+              ? genderColor.withOpacity(0.1)
               : theme.colorScheme.onSurface.withOpacity(0.05),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: player.isActive 
-                ? genderColor.withOpacity(0.5) 
+            color: player.isActive
+                ? genderColor.withOpacity(0.5)
                 : theme.colorScheme.outlineVariant,
           ),
         ),
@@ -201,8 +272,10 @@ class PlayerListScreen extends StatelessWidget {
                   player.name,
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight: player.isActive ? FontWeight.bold : FontWeight.normal,
-                    decoration: player.isActive ? null : TextDecoration.lineThrough,
+                    fontWeight:
+                        player.isActive ? FontWeight.bold : FontWeight.normal,
+                    decoration:
+                        player.isActive ? null : TextDecoration.lineThrough,
                     color: player.isActive ? Colors.black87 : Colors.grey,
                   ),
                 ),
@@ -228,14 +301,15 @@ class PlayerListScreen extends StatelessWidget {
     final m = stats.typeCounts[MatchType.menDoubles] ?? 0;
     final w = stats.typeCounts[MatchType.womenDoubles] ?? 0;
     final x = stats.typeCounts[MatchType.mixedDoubles] ?? 0;
-    
+
     return '計${stats.totalMatches} (男$m 女$w 混$x)';
   }
 
   void _showAddEditDialog(BuildContext context, {Player? player}) {
     final isEdit = player != null;
     final nameController = TextEditingController(text: player?.name ?? '');
-    final yomiganaController = TextEditingController(text: player?.yomigana ?? '');
+    final yomiganaController =
+        TextEditingController(text: player?.yomigana ?? '');
     Gender selectedGender = player?.gender ?? Gender.male;
 
     showDialog(
@@ -271,7 +345,8 @@ class PlayerListScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                     const Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('性別', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text('性別',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                     Row(
                       children: [
@@ -280,7 +355,8 @@ class PlayerListScreen extends StatelessWidget {
                             title: const Text('男性'),
                             value: Gender.male,
                             groupValue: selectedGender,
-                            onChanged: (v) => setState(() => selectedGender = v!),
+                            onChanged: (v) =>
+                                setState(() => selectedGender = v!),
                           ),
                         ),
                         Expanded(
@@ -288,7 +364,8 @@ class PlayerListScreen extends StatelessWidget {
                             title: const Text('女性'),
                             value: Gender.female,
                             groupValue: selectedGender,
-                            onChanged: (v) => setState(() => selectedGender = v!),
+                            onChanged: (v) =>
+                                setState(() => selectedGender = v!),
                           ),
                         ),
                       ],
@@ -307,14 +384,15 @@ class PlayerListScreen extends StatelessWidget {
                       notifier.removePlayer(player.id);
                       Navigator.pop(context);
                     },
-                    child: const Text('削除', style: TextStyle(color: Colors.red)),
+                    child:
+                        const Text('削除', style: TextStyle(color: Colors.red)),
                   ),
                 ElevatedButton(
                   onPressed: () {
                     final name = nameController.text.trim();
                     final yomigana = yomiganaController.text.trim();
                     if (name.isEmpty || yomigana.isEmpty) return;
-                    
+
                     if (isEdit) {
                       notifier.updatePlayer(player.copyWith(
                         name: name,

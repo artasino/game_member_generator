@@ -10,7 +10,8 @@ class SqliteSessionHistoryRepository implements SessionHistoryRepository {
   @override
   Future<List<Session>> getAll() async {
     final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query('sessions', orderBy: 'id ASC');
+    final List<Map<String, dynamic>> maps =
+        await db.query('sessions', orderBy: 'id ASC');
     return maps.map((map) {
       return Session.fromJson(jsonDecode(map['content']));
     }).toList();

@@ -11,7 +11,8 @@ import '../notifiers/session_notifier.dart';
 class MatchHistoryScreen extends StatefulWidget {
   final SessionNotifier notifier;
 
-  const MatchHistoryScreen({Key? key, required this.notifier}) : super(key: key);
+  const MatchHistoryScreen({Key? key, required this.notifier})
+      : super(key: key);
 
   @override
   State<MatchHistoryScreen> createState() => _MatchHistoryScreenState();
@@ -81,7 +82,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                           : null,
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(20),
@@ -113,7 +115,10 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                   padding: const EdgeInsets.only(bottom: 4.0),
                   child: Text(
                     '${_selectedPlayer!.name} と入れ替えるメンバを選択',
-                    style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.orange,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               Expanded(
@@ -122,28 +127,39 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                   child: Card(
                     elevation: 1,
                     margin: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           ...session.games.asMap().entries.map((entry) {
                             final index = entry.key;
                             final game = entry.value;
-                            final pairCountA = widget.notifier.getPairCount(game.teamA, upToIndex: session.index);
-                            final pairCountB = widget.notifier.getPairCount(game.teamB, upToIndex: session.index);
+                            final pairCountA = widget.notifier.getPairCount(
+                                game.teamA,
+                                upToIndex: session.index);
+                            final pairCountB = widget.notifier.getPairCount(
+                                game.teamB,
+                                upToIndex: session.index);
 
                             return Column(
                               children: [
                                 if (index > 0) const Divider(height: 20),
                                 // コート番号（左）とペア情報（右詰め）
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       'コート ${index + 1} (${_matchTypeName(game.type)})',
-                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: theme.colorScheme.primary.withOpacity(0.7)),
+                                      style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: theme.colorScheme.primary
+                                              .withOpacity(0.7)),
                                     ),
                                     const SizedBox(width: 8),
                                     Flexible(
@@ -152,12 +168,20 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                                         reverse: true, // 右側に寄せるための設定
                                         child: Row(
                                           children: [
-                                            _PairInfoLabel(count: pairCountA, team: game.teamA),
+                                            _PairInfoLabel(
+                                                count: pairCountA,
+                                                team: game.teamA),
                                             const Padding(
-                                              padding: EdgeInsets.symmetric(horizontal: 4),
-                                              child: Text('|', style: TextStyle(fontSize: 8, color: Colors.grey)),
+                                              padding: EdgeInsets.symmetric(
+                                                  horizontal: 4),
+                                              child: Text('|',
+                                                  style: TextStyle(
+                                                      fontSize: 8,
+                                                      color: Colors.grey)),
                                             ),
-                                            _PairInfoLabel(count: pairCountB, team: game.teamB),
+                                            _PairInfoLabel(
+                                                count: pairCountB,
+                                                team: game.teamB),
                                           ],
                                         ),
                                       ),
@@ -172,39 +196,60 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                                         children: [
                                           _PlayerTag(
                                             player: game.teamA.player1,
-                                            isSelected: _selectedPlayer?.id == game.teamA.player1.id,
-                                            onTap: () => _handlePlayerTap(session, game.teamA.player1),
-                                            onLongPress: () => _handlePlayerLongPress(game.teamA.player1),
+                                            isSelected: _selectedPlayer?.id ==
+                                                game.teamA.player1.id,
+                                            onTap: () => _handlePlayerTap(
+                                                session, game.teamA.player1),
+                                            onLongPress: () =>
+                                                _handlePlayerLongPress(
+                                                    game.teamA.player1),
                                           ),
                                           const SizedBox(height: 4),
                                           _PlayerTag(
                                             player: game.teamA.player2,
-                                            isSelected: _selectedPlayer?.id == game.teamA.player2.id,
-                                            onTap: () => _handlePlayerTap(session, game.teamA.player2),
-                                            onLongPress: () => _handlePlayerLongPress(game.teamA.player2),
+                                            isSelected: _selectedPlayer?.id ==
+                                                game.teamA.player2.id,
+                                            onTap: () => _handlePlayerTap(
+                                                session, game.teamA.player2),
+                                            onLongPress: () =>
+                                                _handlePlayerLongPress(
+                                                    game.teamA.player2),
                                           ),
                                         ],
                                       ),
                                     ),
                                     const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                      child: Text('vs', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 8.0),
+                                      child: Text('vs',
+                                          style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey)),
                                     ),
                                     Expanded(
                                       child: Column(
                                         children: [
                                           _PlayerTag(
                                             player: game.teamB.player1,
-                                            isSelected: _selectedPlayer?.id == game.teamB.player1.id,
-                                            onTap: () => _handlePlayerTap(session, game.teamB.player1),
-                                            onLongPress: () => _handlePlayerLongPress(game.teamB.player1),
+                                            isSelected: _selectedPlayer?.id ==
+                                                game.teamB.player1.id,
+                                            onTap: () => _handlePlayerTap(
+                                                session, game.teamB.player1),
+                                            onLongPress: () =>
+                                                _handlePlayerLongPress(
+                                                    game.teamB.player1),
                                           ),
                                           const SizedBox(height: 4),
                                           _PlayerTag(
                                             player: game.teamB.player2,
-                                            isSelected: _selectedPlayer?.id == game.teamB.player2.id,
-                                            onTap: () => _handlePlayerTap(session, game.teamB.player2),
-                                            onLongPress: () => _handlePlayerLongPress(game.teamB.player2),
+                                            isSelected: _selectedPlayer?.id ==
+                                                game.teamB.player2.id,
+                                            onTap: () => _handlePlayerTap(
+                                                session, game.teamB.player2),
+                                            onLongPress: () =>
+                                                _handlePlayerLongPress(
+                                                    game.teamB.player2),
                                           ),
                                         ],
                                       ),
@@ -220,7 +265,10 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                               padding: EdgeInsets.only(bottom: 6.0),
                               child: Text(
                                 'お休み',
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey),
                               ),
                             ),
                             Wrap(
@@ -299,16 +347,18 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     Player newP1 = team.player1;
     Player newP2 = team.player2;
 
-    if (team.player1.id == p1.id) newP1 = p2;
+    if (team.player1.id == p1.id)
+      newP1 = p2;
     else if (team.player1.id == p2.id) newP1 = p1;
 
-    if (team.player2.id == p1.id) newP2 = p2;
+    if (team.player2.id == p1.id)
+      newP2 = p2;
     else if (team.player2.id == p2.id) newP2 = p1;
 
     return team.copyWith(player1: newP1, player2: newP2);
   }
 
-  void _showSettingsAndGenerate(BuildContext context) async{
+  void _showSettingsAndGenerate(BuildContext context) async {
     final currentSettings = await widget.notifier.getCurrentSettings();
     List<MatchType> selectedTypes = List.from(currentSettings.matchTypes);
 
@@ -323,7 +373,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('マッチタイプを追加:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  const Text('マッチタイプを追加:',
+                      style: TextStyle(fontSize: 12, color: Colors.grey)),
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -331,27 +382,32 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                       _TypeButton(
                         label: '男子W',
                         color: Colors.blue,
-                        onPressed: () => setState(() => selectedTypes.add(MatchType.menDoubles)),
+                        onPressed: () => setState(
+                            () => selectedTypes.add(MatchType.menDoubles)),
                       ),
                       _TypeButton(
                         label: '女子W',
                         color: Colors.pink,
-                        onPressed: () => setState(() => selectedTypes.add(MatchType.womenDoubles)),
+                        onPressed: () => setState(
+                            () => selectedTypes.add(MatchType.womenDoubles)),
                       ),
                       _TypeButton(
                         label: '混合W',
                         color: Colors.purple,
-                        onPressed: () => setState(() => selectedTypes.add(MatchType.mixedDoubles)),
+                        onPressed: () => setState(
+                            () => selectedTypes.add(MatchType.mixedDoubles)),
                       ),
                     ],
                   ),
                   const Divider(height: 32),
-                  const Text('生成する試合:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  const Text('生成する試合:',
+                      style: TextStyle(fontSize: 12, color: Colors.grey)),
                   const SizedBox(height: 8),
                   if (selectedTypes.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8.0),
-                      child: Text('試合が選択されていません', style: TextStyle(fontSize: 14)),
+                      child:
+                          Text('試合が選択されていません', style: TextStyle(fontSize: 14)),
                     ),
                   Wrap(
                     spacing: 8,
@@ -359,8 +415,10 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                       final index = entry.key;
                       final type = entry.value;
                       return Chip(
-                        label: Text(_matchTypeName(type), style: const TextStyle(fontSize: 12)),
-                        onDeleted: () => setState(() => selectedTypes.removeAt(index)),
+                        label: Text(_matchTypeName(type),
+                            style: const TextStyle(fontSize: 12)),
+                        onDeleted: () =>
+                            setState(() => selectedTypes.removeAt(index)),
                         deleteIconColor: Colors.red,
                       );
                     }).toList(),
@@ -377,7 +435,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                       ? null
                       : () async {
                           Navigator.pop(context);
-                          _generateWithSettings(context, CourtSettings(selectedTypes));
+                          _generateWithSettings(
+                              context, CourtSettings(selectedTypes));
                         },
                   child: const Text('生成'),
                 ),
@@ -391,13 +450,17 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
 
   String _matchTypeName(MatchType type) {
     switch (type) {
-      case MatchType.menDoubles: return '男子W';
-      case MatchType.womenDoubles: return '女子W';
-      case MatchType.mixedDoubles: return '混合W';
+      case MatchType.menDoubles:
+        return '男子W';
+      case MatchType.womenDoubles:
+        return '女子W';
+      case MatchType.mixedDoubles:
+        return '混合W';
     }
   }
 
-  Future<void> _generateWithSettings(BuildContext context, CourtSettings settings) async {
+  Future<void> _generateWithSettings(
+      BuildContext context, CourtSettings settings) async {
     try {
       await widget.notifier.generateSessionWithSettings(settings);
       setState(() {
@@ -411,7 +474,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           title: const Text('生成エラー'),
           content: Text(e.toString()),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
           ],
         ),
       );
@@ -425,7 +489,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         title: const Text('履歴のクリア'),
         content: const Text('全ての試合履歴を削除しますか？'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル')),
           TextButton(
             onPressed: () {
               widget.notifier.clearHistory();
@@ -484,7 +549,9 @@ class _RestingChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.orange.withOpacity(0.2) : color.withOpacity(0.08),
+          color: isSelected
+              ? Colors.orange.withOpacity(0.2)
+              : color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected ? Colors.orange : color.withOpacity(0.3),
@@ -494,7 +561,8 @@ class _RestingChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(player.gender == Gender.male ? Icons.male : Icons.female, size: 12, color: isSelected ? Colors.orange : color),
+            Icon(player.gender == Gender.male ? Icons.male : Icons.female,
+                size: 12, color: isSelected ? Colors.orange : color),
             const SizedBox(width: 4),
             Text(
               player.name,
@@ -516,7 +584,8 @@ class _TypeButton extends StatelessWidget {
   final Color color;
   final VoidCallback onPressed;
 
-  const _TypeButton({required this.label, required this.color, required this.onPressed});
+  const _TypeButton(
+      {required this.label, required this.color, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -557,7 +626,9 @@ class _PlayerTag extends StatelessWidget {
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.orange.withOpacity(0.2) : color.withOpacity(0.1),
+          color: isSelected
+              ? Colors.orange.withOpacity(0.2)
+              : color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected ? Colors.orange : color.withOpacity(0.4),

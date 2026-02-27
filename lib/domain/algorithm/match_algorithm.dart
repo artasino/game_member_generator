@@ -6,5 +6,5 @@ abstract class MatchAlgorithm {
   List<Game> generateMatches({
     required List<Player> players,
     required List<MatchType> matchTypes,
-});
+  });
 }
