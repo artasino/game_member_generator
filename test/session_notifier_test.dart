@@ -13,7 +13,7 @@ import 'package:game_member_generator/presentation/notifiers/session_notifier.da
 import 'package:game_member_generator/domain/algorithm/match_algorithm.dart';
 import 'package:game_member_generator/domain/repository/player_repository/player_repository.dart';
 
-// モッククラスの定義
+// モッククラスの定義（非同期対応）
 class MockSessionHistoryRepository implements SessionHistoryRepository {
   List<Session> sessions = [];
   @override
@@ -21,29 +21,34 @@ class MockSessionHistoryRepository implements SessionHistoryRepository {
   @override
   Future<void> add(Session session) async => sessions.add(session);
   @override
+  Future<void> update(Session session) async {
+    final index = sessions.indexWhere((s) => s.index == session.index);
+    if (index != -1) sessions[index] = session;
+  }
+  @override
   Future<void> clear() async => sessions.clear();
 }
 
 class MockCourtSettingsRepository implements CourtSettingsRepository {
   CourtSettings settings = CourtSettings([MatchType.menDoubles]);
   @override
-  CourtSettings get() => settings;
+  Future<CourtSettings> get() async => settings;
   @override
-  void update(CourtSettings settings) => this.settings = settings;
+  Future<void> update(CourtSettings settings) async => this.settings = settings;
 }
 
 class MockPlayerRepository implements PlayerRepository {
   List<Player> players = [];
   @override
-  List<Player> getActive() => players.where((p) => p.isActive).toList();
+  Future<List<Player>> getActive() async => players.where((p) => p.isActive).toList();
   @override
-  List<Player> getAll() => players;
+  Future<List<Player>> getAll() async => players;
   @override
-  void add(Player player) => players.add(player);
+  Future<void> add(Player player) async => players.add(player);
   @override
-  void remove(String id) => players.removeWhere((p) => p.id == id);
+  Future<void> remove(String id) async => players.removeWhere((p) => p.id == id);
   @override
-  void update(Player player) {
+  Future<void> update(Player player) async {
     final index = players.indexWhere((p) => p.id == player.id);
     if (index != -1) players[index] = player;
   }
@@ -52,7 +57,6 @@ class MockPlayerRepository implements PlayerRepository {
 class FixedMatchAlgorithm implements MatchAlgorithm {
   @override
   List<Game> generateMatches({required List<Player> players, required List<MatchType> matchTypes}) {
-    // テスト用に固定の試合を返す
     return [
       Game(
         MatchType.menDoubles,
@@ -84,28 +88,28 @@ void main() {
 
   group('SessionNotifier - 統計計算 (playerStats)', () {
     test('試合履歴に基づいて正しく出場回数が計算されること', () async {
-      // 準備: 4人のプレイヤー
       final p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
       final p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
       final p3 = Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
       final p4 = Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
       playerRepo.players = [p1, p2, p3, p4];
 
-      // 1試合目を追加
       await notifier.generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
 
+      // 内部で非同期更新が行われるため、少し待機が必要な場合がある（またはnotifyListenersを待つ）
       expect(notifier.playerStats['1']?.totalMatches, 1);
       expect(notifier.playerStats['1']?.typeCounts[MatchType.menDoubles], 1);
 
-      // 2試合目を追加
       await notifier.generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
-
       expect(notifier.playerStats['1']?.totalMatches, 2);
     });
 
     test('一度も試合に出ていないプレイヤーは0回として計算されること', () async {
       final p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
       playerRepo.players = [p1];
+      
+      // getAll() を介して統計が初期化されるようにリフレッシュを呼ぶ
+      await notifier.clearHistory(); // これにより再計算が走る
 
       expect(notifier.playerStats['1']?.totalMatches, 0);
     });
@@ -123,8 +127,7 @@ void main() {
 
       final team = Team(p1, p2);
       expect(notifier.getPairCount(team), 1);
-
-      // 順序が逆でもカウントされること
+      
       final reversedTeam = Team(p2, p1);
       expect(notifier.getPairCount(reversedTeam), 1);
     });
@@ -136,12 +139,11 @@ void main() {
       final p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
       final p3 = Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
       final p4 = Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
-      final p5 = Player(id: '5', name: 'P5', yomigana: 'p5', gender: Gender.male); // お休み
+      final p5 = Player(id: '5', name: 'P5', yomigana: 'p5', gender: Gender.male);
       playerRepo.players = [p1, p2, p3, p4, p5];
 
       await notifier.generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
       
-      // P1(1回) と P5(0回) を入れ替える
       final session = notifier.sessions.first;
       final newGames = [
         Game(MatchType.menDoubles, Team(p5, p2), Team(p3, p4))

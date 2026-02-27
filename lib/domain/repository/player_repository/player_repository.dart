@@ -1,9 +1,9 @@
 import '../../entities/player.dart';
 
 abstract class PlayerRepository {
-  List<Player> getAll();
-  List<Player> getActive();
-  void add(Player player);
-  void update(Player player);
-  void remove(String id);
+  Future<List<Player>> getAll();
+  Future<List<Player>> getActive();
+  Future<void> add(Player player);
+  Future<void> update(Player player);
+  Future<void> remove(String id);
 }

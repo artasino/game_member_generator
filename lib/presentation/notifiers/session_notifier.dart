@@ -24,6 +24,10 @@ class SessionNotifier extends ChangeNotifier {
   List<Session> _sessions = [];
   List<Session> get sessions => _sessions;
 
+  // キャッシュされた統計データ
+  Map<String, PlayerStats> _cachedStats = {};
+  Map<String, PlayerStats> get playerStats => _cachedStats;
+
   SessionNotifier({
     required this.sessionRepository,
     required this.courtSettingsRepository,
@@ -32,12 +36,12 @@ class SessionNotifier extends ChangeNotifier {
     _refresh();
   }
 
-  /// 全プレイヤーの出場統計を計算する
-  Map<String, PlayerStats> get playerStats {
+  /// 統計を計算し、キャッシュを更新する
+  Future<void> _updateStats() async {
     final Map<String, int> totals = {};
     final Map<String, Map<MatchType, int>> breakdown = {};
 
-    final allPlayers = matchMakingService.playerRepository.getAll();
+    final allPlayers = await matchMakingService.playerRepository.getAll();
     for (final player in allPlayers) {
       totals[player.id] = 0;
       breakdown[player.id] = {};
@@ -60,7 +64,7 @@ class SessionNotifier extends ChangeNotifier {
       }
     }
 
-    return totals.map((playerId, total) => MapEntry(
+    _cachedStats = totals.map((playerId, total) => MapEntry(
       playerId,
       PlayerStats(
         totalMatches: total,
@@ -69,8 +73,7 @@ class SessionNotifier extends ChangeNotifier {
     ));
   }
 
-  /// 指定されたペア（Team）がこれまでに組んだ回数を計算する
-  /// そのセッションまでの回数を返すために、オプションで截止セッションインデックスを受け取る
+  /// ペアの回数
   int getPairCount(Team team, {int? upToIndex}) {
     int count = 0;
     final id1 = team.player1.id;
@@ -78,7 +81,6 @@ class SessionNotifier extends ChangeNotifier {
 
     for (final session in _sessions) {
       if (upToIndex != null && session.index > upToIndex) break;
-
       for (final game in session.games) {
         if (_isMatch(game.teamA, id1, id2) || _isMatch(game.teamB, id1, id2)) {
           count++;
@@ -97,6 +99,7 @@ class SessionNotifier extends ChangeNotifier {
   Future<void> _refresh() async {
     final fetchedSessions = await sessionRepository.getAll();
     _sessions = List.from(fetchedSessions);
+    await _updateStats(); // 統計も更新
     notifyListeners();
   }
 
@@ -104,14 +107,18 @@ class SessionNotifier extends ChangeNotifier {
     final index = _sessions.indexWhere((s) => s.index == session.index);
     if (index != -1) {
       _sessions[index] = session;
+      await sessionRepository.update(session);
+      await _updateStats(); // 統計を再計算
       notifyListeners();
     }
   }
 
   Future<void> generateSessionWithSettings(CourtSettings settings) async {
-    courtSettingsRepository.update(settings);
-    final allActivePlayers = matchMakingService.playerRepository.getActive();
-    final games = matchMakingService.generateMatches(
+    await courtSettingsRepository.update(settings);
+    final allActivePlayers = await matchMakingService.playerRepository.getActive();
+    
+    final games = matchMakingService.algorithm.generateMatches(
+      players: allActivePlayers,
       matchTypes: settings.matchTypes,
     );
 
@@ -139,7 +146,7 @@ class SessionNotifier extends ChangeNotifier {
     await _refresh();
   }
 
-  CourtSettings getCurrentSettings() {
-    return courtSettingsRepository.get();
+  Future<CourtSettings> getCurrentSettings() async {
+    return await courtSettingsRepository.get();
   }
 }

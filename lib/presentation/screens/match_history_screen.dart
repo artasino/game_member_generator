@@ -308,8 +308,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     return team.copyWith(player1: newP1, player2: newP2);
   }
 
-  void _showSettingsAndGenerate(BuildContext context) {
-    final currentSettings = widget.notifier.getCurrentSettings();
+  void _showSettingsAndGenerate(BuildContext context) async{
+    final currentSettings = await widget.notifier.getCurrentSettings();
     List<MatchType> selectedTypes = List.from(currentSettings.matchTypes);
 
     showDialog(

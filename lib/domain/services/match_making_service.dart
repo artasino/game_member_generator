@@ -9,11 +9,11 @@ class MatchMakingService {
 
   MatchMakingService(this.algorithm, this.playerRepository);
 
-  List<Game> generateMatches({
+  Future<List<Game>> generateMatches({
     required List<MatchType> matchTypes,
-  }) {
+  }) async {
     // 保存されている「アクティブな」プレイヤーを取得してマッチングに利用する
     final players = playerRepository.getActive();
-    return algorithm.generateMatches(players: players, matchTypes: matchTypes);
+    return algorithm.generateMatches(players: await players, matchTypes: matchTypes);
   }
 }

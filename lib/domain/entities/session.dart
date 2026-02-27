@@ -15,4 +15,24 @@ class Session {
       restingPlayers: restingPlayers ?? this.restingPlayers,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'index': index,
+      'games': games.map((g) => g.toJson()).toList(),
+      'restingPlayers': restingPlayers.map((p) => p.toJson()).toList(),
+    };
+  }
+
+  factory Session.fromJson(Map<String, dynamic> json) {
+    return Session(
+      json['index'] as int,
+      (json['games'] as List)
+          .map((g) => Game.fromJson(g as Map<String, dynamic>))
+          .toList(),
+      restingPlayers: (json['restingPlayers'] as List)
+          .map((p) => Player.fromJson(p as Map<String, dynamic>))
+          .toList(),
+    );
+  }
 }

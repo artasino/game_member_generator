@@ -6,28 +6,27 @@ class InMemoryPlayerRepository implements PlayerRepository {
   final List<Player> _players = [];
 
   @override
-  List<Player> getAll() => List.unmodifiable(_players);
+  Future<List<Player>> getAll() async => List.unmodifiable(_players);
 
   @override
-  List<Player> getActive() =>
+  Future<List<Player>> getActive() async =>
       _players.where((p) => p.isActive).toList();
 
   @override
-  void add(Player player) {
+  Future<void> add(Player player) async {
     _players.add(player);
   }
 
   @override
-  void update(Player player) {
-    final index =
-    _players.indexWhere((p) => p.id == player.id);
+  Future<void> update(Player player) async {
+    final index = _players.indexWhere((p) => p.id == player.id);
     if (index != -1) {
       _players[index] = player;
     }
   }
 
   @override
-  void remove(String id) {
+  Future<void> remove(String id) async {
     _players.removeWhere((p) => p.id == id);
   }
 }

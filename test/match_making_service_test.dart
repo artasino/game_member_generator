@@ -6,24 +6,24 @@ import 'package:game_member_generator/domain/entities/player.dart';
 import 'package:game_member_generator/domain/repository/player_repository/player_repository.dart';
 import 'package:game_member_generator/domain/services/match_making_service.dart';
 
-// テスト用のモックリポジトリ
+// テスト用のモックリポジトリ（非同期対応）
 class MockPlayerRepository implements PlayerRepository {
   List<Player> players = [];
 
   @override
-  List<Player> getActive() => players;
+  Future<List<Player>> getActive() async => players;
 
   @override
-  List<Player> getAll() => players;
+  Future<List<Player>> getAll() async => players;
 
   @override
-  void add(Player player) => players.add(player);
+  Future<void> add(Player player) async => players.add(player);
 
   @override
-  void remove(String id) => players.removeWhere((p) => p.id == id);
+  Future<void> remove(String id) async => players.removeWhere((p) => p.id == id);
 
   @override
-  void update(Player player) {
+  Future<void> update(Player player) async {
     final index = players.indexWhere((p) => p.id == player.id);
     if (index != -1) players[index] = player;
   }
@@ -40,21 +40,21 @@ void main() {
   });
 
   group('MatchMakingService - 正常系', () {
-    test('保存されているプレイヤーから男子ダブルスと女子ダブルスが生成されること', () {
+    test('保存されているプレイヤーから男子ダブルスと女子ダブルスが生成されること', () async {
       // Given: リポジトリにプレイヤーが保存されている
       mockRepository.players = [
-        const Player(id: '1', name: 'M1', gender: Gender.male),
-        const Player(id: '2', name: 'M2', gender: Gender.male),
-        const Player(id: '3', name: 'M3', gender: Gender.male),
-        const Player(id: '4', name: 'M4', gender: Gender.male),
-        const Player(id: '5', name: 'F1', gender: Gender.female),
-        const Player(id: '6', name: 'F2', gender: Gender.female),
-        const Player(id: '7', name: 'F3', gender: Gender.female),
-        const Player(id: '8', name: 'F4', gender: Gender.female),
+        const Player(id: '1', name: 'M1', yomigana: 'm1', gender: Gender.male),
+        const Player(id: '2', name: 'M2', yomigana: 'm2', gender: Gender.male),
+        const Player(id: '3', name: 'M3', yomigana: 'm3', gender: Gender.male),
+        const Player(id: '4', name: 'M4', yomigana: 'm4', gender: Gender.male),
+        const Player(id: '5', name: 'F1', yomigana: 'f1', gender: Gender.female),
+        const Player(id: '6', name: 'F2', yomigana: 'f2', gender: Gender.female),
+        const Player(id: '7', name: 'F3', yomigana: 'f3', gender: Gender.female),
+        const Player(id: '8', name: 'F4', yomigana: 'f4', gender: Gender.female),
       ];
 
       // When: matchTypesのみを指定して実行
-      final result = service.generateMatches(
+      final result = await service.generateMatches(
         matchTypes: [MatchType.menDoubles, MatchType.womenDoubles],
       );
 
@@ -64,15 +64,15 @@ void main() {
       expect(result.any((g) => g.type == MatchType.womenDoubles), isTrue);
     });
 
-    test('保存されているプレイヤーから混合ダブルスが生成されること', () {
+    test('保存されているプレイヤーから混合ダブルスが生成されること', () async {
       mockRepository.players = [
-        const Player(id: '1', name: 'M1', gender: Gender.male),
-        const Player(id: '2', name: 'M2', gender: Gender.male),
-        const Player(id: '3', name: 'F1', gender: Gender.female),
-        const Player(id: '4', name: 'F2', gender: Gender.female),
+        const Player(id: '1', name: 'M1', yomigana: 'm1', gender: Gender.male),
+        const Player(id: '2', name: 'M2', yomigana: 'm2', gender: Gender.male),
+        const Player(id: '3', name: 'F1', yomigana: 'f1', gender: Gender.female),
+        const Player(id: '4', name: 'F2', yomigana: 'f2', gender: Gender.female),
       ];
 
-      final result = service.generateMatches(
+      final result = await service.generateMatches(
         matchTypes: [MatchType.mixedDoubles],
       );
 
@@ -82,25 +82,25 @@ void main() {
   });
 
   group('MatchMakingService - 異常系', () {
-    test('リポジトリの男性プレイヤーが不足している場合、例外を投げること', () {
+    test('リポジトリの男性プレイヤーが不足している場合、例外を投げること', () async {
       mockRepository.players = [
-        const Player(id: '1', name: 'M1', gender: Gender.male),
-        const Player(id: '2', name: 'M2', gender: Gender.male),
-        const Player(id: '3', name: 'M3', gender: Gender.male),
-        const Player(id: '4', name: 'F1', gender: Gender.female),
+        const Player(id: '1', name: 'M1', yomigana: 'm1', gender: Gender.male),
+        const Player(id: '2', name: 'M2', yomigana: 'm2', gender: Gender.male),
+        const Player(id: '3', name: 'M3', yomigana: 'm3', gender: Gender.male),
+        const Player(id: '4', name: 'F1', yomigana: 'f1', gender: Gender.female),
       ];
 
       expect(
-        () => service.generateMatches(matchTypes: [MatchType.menDoubles]),
+        () async => await service.generateMatches(matchTypes: [MatchType.menDoubles]),
         throwsA(isA<Exception>().having((e) => e.toString(), 'message', contains('Not enough male players'))),
       );
     });
 
-    test('リポジトリが空の場合、例外を投げること', () {
+    test('リポジトリが空の場合、例外を投げること', () async {
       mockRepository.players = [];
 
       expect(
-        () => service.generateMatches(matchTypes: [MatchType.menDoubles]),
+        () async => await service.generateMatches(matchTypes: [MatchType.menDoubles]),
         throwsA(isA<Exception>()),
       );
     });

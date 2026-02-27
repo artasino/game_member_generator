@@ -12,29 +12,29 @@ class PlayerNotifier extends ChangeNotifier {
 
   List<Player> get players => _players;
 
-  void _refresh() {
-    _players = repository.getAll();
+  Future<void> _refresh() async {
+    _players = await repository.getAll();
     notifyListeners();
   }
 
-  void addPlayer(Player player) {
-    repository.add(player);
-    _refresh();
+  Future<void> addPlayer(Player player) async {
+    await repository.add(player);
+    await _refresh();
   }
 
-  void updatePlayer(Player player) {
-    repository.update(player);
-    _refresh();
+  Future<void> updatePlayer(Player player) async {
+    await repository.update(player);
+    await _refresh();
   }
 
-  void toggleActive(Player player) {
+  Future<void> toggleActive(Player player) async {
     final updated = player.copyWith(isActive: !player.isActive);
-    repository.update(updated);
-    _refresh();
+    await repository.update(updated);
+    await _refresh();
   }
 
-  void removePlayer(String id) {
-    repository.remove(id);
-    _refresh();
+  Future<void> removePlayer(String id) async {
+    await repository.remove(id);
+    await _refresh();
   }
 }

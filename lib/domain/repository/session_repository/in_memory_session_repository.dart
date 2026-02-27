@@ -18,4 +18,10 @@ class InMemorySessionRepository implements SessionHistoryRepository{
   Future<List<Session>> getAll() async{
     return List.unmodifiable(_sessions);
   }
+
+  @override
+  Future<void> update(Session session) {
+    // TODO: implement update
+    throw UnimplementedError();
+  }
 }
