@@ -1,16 +1,49 @@
-# game_member_generator
+# Game Member Generator
 
-A new Flutter project.
+スポーツ（テニスやバドミントンなど）の練習会で、参加メンバを元に自動で試合の組み合わせ（マッチメイキング）を行う Flutter アプリケーションです。
 
-## Getting Started
+## 主な機能
 
-This project is a starting point for a Flutter application.
+- **メンバ管理**: メンバの登録、編集、削除。漢字の名前でも正しくソートできる「よみがな」対応。
+- **参加状況の切り替え**: その日の練習に参加しているメンバをワンタップで Active/Inactive 切り替え。
+- **自動マッチメイキング**:
+  - 男子ダブルス、女子ダブルス、混合ダブルスの生成に対応。
+  - 複数コート（複数試合）の一括生成。
+- **試合履歴の管理**:
+  - 生成された組み合わせをセッションごとに保存。
+  - セッション間を左右矢印で移動して確認可能。
+  - 過去の対戦結果に基づいた統計（出場回数、種目別回数、ペア結成回数）の表示。
+- **柔軟な調整**: 生成された組み合わせを、長押し＆タップで手動で入れ替えることが可能。
+- **SQLite 永続化**: 登録したメンバや設定、試合履歴は端末内に安全に保存されます。
 
-A few resources to get you started if this is your first Flutter project:
+## 技術スタック
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+- **Flutter / Dart**: クロスプラットフォーム UI フレームワーク。
+- **sqflite (FFI)**: ローカルデータベースによる永続化。Linux デスクトップ環境にも対応。
+- **ChangeNotifier & AnimatedBuilder**: シンプルで一貫性のある状態管理。
+- **Clean Architecture 的な設計**:
+  - `Domain`: エンティティ、リポジトリインターフェース、ビジネスロジック（サービス、アルゴリズム）。
+  - `Infrastructure`: SQLite によるリポジトリの具象実装。
+  - `Presentation`: 状態管理（Notifiers）と画面 UI。
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## テスト
+
+以下のテストが実装されており、ロジックの正確性を担保しています。
+- **ユニットテスト**: マッチメイキングアルゴリズムの検証。
+- **統計テスト**: 出場回数やペア回数の計算ロジックの検証。
+- **シリアライズテスト**: JSON 変換（保存・復元）の型安全性の検証。
+
+```bash
+flutter test
+```
+
+## 開発環境のセットアップ (Linux)
+
+Linux 環境で実行する場合、SQLite (FFI) を動作させるために以下のパッケージが必要になる場合があります。
+
+```bash
+sudo apt-get update
+sudo apt-get install libsqlite3-dev
+```
+
+FFI の初期化は `lib/main.dart` で自動的に行われます。
