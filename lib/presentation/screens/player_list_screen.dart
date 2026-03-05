@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
+import '../../domain/entities/player_stats.dart';
 import '../notifiers/player_notifier.dart';
 import '../notifiers/session_notifier.dart';
 

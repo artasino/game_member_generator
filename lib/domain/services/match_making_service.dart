@@ -3,6 +3,7 @@ import 'package:game_member_generator/presentation/notifiers/session_notifier.da
 import '../algorithm/match_algorithm.dart';
 import '../entities/game.dart';
 import '../entities/match_type.dart';
+import '../entities/player_stats.dart';
 import '../repository/player_repository/player_repository.dart';
 
 /// 試合の組み合わせ（マッチメイキング）を担当するドメインサービス

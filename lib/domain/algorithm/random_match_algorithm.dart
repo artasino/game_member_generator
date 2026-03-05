@@ -6,6 +6,7 @@ import '../entities/game.dart';
 import '../entities/gender.dart';
 import '../entities/match_type.dart';
 import '../entities/player.dart';
+import '../entities/player_stats.dart';
 import '../entities/team.dart';
 import 'match_algorithm.dart';
 

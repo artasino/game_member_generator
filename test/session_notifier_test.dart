@@ -4,6 +4,7 @@ import 'package:game_member_generator/domain/entities/game.dart';
 import 'package:game_member_generator/domain/entities/gender.dart';
 import 'package:game_member_generator/domain/entities/match_type.dart';
 import 'package:game_member_generator/domain/entities/player.dart';
+import 'package:game_member_generator/domain/entities/player_stats.dart';
 import 'package:game_member_generator/domain/entities/session.dart';
 import 'package:game_member_generator/domain/entities/team.dart';
 import 'package:game_member_generator/domain/repository/court_settings_repository.dart';
