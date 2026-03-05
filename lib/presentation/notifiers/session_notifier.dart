@@ -2,46 +2,26 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
+import '../../domain/entities/player_stats.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/entities/team.dart';
 import '../../domain/repository/court_settings_repository.dart';
 import '../../domain/repository/session_repository/session_history_repository.dart';
 import '../../domain/services/match_making_service.dart';
 
-/// プレイヤーの出場統計を保持するクラス
-/// BalancedMatchingの計算に利用できる詳細な履歴を含む
-class PlayerStats {
-  /// 合計出場回数
-  final int totalMatches;
-  /// 種目別の出場回数
-  final Map<MatchType, int> typeCounts;
-  /// このプレイヤーが誰と何回ペア（味方）を組んだか (key: Player.id, value: 回数)
-  final Map<String, int> partnerCounts;
-  /// このプレイヤーが誰と何回対戦（敵）したか (key: Player.id, value: 回数)
-  final Map<String, int> opponentCounts;
-
-  PlayerStats({
-    required this.totalMatches,
-    required this.typeCounts,
-    required this.partnerCounts,
-    required this.opponentCounts,
-  });
-
-  /// 指定した相手と同じコートにいた（味方または敵）合計回数を返す
-  int getInteractionCount(String otherId) =>
-      (partnerCounts[otherId] ?? 0) + (opponentCounts[otherId] ?? 0);
-}
-
+/// 試合履歴（セッション）の状態管理と統計計算を行うNotifier
 class SessionNotifier extends ChangeNotifier {
   final SessionHistoryRepository sessionRepository;
   final CourtSettingsRepository courtSettingsRepository;
   final MatchMakingService matchMakingService;
 
   List<Session> _sessions = [];
+  /// 保存されている全セッション（試合履歴）のリスト
   List<Session> get sessions => _sessions;
 
   // キャッシュされた詳細統計データ
   Map<String, PlayerStats> _cachedStats = {};
+  /// 全プレイヤーの出場統計を計算する（キャッシュされた値を返す）
   Map<String, PlayerStats> get playerStats => _cachedStats;
 
   SessionNotifier({
@@ -73,16 +53,11 @@ class SessionNotifier extends ChangeNotifier {
         final teamA = [game.teamA.player1, game.teamA.player2];
         final teamB = [game.teamB.player1, game.teamB.player2];
 
-        // 各プレイヤーごとに味方と敵を記録する
         void record(Player p, Player partner, List<Player> opponents) {
           final id = p.id;
           totals[id] = (totals[id] ?? 0) + 1;
           typeBreakdowns[id]![game.type] = (typeBreakdowns[id]![game.type] ?? 0) + 1;
-          
-          // 味方のカウント
           partnerBreakdowns[id]![partner.id] = (partnerBreakdowns[id]![partner.id] ?? 0) + 1;
-          
-          // 敵のカウント
           for (final opp in opponents) {
             opponentBreakdowns[id]![opp.id] = (opponentBreakdowns[id]![opp.id] ?? 0) + 1;
           }
@@ -136,6 +111,7 @@ class SessionNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// セッション情報を更新し、永続化層へ保存する
   Future<void> updateSession(Session session) async {
     final index = _sessions.indexWhere((s) => s.index == session.index);
     if (index != -1) {
@@ -146,10 +122,10 @@ class SessionNotifier extends ChangeNotifier {
     }
   }
 
+  /// 設定に基づいて新しい試合を生成し、履歴に追加する
   Future<void> generateSessionWithSettings(CourtSettings settings) async {
     await courtSettingsRepository.update(settings);
     
-    // キャッシュされた最新の統計データを渡す
     final games = await matchMakingService.generateMatches(
       matchTypes: settings.matchTypes,
       playerStats: _cachedStats,
@@ -163,7 +139,6 @@ class SessionNotifier extends ChangeNotifier {
       playingPlayerIds.add(game.teamB.player2.id);
     }
 
-    // お休みメンバの特定のために全アクティブプレイヤーを取得
     final allActivePlayers = await matchMakingService.playerRepository.getActive();
     final restingPlayers = allActivePlayers
         .where((p) => !playingPlayerIds.contains(p.id))
@@ -176,11 +151,13 @@ class SessionNotifier extends ChangeNotifier {
     await _refresh();
   }
 
+  /// 全ての試合履歴を削除する
   Future<void> clearHistory() async {
     await sessionRepository.clear();
     await _refresh();
   }
 
+  /// 現在保存されているコート設定を取得する
   Future<CourtSettings> getCurrentSettings() async {
     return await courtSettingsRepository.get();
   }
