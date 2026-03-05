@@ -106,7 +106,7 @@ class SessionNotifier extends ChangeNotifier {
     ));
   }
 
-  /// 指定されたペアがそのセッションまでに組んだ回数を計算する（後方互換用）
+  /// 指定されたペアがそのセッションまでに組んだ回数を計算する
   int getPairCount(Team team, {int? upToIndex}) {
     int count = 0;
     final id1 = team.player1.id;
@@ -148,10 +148,11 @@ class SessionNotifier extends ChangeNotifier {
 
   Future<void> generateSessionWithSettings(CourtSettings settings) async {
     await courtSettingsRepository.update(settings);
-    final allActivePlayers = await matchMakingService.playerRepository.getActive();
     
+    // キャッシュされた最新の統計データを渡す
     final games = await matchMakingService.generateMatches(
       matchTypes: settings.matchTypes,
+      playerStats: _cachedStats,
     );
 
     final playingPlayerIds = <String>{};
@@ -162,6 +163,8 @@ class SessionNotifier extends ChangeNotifier {
       playingPlayerIds.add(game.teamB.player2.id);
     }
 
+    // お休みメンバの特定のために全アクティブプレイヤーを取得
+    final allActivePlayers = await matchMakingService.playerRepository.getActive();
     final restingPlayers = allActivePlayers
         .where((p) => !playingPlayerIds.contains(p.id))
         .toList();

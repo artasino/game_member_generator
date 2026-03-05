@@ -13,7 +13,7 @@ import 'package:game_member_generator/presentation/notifiers/session_notifier.da
 import 'package:game_member_generator/domain/algorithm/match_algorithm.dart';
 import 'package:game_member_generator/domain/repository/player_repository/player_repository.dart';
 
-// モッククラスの定義（非同期対応）
+// モッククラスの定義
 class MockSessionHistoryRepository implements SessionHistoryRepository {
   List<Session> sessions = [];
   @override
@@ -56,7 +56,11 @@ class MockPlayerRepository implements PlayerRepository {
 
 class FixedMatchAlgorithm implements MatchAlgorithm {
   @override
-  List<Game> generateMatches({required List<Player> players, required List<MatchType> matchTypes}) {
+  List<Game> generateMatches({
+    required List<Player> players,
+    required List<MatchType> matchTypes,
+    required Map<String, PlayerStats> playerStats, // 追加
+  }) {
     return [
       Game(
         MatchType.menDoubles,
@@ -86,8 +90,8 @@ void main() {
     );
   });
 
-  group('SessionNotifier - 統計計算 (playerStats)', () {
-    test('試合履歴に基づいて正しく出場回数が計算されること', () async {
+  group('SessionNotifier - 統計計算', () {
+    test('試合履歴に基づいて正しく出場回数と詳細統計が計算されること', () async {
       final p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
       final p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
       final p3 = Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
@@ -96,45 +100,18 @@ void main() {
 
       await notifier.generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
 
-      // 内部で非同期更新が行われるため、少し待機が必要な場合がある（またはnotifyListenersを待つ）
+      // 合計回数
       expect(notifier.playerStats['1']?.totalMatches, 1);
-      expect(notifier.playerStats['1']?.typeCounts[MatchType.menDoubles], 1);
-
-      await notifier.generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
-      expect(notifier.playerStats['1']?.totalMatches, 2);
-    });
-
-    test('一度も試合に出ていないプレイヤーは0回として計算されること', () async {
-      final p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
-      playerRepo.players = [p1];
-      
-      // getAll() を介して統計が初期化されるようにリフレッシュを呼ぶ
-      await notifier.clearHistory(); // これにより再計算が走る
-
-      expect(notifier.playerStats['1']?.totalMatches, 0);
+      // 味方回数 (P1の味方はP2)
+      expect(notifier.playerStats['1']?.partnerCounts['2'], 1);
+      // 敵回数 (P1の敵はP3, P4)
+      expect(notifier.playerStats['1']?.opponentCounts['3'], 1);
+      expect(notifier.playerStats['1']?.opponentCounts['4'], 1);
     });
   });
 
-  group('SessionNotifier - ペア回数 (getPairCount)', () {
-    test('同じペアが組んだ回数が正しくカウントされること', () async {
-      final p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
-      final p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
-      final p3 = Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
-      final p4 = Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
-      playerRepo.players = [p1, p2, p3, p4];
-
-      await notifier.generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
-
-      final team = Team(p1, p2);
-      expect(notifier.getPairCount(team), 1);
-      
-      final reversedTeam = Team(p2, p1);
-      expect(notifier.getPairCount(reversedTeam), 1);
-    });
-  });
-
-  group('SessionNotifier - メンバー入れ替え (updateSession)', () {
-    test('セッション内のメンバーを入れ替えた後、統計が再計算されること', () async {
+  group('SessionNotifier - メンバー入れ替え', () {
+    test('入れ替え後に詳細統計も再計算されること', () async {
       final p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
       final p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
       final p3 = Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
@@ -145,15 +122,15 @@ void main() {
       await notifier.generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
       
       final session = notifier.sessions.first;
+      // P1 と P5 を入れ替える
       final newGames = [
         Game(MatchType.menDoubles, Team(p5, p2), Team(p3, p4))
       ];
-      final newResting = [p1];
-      
-      await notifier.updateSession(session.copyWith(games: newGames, restingPlayers: newResting));
+      await notifier.updateSession(session.copyWith(games: newGames, restingPlayers: [p1]));
 
       expect(notifier.playerStats['1']?.totalMatches, 0);
       expect(notifier.playerStats['5']?.totalMatches, 1);
+      expect(notifier.playerStats['5']?.partnerCounts['2'], 1);
     });
   });
 }

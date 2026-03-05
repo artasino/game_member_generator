@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:game_member_generator/presentation/notifiers/session_notifier.dart';
+
 import '../entities/game.dart';
 import '../entities/gender.dart';
 import '../entities/match_type.dart';
@@ -12,6 +14,7 @@ class RandomMatchAlgorithm implements MatchAlgorithm {
   List<Game> generateMatches({
     required List<Player> players,
     required List<MatchType> matchTypes,
+    required Map<String, PlayerStats> playerStats, // 追加
   }) {
     final random = Random();
     final males = <Player>[];
