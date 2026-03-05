@@ -236,7 +236,7 @@ class PlayerListScreen extends StatelessWidget {
     final genderColor =
         player.gender == Gender.male ? Colors.blue : Colors.pink;
     final stats =
-        statsMap[player.id] ?? PlayerStats(totalMatches: 0, typeCounts: {});
+        statsMap[player.id] ?? PlayerStats(totalMatches: 0, typeCounts: {}, partnerCounts: {}, opponentCounts: {});
 
     return InkWell(
       onTap: () => notifier.toggleActive(player),
