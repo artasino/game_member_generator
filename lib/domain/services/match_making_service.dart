@@ -1,3 +1,4 @@
+import 'package:game_member_generator/domain/entities/player_stats_pool.dart';
 import 'package:game_member_generator/presentation/notifiers/session_notifier.dart';
 
 import '../algorithm/match_algorithm.dart';
@@ -16,7 +17,7 @@ class MatchMakingService {
   /// 指定されたマッチタイプとプレイヤー統計に基づいて試合を生成する
   Future<List<Game>> generateMatches({
     required List<MatchType> matchTypes,
-    required Map<String, PlayerStats> playerStats,
+    required PlayerStatsPool playerStats,
   }) async {
     // 保存されている「アクティブな」プレイヤーを取得
     final players = await playerRepository.getActive();

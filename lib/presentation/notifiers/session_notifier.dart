@@ -3,6 +3,8 @@ import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/player_stats.dart';
+import '../../domain/entities/player_stats_pool.dart';
+import '../../domain/entities/player_with_stats.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/entities/team.dart';
 import '../../domain/repository/court_settings_repository.dart';
@@ -19,10 +21,11 @@ class SessionNotifier extends ChangeNotifier {
   /// 保存されている全セッション（試合履歴）のリスト
   List<Session> get sessions => _sessions;
 
-  // キャッシュされた詳細統計データ
-  Map<String, PlayerStats> _cachedStats = {};
-  /// 全プレイヤーの出場統計を計算する（キャッシュされた値を返す）
-  Map<String, PlayerStats> get playerStats => _cachedStats;
+  // キャッシュされた統計プール
+  PlayerStatsPool _cachedPool = PlayerStatsPool([]);
+  
+  /// 全プレイヤーの出場統計プールを返す
+  PlayerStatsPool get playerStatsPool => _cachedPool;
 
   SessionNotifier({
     required this.sessionRepository,
@@ -32,7 +35,7 @@ class SessionNotifier extends ChangeNotifier {
     _refresh();
   }
 
-  /// 試合履歴を走査し、BalancedMatchingに必要な詳細統計を計算する
+  /// 試合履歴を走査し、PlayerStatsPoolを再構築する
   Future<void> _updateStats() async {
     final Map<String, int> totals = {};
     final Map<String, Map<MatchType, int>> typeBreakdowns = {};
@@ -70,15 +73,19 @@ class SessionNotifier extends ChangeNotifier {
       }
     }
 
-    _cachedStats = totals.map((playerId, total) => MapEntry(
-      playerId,
-      PlayerStats(
-        totalMatches: total,
-        typeCounts: typeBreakdowns[playerId] ?? {},
-        partnerCounts: partnerBreakdowns[playerId] ?? {},
-        opponentCounts: opponentBreakdowns[playerId] ?? {},
-      ),
-    ));
+    final playerWithStatsList = allPlayers.map((p) {
+      return PlayerWithStats(
+        player: p,
+        stats: PlayerStats(
+          totalMatches: totals[p.id] ?? 0,
+          typeCounts: typeBreakdowns[p.id] ?? {},
+          partnerCounts: partnerBreakdowns[p.id] ?? {},
+          opponentCounts: opponentBreakdowns[p.id] ?? {},
+        ),
+      );
+    }).toList();
+
+    _cachedPool = PlayerStatsPool(playerWithStatsList);
   }
 
   /// 指定されたペアがそのセッションまでに組んだ回数を計算する
@@ -128,7 +135,7 @@ class SessionNotifier extends ChangeNotifier {
     
     final games = await matchMakingService.generateMatches(
       matchTypes: settings.matchTypes,
-      playerStats: _cachedStats,
+      playerStats: _cachedPool,
     );
 
     final playingPlayerIds = <String>{};

@@ -1,7 +1,8 @@
+import 'package:game_member_generator/domain/entities/player_stats_pool.dart';
+
 import '../entities/game.dart';
 import '../entities/match_type.dart';
 import '../entities/player.dart';
-import '../entities/player_stats.dart';
 
 /// マッチメイキングアルゴリズムのインターフェース
 abstract class MatchAlgorithm {
@@ -9,6 +10,6 @@ abstract class MatchAlgorithm {
   List<Game> generateMatches({
     required List<Player> players,
     required List<MatchType> matchTypes,
-    required Map<String, PlayerStats> playerStats,
+    required PlayerStatsPool playerStats,
   });
 }
