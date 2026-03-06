@@ -10,12 +10,15 @@ class PlayerStats {
   final Map<String, int> partnerCounts;
   /// このプレイヤーが誰と何回対戦（敵）したか (key: Player.id, value: 回数)
   final Map<String, int> opponentCounts;
+  /// 直近のセッションでお休みだったかどうか
+  final bool restedLastTime;
 
   PlayerStats({
     required this.totalMatches,
     required this.typeCounts,
     required this.partnerCounts,
     required this.opponentCounts,
+    this.restedLastTime = false,
   });
 
   /// 指定した相手と同じコートにいた（味方または敵）合計回数を返す

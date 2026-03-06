@@ -18,13 +18,9 @@ class SessionNotifier extends ChangeNotifier {
   final MatchMakingService matchMakingService;
 
   List<Session> _sessions = [];
-  /// 保存されている全セッション（試合履歴）のリスト
   List<Session> get sessions => _sessions;
 
-  // キャッシュされた統計プール
   PlayerStatsPool _cachedPool = PlayerStatsPool([]);
-  
-  /// 全プレイヤーの出場統計プールを返す
   PlayerStatsPool get playerStatsPool => _cachedPool;
 
   SessionNotifier({
@@ -35,7 +31,6 @@ class SessionNotifier extends ChangeNotifier {
     _refresh();
   }
 
-  /// 試合履歴を走査し、PlayerStatsPoolを再構築する
   Future<void> _updateStats() async {
     final Map<String, int> totals = {};
     final Map<String, Map<MatchType, int>> typeBreakdowns = {};
@@ -73,6 +68,11 @@ class SessionNotifier extends ChangeNotifier {
       }
     }
 
+    // 「前回お休み」の判定
+    final lastSessionRestingIds = _sessions.isNotEmpty 
+        ? _sessions.last.restingPlayers.map((p) => p.id).toSet() 
+        : <String>{};
+
     final playerWithStatsList = allPlayers.map((p) {
       return PlayerWithStats(
         player: p,
@@ -81,6 +81,7 @@ class SessionNotifier extends ChangeNotifier {
           typeCounts: typeBreakdowns[p.id] ?? {},
           partnerCounts: partnerBreakdowns[p.id] ?? {},
           opponentCounts: opponentBreakdowns[p.id] ?? {},
+          restedLastTime: lastSessionRestingIds.contains(p.id), // フラグを設定
         ),
       );
     }).toList();
@@ -88,12 +89,10 @@ class SessionNotifier extends ChangeNotifier {
     _cachedPool = PlayerStatsPool(playerWithStatsList);
   }
 
-  /// 指定されたペアがそのセッションまでに組んだ回数を計算する
   int getPairCount(Team team, {int? upToIndex}) {
     int count = 0;
     final id1 = team.player1.id;
     final id2 = team.player2.id;
-
     for (final session in _sessions) {
       if (upToIndex != null && session.index > upToIndex) break;
       for (final game in session.games) {
@@ -118,7 +117,6 @@ class SessionNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// セッション情報を更新し、永続化層へ保存する
   Future<void> updateSession(Session session) async {
     final index = _sessions.indexWhere((s) => s.index == session.index);
     if (index != -1) {
@@ -129,10 +127,8 @@ class SessionNotifier extends ChangeNotifier {
     }
   }
 
-  /// 設定に基づいて新しい試合を生成し、履歴に追加する
   Future<void> generateSessionWithSettings(CourtSettings settings) async {
     await courtSettingsRepository.update(settings);
-    
     final games = await matchMakingService.generateMatches(
       matchTypes: settings.matchTypes,
       playerStats: _cachedPool,
@@ -158,13 +154,11 @@ class SessionNotifier extends ChangeNotifier {
     await _refresh();
   }
 
-  /// 全ての試合履歴を削除する
   Future<void> clearHistory() async {
     await sessionRepository.clear();
     await _refresh();
   }
 
-  /// 現在保存されているコート設定を取得する
   Future<CourtSettings> getCurrentSettings() async {
     return await courtSettingsRepository.get();
   }
