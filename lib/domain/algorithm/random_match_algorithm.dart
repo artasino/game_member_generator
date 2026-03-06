@@ -13,15 +13,14 @@ class RandomMatchAlgorithm implements MatchAlgorithm {
   @override
   List<Game> generateMatches({
     required List<MatchType> matchTypes,
-    required Map<int, PlayerStatsPool> playerBuckets,
+    required Map<int, PlayerStatsPool> maleBuckets,
+    required Map<int, PlayerStatsPool> femaleBuckets,
   }) {
     final random = Random();
     
-    // 全バケットからプレイヤー情報を抽出してリスト化
-    final allPlayers = playerBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
-
-    final males = allPlayers.where((p) => p.gender == Gender.male).toList();
-    final females = allPlayers.where((p) => p.gender == Gender.female).toList();
+    // 男女それぞれのバケットからプレイヤーリストを平坦化して作成
+    final males = maleBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
+    final females = femaleBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
     
     // 完全にランダムにするためにシャッフル
     males.shuffle(random);

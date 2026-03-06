@@ -59,16 +59,19 @@ class FixedMatchAlgorithm implements MatchAlgorithm {
   @override
   List<Game> generateMatches({
     required List<MatchType> matchTypes,
-    required Map<int, PlayerStatsPool> playerBuckets, // 修正
+    required Map<int, PlayerStatsPool> maleBuckets,
+    required Map<int, PlayerStatsPool> femaleBuckets,
   }) {
-    // 全バケットからプレイヤーを抽出
-    final players = playerBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
+    // 男女両方のバケットからプレイヤーを抽出して結合
+    final males = maleBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
+    final females = femaleBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
+    final allPlayers = [...males, ...females];
     
     return [
       Game(
         MatchType.menDoubles,
-        Team(players[0], players[1]),
-        Team(players[2], players[3]),
+        Team(allPlayers[0], allPlayers[1]),
+        Team(allPlayers[2], allPlayers[3]),
       )
     ];
   }
@@ -124,6 +127,7 @@ void main() {
       await notifier.generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
       
       final session = notifier.sessions.first;
+      // P1 と P5 を入れ替える
       final newGames = [
         Game(MatchType.menDoubles, Team(p5, p2), Team(p3, p4))
       ];

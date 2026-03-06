@@ -11,51 +11,48 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
   @override
   List<Game> generateMatches({
     required List<MatchType> matchTypes,
-    required Map<int, PlayerStatsPool> playerBuckets,
+    required Map<int, PlayerStatsPool> maleBuckets,
+    required Map<int, PlayerStatsPool> femaleBuckets,
   }) {
+
     final random = Random();
-    
-    // 全バケットから平坦なリスト（ソート済み）を作成し、初期プールを構築
-    final allPlayers = playerBuckets.values.expand((p) => p.all).toList();
-    PlayerStatsPool currentPool = PlayerStatsPool(allPlayers);
-    
+
+
+    PlayerStatsPool malePool = PlayerStatsPool(maleBuckets.values.expand((p) => p.all).toList());
+    PlayerStatsPool femalePool = PlayerStatsPool(femaleBuckets.values.expand((p) => p.all).toList());
+
     final matches = <Game>[];
 
     for (final matchType in matchTypes) {
       switch (matchType) {
         case MatchType.menDoubles:
-          final result = currentPool.males.pickCandidates(4, random);
+          final result = malePool.pickCandidates(4, random);
           if (result.picked.length < 4) throw Exception('男子プレイヤーが不足しています');
           matches.add(_createOptimizedGame(matchType, result.picked));
-          currentPool = result.remainingPool;
+          malePool = result.remainingPool;
           break;
 
         case MatchType.womenDoubles:
-          final result = currentPool.females.pickCandidates(4, random);
+          final result = femalePool.pickCandidates(4, random);
           if (result.picked.length < 4) throw Exception('女子プレイヤーが不足しています');
           matches.add(_createOptimizedGame(matchType, result.picked));
-          currentPool = result.remainingPool;
+          femalePool = result.remainingPool;
           break;
 
         case MatchType.mixedDoubles:
-          final mResult = currentPool.males.pickCandidates(2, random);
-          final fResult = currentPool.females.pickCandidates(2, random);
+          final mResult = malePool.pickCandidates(2, random);
+          final fResult = femalePool.pickCandidates(2, random);
           if (mResult.picked.length < 2 || fResult.picked.length < 2) {
             throw Exception('混合Wのペアが不足しています');
           }
           matches.add(_createOptimizedMixedGame(matchType, mResult.picked, fResult.picked));
-          currentPool = _removePickedFromPool(currentPool, [...mResult.picked, ...fResult.picked]);
+          malePool = mResult.remainingPool;
+          femalePool = fResult.remainingPool;
           break;
       }
     }
 
     return matches;
-  }
-
-  PlayerStatsPool _removePickedFromPool(PlayerStatsPool pool, List<PlayerWithStats> picked) {
-    final pickedIds = picked.map((p) => p.player.id).toSet();
-    final remaining = pool.all.where((p) => !pickedIds.contains(p.player.id)).toList();
-    return PlayerStatsPool(remaining);
   }
 
   Game _createOptimizedGame(MatchType type, List<PlayerWithStats> candidates) {

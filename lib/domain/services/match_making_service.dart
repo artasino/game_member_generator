@@ -20,15 +20,16 @@ class MatchMakingService {
     final activePlayers = await playerRepository.getActive();
     final activeIds = activePlayers.map((p) => p.id).toSet();
     
-    // 2. 統計プールから、今回のアクティブプレイヤーのみに絞り込んだプールを作成
+    // 2. アクティブなプレイヤーのみのプールを作成
     final activePool = PlayerStatsPool(
       playerStats.all.where((p) => activeIds.contains(p.player.id)).toList()
     );
     
-    // 3. 試合数ごとのバケットを作成してアルゴリズムに渡す
+    // 3. 男女別にプールを分け、それぞれのバケットを取得してアルゴリズムに渡す
     return algorithm.generateMatches(
       matchTypes: matchTypes,
-      playerBuckets: activePool.buckets,
+      maleBuckets: activePool.males.buckets,
+      femaleBuckets: activePool.females.buckets,
     );
   }
 }
