@@ -4,7 +4,7 @@ import '../../domain/entities/game.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
-import '../../domain/entities/player_with_stats.dart';
+import '../../domain/entities/player_stats_pool.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/entities/team.dart';
 import '../notifiers/session_notifier.dart';
@@ -146,7 +146,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                                   children: [
                                     Text(
                                       'コート ${index + 1} (${_matchTypeName(game.type)})',
-                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: theme.colorScheme.primary.withOpacity(0.7)),
+                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: theme.colorScheme.primary.withValues(alpha: 0.7)),
                                     ),
                                     const SizedBox(width: 8),
                                     Flexible(
@@ -258,7 +258,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   }
 
   int _getPairCountFromPool(PlayerStatsPool pool, Team team) {
-    // pool.allの中からplayer1を探し、そのstatsからplayer2とのpartnerCountsを取得する
     try {
       final p1WithStats = pool.all.firstWhere((p) => p.player.id == team.player1.id);
       return p1WithStats.stats.partnerCounts[team.player2.id] ?? 0;
@@ -320,11 +319,17 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     Player newP1 = team.player1;
     Player newP2 = team.player2;
 
-    if (team.player1.id == p1.id) newP1 = p2;
-    else if (team.player1.id == p2.id) newP1 = p1;
+    if (team.player1.id == p1.id) {
+      newP1 = p2;
+    } else if (team.player1.id == p2.id) {
+      newP1 = p1;
+    }
 
-    if (team.player2.id == p1.id) newP2 = p2;
-    else if (team.player2.id == p2.id) newP2 = p1;
+    if (team.player2.id == p1.id) {
+      newP2 = p2;
+    } else if (team.player2.id == p2.id) {
+      newP2 = p1;
+    }
 
     return team.copyWith(player1: newP1, player2: newP2);
   }
@@ -499,10 +504,10 @@ class _RestingChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.orange.withOpacity(0.2) : color.withOpacity(0.08),
+          color: isSelected ? Colors.orange.withValues(alpha: 0.2) : color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? Colors.orange : color.withOpacity(0.3),
+            color: isSelected ? Colors.orange : color.withValues(alpha: 0.3),
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -537,7 +542,7 @@ class _TypeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: color.withOpacity(0.1),
+        backgroundColor: color.withValues(alpha: 0.1),
         foregroundColor: color,
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -572,10 +577,10 @@ class _PlayerTag extends StatelessWidget {
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.orange.withOpacity(0.2) : color.withOpacity(0.1),
+          color: isSelected ? Colors.orange.withValues(alpha: 0.2) : color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? Colors.orange : color.withOpacity(0.4),
+            color: isSelected ? Colors.orange : color.withValues(alpha: 0.4),
             width: isSelected ? 1.5 : 1,
           ),
         ),
