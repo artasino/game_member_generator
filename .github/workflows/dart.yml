@@ -1,10 +1,10 @@
-name: Build Windows EXE
+name: Build Windows App
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
 jobs:
   build:
@@ -14,17 +14,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Dart
-        uses: dart-lang/setup-dart@v1
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Enable Windows build
+        run: flutter config --enable-windows-desktop
 
       - name: Install dependencies
-        run: dart pub get
+        run: flutter pub get
 
-      - name: Build exe
-        run: dart compile exe bin/main.dart -o app.exe
+      - name: Build Windows
+        run: flutter build windows
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-exe
-          path: app.exe
+          name: game_member_generator_windows
+          path: build/windows/x64/runner/Release
