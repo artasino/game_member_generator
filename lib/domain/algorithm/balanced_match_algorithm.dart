@@ -5,6 +5,7 @@ import 'package:game_member_generator/domain/entities/match_type.dart';
 import 'package:game_member_generator/domain/entities/player_stats_pool.dart';
 import 'package:game_member_generator/domain/entities/player_with_stats.dart';
 import 'package:game_member_generator/domain/entities/team.dart';
+import 'package:game_member_generator/domain/entities/gender.dart';
 
 /// 試合数や対戦履歴の偏りを抑えたマッチメイキングアルゴリズム
 class BalancedMatchAlgorithm implements MatchAlgorithm {
@@ -53,32 +54,28 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     // 抽選候補から必要な人数を選ぶ全組み合わせを取得
     final maleCombos = _getCombinations(
       maleSelection.candidatePool.all,
-      requiredMale - maleSelection.mustPlayers.length,
+      max(0, requiredMale - maleSelection.mustPlayers.length),
     );
     final femaleCombos = _getCombinations(
       femaleSelection.candidatePool.all,
-      requiredFemale - femaleSelection.mustPlayers.length,
+      max(0, requiredFemale - femaleSelection.mustPlayers.length),
     );
 
     double bestTotalScore = double.infinity;
     List<Game> bestGames = [];
 
-    // コンビネーションが空の場合（全員Mustの場合など）のハンドリング
-    final mCombos = maleCombos.isEmpty ? [ <PlayerWithStats>[] ] : maleCombos;
-    final fCombos = femaleCombos.isEmpty ? [ <PlayerWithStats>[] ] : femaleCombos;
-
-    for (final mCombo in mCombos) {
+    for (final mCombo in maleCombos) {
       final playingMales = [...maleSelection.mustPlayers, ...mCombo];
       final restingMales = maleSelection.candidatePool.all.where((p) => !mCombo.contains(p)).toList();
 
-      for (final fCombo in fCombos) {
+      for (final fCombo in femaleCombos) {
         final playingFemales = [...femaleSelection.mustPlayers, ...fCombo];
         final restingFemales = femaleSelection.candidatePool.all.where((p) => !fCombo.contains(p)).toList();
 
-        // A. 選出スコア（休みの偏り）を計算
+        // 優先度1: 休みが連続しないスコアを計算
         double selectionScore = _calculateRestingScore([...restingMales, ...restingFemales]);
 
-        // B. このメンバ内での最適な「コートへの割り振り」を探索
+        // 最適なコートへの割り振りを探索
         final assignmentResult = _searchBestAssignment(
           matchTypes: matchTypes,
           availableMales: List.from(playingMales),
@@ -98,19 +95,19 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     return bestGames;
   }
 
-  /// 休みの偏りに対するペナルティ
+  /// 休みの偏りに対するペナルティ（優先度1位: 連続休み回避）
   double _calculateRestingScore(List<PlayerWithStats> resting) {
     double score = 0;
     for (final r in resting) {
       if (r.stats.restedLastTime) {
-        score += 10000.0; // 連続休みは最優先で回避
+        score += 10000.0;
       }
       score += 100.0 / (r.stats.totalMatches + 1);
     }
     return score;
   }
 
-  /// 決定したメンバーを各コート（matchTypes）へ最適に割り振る
+  /// 決定したメンバーを各コート（matchTypes）へ最適に振り分ける
   _AssignmentResult _searchBestAssignment({
     required List<MatchType> matchTypes,
     required List<PlayerWithStats> availableMales,
@@ -119,7 +116,6 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     return _recurseAssignment(matchTypes, 0, availableMales, availableFemales);
   }
 
-  /// 再帰的にすべてのコートへのプレイヤーの割り振りを試す
   _AssignmentResult _recurseAssignment(
     List<MatchType> types,
     int typeIndex,
@@ -133,33 +129,28 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     List<Game> bestGames = [];
 
     if (type == MatchType.menDoubles) {
-      // 残っている男性から4人選ぶ全パターンを試す
       final combos = _getCombinations(males, 4);
       for (final selected in combos) {
         final remaining = males.where((m) => !selected.contains(m)).toList();
         final gameScore = _getBestGameForFour(type, selected);
         final next = _recurseAssignment(types, typeIndex + 1, remaining, females);
-        
         if (gameScore.score + next.score < bestScore) {
           bestScore = gameScore.score + next.score;
           bestGames = [gameScore.game, ...next.games];
         }
       }
     } else if (type == MatchType.womenDoubles) {
-      // 残っている女性から4人選ぶ全パターンを試す
       final combos = _getCombinations(females, 4);
       for (final selected in combos) {
         final remaining = females.where((f) => !selected.contains(f)).toList();
         final gameScore = _getBestGameForFour(type, selected);
         final next = _recurseAssignment(types, typeIndex + 1, males, remaining);
-        
         if (gameScore.score + next.score < bestScore) {
           bestScore = gameScore.score + next.score;
           bestGames = [gameScore.game, ...next.games];
         }
       }
     } else {
-      // 混合ダブルス: 男性2人、女性2人を選ぶ全パターンを試す
       final mCombos = _getCombinations(males, 2);
       final fCombos = _getCombinations(females, 2);
       for (final selectedM in mCombos) {
@@ -168,7 +159,6 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
           final remainingF = females.where((f) => !selectedF.contains(f)).toList();
           final gameScore = _getBestMixedGame(type, selectedM, selectedF);
           final next = _recurseAssignment(types, typeIndex + 1, remainingM, remainingF);
-          
           if (gameScore.score + next.score < bestScore) {
             bestScore = gameScore.score + next.score;
             bestGames = [gameScore.game, ...next.games];
@@ -180,19 +170,16 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     return _AssignmentResult(bestScore, bestGames);
   }
 
-  /// 4人の中で最適なチーム分け（3パターン）を決定
   _GameScore _getBestGameForFour(MatchType type, List<PlayerWithStats> p) {
     final patterns = [
       [p[0], p[1], p[2], p[3]],
       [p[0], p[2], p[1], p[3]],
       [p[0], p[3], p[1], p[2]],
     ];
-
     double minScore = double.infinity;
     late Game bestGame;
-
     for (final pattern in patterns) {
-      double score = _calculateGamePenalty(pattern[0], pattern[1], pattern[2], pattern[3]);
+      double score = _calculateGamePenalty(type, pattern[0], pattern[1], pattern[2], pattern[3]);
       if (score < minScore) {
         minScore = score;
         bestGame = Game(type, Team(pattern[0].player, pattern[1].player), Team(pattern[2].player, pattern[3].player));
@@ -201,16 +188,15 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     return _GameScore(minScore, bestGame);
   }
 
-  /// 混合ダブルスで最適なチーム分け（2パターン）を決定
   _GameScore _getBestMixedGame(MatchType type, List<PlayerWithStats> ms, List<PlayerWithStats> fs) {
     final patterns = [
-      [ms[0], fs[0], ms[1], fs[1]], // M1-F1 vs M2-F2
-      [ms[0], fs[1], ms[1], fs[0]], // M1-F2 vs M2-F1
+      [ms[0], fs[0], ms[1], fs[1]],
+      [ms[0], fs[1], ms[1], fs[0]],
     ];
     double minScore = double.infinity;
     late Game bestGame;
     for (final pattern in patterns) {
-      double score = _calculateGamePenalty(pattern[0], pattern[1], pattern[2], pattern[3]);
+      double score = _calculateGamePenalty(type, pattern[0], pattern[1], pattern[2], pattern[3]);
       if (score < minScore) {
         minScore = score;
         bestGame = Game(type, Team(pattern[0].player, pattern[1].player), Team(pattern[2].player, pattern[3].player));
@@ -219,25 +205,44 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     return _GameScore(minScore, bestGame);
   }
 
-  /// 指定されたペアと対戦相手の履歴ペナルティを計算
-  double _calculateGamePenalty(PlayerWithStats p1, PlayerWithStats p2, PlayerWithStats p3, PlayerWithStats p4) {
-    double p = 0;
-    // ペアが同じにならない (Penalty 50)
-    p += (p1.stats.partnerCounts[p2.player.id] ?? 0) * 50.0;
-    p += (p3.stats.partnerCounts[p4.player.id] ?? 0) * 50.0;
+  /// 試合のペナルティ計算
+  double _calculateGamePenalty(MatchType type, PlayerWithStats p1, PlayerWithStats p2, PlayerWithStats p3, PlayerWithStats p4) {
+    double penalty = 0;
+
+    // 優先度2位: 種目バランス (Weight: 200.0)
+    for (var ps in [p1, p2, p3, p4]) {
+      penalty += _calculateTypeImbalancePenalty(ps, type) * 200.0;
+    }
+
+    // 優先度3位: ペア重複 (Weight: 50.0)
+    penalty += (p1.stats.partnerCounts[p2.player.id] ?? 0) * 50.0;
+    penalty += (p3.stats.partnerCounts[p4.player.id] ?? 0) * 50.0;
     
-    // 敵が同じにならない (Penalty 10)
-    final teamA = [p1, p2];
-    final teamB = [p3, p4];
-    for (var a in teamA) {
-      for (var b in teamB) {
-        p += (a.stats.opponentCounts[b.player.id] ?? 0) * 10.0;
+    // 優先度4位: 敵重複 (Weight: 10.0)
+    for (var a in [p1, p2]) {
+      for (var b in [p3, p4]) {
+        penalty += (a.stats.opponentCounts[b.player.id] ?? 0) * 10.0;
       }
     }
-    return p;
+    return penalty;
   }
 
-  /// 組み合わせ生成のヘルパー関数
+  double _calculateTypeImbalancePenalty(PlayerWithStats ps, MatchType type) {
+    final counts = ps.stats.typeCounts;
+    if (ps.player.gender == Gender.male) {
+      final md = counts[MatchType.menDoubles] ?? 0;
+      final mx = counts[MatchType.mixedDoubles] ?? 0;
+      if (type == MatchType.menDoubles) return md > mx ? (md - mx).toDouble() : 0;
+      if (type == MatchType.mixedDoubles) return mx > md ? (mx - md).toDouble() : 0;
+    } else {
+      final wd = counts[MatchType.womenDoubles] ?? 0;
+      final mx = counts[MatchType.mixedDoubles] ?? 0;
+      if (type == MatchType.womenDoubles) return wd > mx ? (wd - mx).toDouble() : 0;
+      if (type == MatchType.mixedDoubles) return mx > wd ? (mx - wd).toDouble() : 0;
+    }
+    return 0;
+  }
+
   List<List<T>> _getCombinations<T>(List<T> items, int n) {
     if (n <= 0) return [[]];
     if (items.isEmpty) return [];
@@ -260,6 +265,7 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
         must.addAll(pool.all);
         if (must.length == requiredCount) return _SelectionSplit(must, PlayerStatsPool([]));
       } else {
+        // 超える瞬間のバケットのみを Candidate にする
         return _SelectionSplit(must, PlayerStatsPool(pool.all));
       }
     }

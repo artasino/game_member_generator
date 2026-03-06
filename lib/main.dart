@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'domain/algorithm/balanced_match_algorithm.dart';
-import 'domain/algorithm/random_match_algorithm.dart';
 import 'domain/entities/gender.dart';
 import 'domain/entities/player.dart';
 import 'domain/services/match_making_service.dart';
@@ -23,8 +22,8 @@ void main() async {
   final sessionRepo = SqliteSessionHistoryRepository();
   final courtSettingsRepo = SqliteCourtSettingsRepository();
 
-  // 4. サービスとNotifierの準備
-  final algorithm = BalancedMatchAlgorithm();
+  // 3. サービスとNotifierの準備
+  final algorithm = BalancedMatchAlgorithm(); // Balancedに変更
   final matchService = MatchMakingService(algorithm, playerRepo);
 
   final playerNotifier = PlayerNotifier(playerRepo);
@@ -33,6 +32,18 @@ void main() async {
     courtSettingsRepository: courtSettingsRepo,
     matchMakingService: matchService,
   );
+
+  // Notifier同士を接続（Playerの変更をSessionに通知するため）
+  playerNotifier.setSessionNotifier(sessionNotifier);
+
+  // 4. 初回起動時のみサンプルデータを投入するロジック
+  final players = await playerRepo.getAll();
+  if (players.isEmpty) {
+    for (int i = 1; i <= 5; i++) {
+      await playerNotifier.addPlayer(Player(id: 'M$i', name: '男子$i', yomigana: 'だんし$i', gender: Gender.male));
+      await playerNotifier.addPlayer(Player(id: 'F$i', name: '女子$i', yomigana: 'じょし$i', gender: Gender.female));
+    }
+  }
 
   runApp(MyApp(
     playerNotifier: playerNotifier,

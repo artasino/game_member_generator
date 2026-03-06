@@ -31,6 +31,11 @@ class SessionNotifier extends ChangeNotifier {
     _refresh();
   }
 
+  Future<void> onPlayersUpdated() async {
+    await _updateStats();
+    notifyListeners();
+  }
+
   Future<void> _updateStats() async {
     final Map<String, int> totals = {};
     final Map<String, Map<MatchType, int>> typeBreakdowns = {};
@@ -68,7 +73,6 @@ class SessionNotifier extends ChangeNotifier {
       }
     }
 
-    // 「前回お休み」の判定
     final lastSessionRestingIds = _sessions.isNotEmpty 
         ? _sessions.last.restingPlayers.map((p) => p.id).toSet() 
         : <String>{};
@@ -81,7 +85,7 @@ class SessionNotifier extends ChangeNotifier {
           typeCounts: typeBreakdowns[p.id] ?? {},
           partnerCounts: partnerBreakdowns[p.id] ?? {},
           opponentCounts: opponentBreakdowns[p.id] ?? {},
-          restedLastTime: lastSessionRestingIds.contains(p.id), // フラグを設定
+          restedLastTime: lastSessionRestingIds.contains(p.id),
         ),
       );
     }).toList();
