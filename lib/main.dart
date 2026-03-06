@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'domain/algorithm/balanced_match_algorithm.dart';
 import 'domain/algorithm/random_match_algorithm.dart';
 import 'domain/entities/gender.dart';
 import 'domain/entities/player.dart';
@@ -23,7 +24,7 @@ void main() async {
   final courtSettingsRepo = SqliteCourtSettingsRepository();
 
   // 4. サービスとNotifierの準備
-  final algorithm = RandomMatchAlgorithm();
+  final algorithm = BalancedMatchAlgorithm();
   final matchService = MatchMakingService(algorithm, playerRepo);
 
   final playerNotifier = PlayerNotifier(playerRepo);
