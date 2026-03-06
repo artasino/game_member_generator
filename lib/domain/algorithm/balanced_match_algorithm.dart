@@ -14,45 +14,96 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     required Map<int, PlayerStatsPool> maleBuckets,
     required Map<int, PlayerStatsPool> femaleBuckets,
   }) {
-
     final random = Random();
 
+    // 1. 必要人数の計算
+    int requiredMale = 0;
+    int requiredFemale = 0;
+    for (final type in matchTypes) {
+      if (type == MatchType.menDoubles) {
+        requiredMale += 4;
+      } else if (type == MatchType.womenDoubles) {
+        requiredFemale += 4;
+      } else if (type == MatchType.mixedDoubles) {
+        requiredMale += 2;
+        requiredFemale += 2;
+      }
+    }
 
-    PlayerStatsPool malePool = PlayerStatsPool(maleBuckets.values.expand((p) => p.all).toList());
-    PlayerStatsPool femalePool = PlayerStatsPool(femaleBuckets.values.expand((p) => p.all).toList());
+    // 2. 出場回数に基づいた選出（Must枠と抽選プールの分離）
+    final maleSelection = _splitMustAndCandidates(maleBuckets, requiredMale);
+    final femaleSelection = _splitMustAndCandidates(femaleBuckets, requiredFemale);
+
+    // 3. 抽選プールから不足分をピックアップ
+    final List<PlayerWithStats> malePicked = List.from(maleSelection.mustPlayers);
+    if (malePicked.length < requiredMale) {
+      final needed = requiredMale - malePicked.length;
+      final result = maleSelection.candidatePool.pickCandidates(needed, random);
+      if (result.picked.length < needed) throw Exception('男子プレイヤーが不足しています');
+      malePicked.addAll(result.picked);
+    }
+
+    final List<PlayerWithStats> femalePicked = List.from(femaleSelection.mustPlayers);
+    if (femalePicked.length < requiredFemale) {
+      final needed = requiredFemale - femalePicked.length;
+      final result = femaleSelection.candidatePool.pickCandidates(needed, random);
+      if (result.picked.length < needed) throw Exception('女子プレイヤーが不足しています');
+      femalePicked.addAll(result.picked);
+    }
+
+    // 4. 試合の構築（シャッフルして割り当て）
+    malePicked.shuffle(random);
+    femalePicked.shuffle(random);
 
     final matches = <Game>[];
-
     for (final matchType in matchTypes) {
       switch (matchType) {
         case MatchType.menDoubles:
-          final result = malePool.pickCandidates(4, random);
-          if (result.picked.length < 4) throw Exception('男子プレイヤーが不足しています');
-          matches.add(_createOptimizedGame(matchType, result.picked));
-          malePool = result.remainingPool;
+          final selected = malePicked.take(4).toList();
+          malePicked.removeRange(0, 4);
+          matches.add(_createOptimizedGame(matchType, selected));
           break;
-
         case MatchType.womenDoubles:
-          final result = femalePool.pickCandidates(4, random);
-          if (result.picked.length < 4) throw Exception('女子プレイヤーが不足しています');
-          matches.add(_createOptimizedGame(matchType, result.picked));
-          femalePool = result.remainingPool;
+          final selected = femalePicked.take(4).toList();
+          femalePicked.removeRange(0, 4);
+          matches.add(_createOptimizedGame(matchType, selected));
           break;
-
         case MatchType.mixedDoubles:
-          final mResult = malePool.pickCandidates(2, random);
-          final fResult = femalePool.pickCandidates(2, random);
-          if (mResult.picked.length < 2 || fResult.picked.length < 2) {
-            throw Exception('混合Wのペアが不足しています');
-          }
-          matches.add(_createOptimizedMixedGame(matchType, mResult.picked, fResult.picked));
-          malePool = mResult.remainingPool;
-          femalePool = fResult.remainingPool;
+          final ms = malePicked.take(2).toList();
+          malePicked.removeRange(0, 2);
+          final fs = femalePicked.take(2).toList();
+          femalePicked.removeRange(0, 2);
+          matches.add(_createOptimizedMixedGame(matchType, ms, fs));
           break;
       }
     }
 
     return matches;
+  }
+
+  /// バケットを走査して、「全員入れても必要数を超えない」メンバをMustリストに、
+  /// 超えた瞬間のバケットのメンバのみをCandidatePoolに分ける
+  _SelectionSplit _splitMustAndCandidates(Map<int, PlayerStatsPool> buckets, int requiredCount) {
+    final List<PlayerWithStats> must = [];
+
+    // バケットは出場回数の昇順でソートされている必要がある
+    final sortedKeys = buckets.keys.toList()..sort();
+
+    for (final count in sortedKeys) {
+      final pool = buckets[count]!;
+      if (must.length + pool.length <= requiredCount) {
+        // このバケットの全員を入れても上限に達しない場合は全員確定
+        must.addAll(pool.all);
+        if (must.length == requiredCount) {
+          return _SelectionSplit(must, PlayerStatsPool([]));
+        }
+      } else {
+        // このバケットを入れると上限を超えるので、このバケットのメンバのみを抽選対象にする
+        return _SelectionSplit(must, PlayerStatsPool(pool.all));
+      }
+    }
+
+    return _SelectionSplit(must, PlayerStatsPool([]));
   }
 
   Game _createOptimizedGame(MatchType type, List<PlayerWithStats> candidates) {
@@ -66,4 +117,10 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     final teamB = Team(ms[1].player, fs[1].player);
     return Game(type, teamA, teamB);
   }
+}
+
+class _SelectionSplit {
+  final List<PlayerWithStats> mustPlayers;
+  final PlayerStatsPool candidatePool;
+  _SelectionSplit(this.mustPlayers, this.candidatePool);
 }

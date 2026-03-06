@@ -11,6 +11,15 @@ class PlayerStatsPool {
   /// 参加メンバ全員
   List<PlayerWithStats> get all => List.unmodifiable(_players);
 
+  /// 現在のプールの人数
+  int get length {
+    // リスト自体が初期化されていない、または要素がない場合は0を返す
+    try {
+      return _players.length;
+    } catch (_) {
+      return 0;
+    }
+  }
   /// 男性のみのプールを返す
   PlayerStatsPool get males => PlayerStatsPool(
         _players.where((p) => p.player.gender == Gender.male).toList(),
@@ -54,8 +63,6 @@ class PlayerStatsPool {
     return SelectionResult(picked, PlayerStatsPool(remaining));
   }
 
-  /// 現在のプールの人数
-  int get length => _players.length;
 }
 
 /// 選出結果を保持するデータ構造
