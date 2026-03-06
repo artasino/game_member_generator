@@ -1,38 +1,38 @@
 import 'dart:math';
 
+import 'package:game_member_generator/domain/entities/player_stats_pool.dart';
+
 import '../entities/game.dart';
 import '../entities/gender.dart';
 import '../entities/match_type.dart';
-import '../entities/player.dart';
-import '../entities/player_stats_pool.dart';
 import '../entities/team.dart';
 import 'match_algorithm.dart';
 
+/// ランダムに試合の組み合わせを生成するアルゴリズム
 class RandomMatchAlgorithm implements MatchAlgorithm {
   @override
   List<Game> generateMatches({
-    required List<Player> players,
     required List<MatchType> matchTypes,
-    required PlayerStatsPool playerStats, // 追加
+    required Map<int, PlayerStatsPool> playerBuckets,
   }) {
     final random = Random();
-    final males = <Player>[];
-    final females = <Player>[];
-    for (var player in players) {
-      if (player.gender == Gender.male) {
-        males.add(player);
-      } else {
-        females.add(player);
-      }
-    }
+    
+    // 全バケットからプレイヤー情報を抽出してリスト化
+    final allPlayers = playerBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
+
+    final males = allPlayers.where((p) => p.gender == Gender.male).toList();
+    final females = allPlayers.where((p) => p.gender == Gender.female).toList();
+    
+    // 完全にランダムにするためにシャッフル
     males.shuffle(random);
     females.shuffle(random);
+
     final matches = <Game>[];
     for (final matchType in matchTypes) {
       switch (matchType) {
         case MatchType.menDoubles:
           if (males.length < 4) {
-            throw Exception('Not enough male players to generate matches');
+            throw Exception('男子プレイヤーが不足しています');
           }
           final teamA = Team(males.removeAt(0), males.removeAt(0));
           final teamB = Team(males.removeAt(0), males.removeAt(0));
@@ -40,7 +40,7 @@ class RandomMatchAlgorithm implements MatchAlgorithm {
           break;
         case MatchType.womenDoubles:
           if (females.length < 4) {
-            throw Exception('Not enough female players to generate matches');
+            throw Exception('女子プレイヤーが不足しています');
           }
           final teamA = Team(females.removeAt(0), females.removeAt(0));
           final teamB = Team(females.removeAt(0), females.removeAt(0));
@@ -48,7 +48,7 @@ class RandomMatchAlgorithm implements MatchAlgorithm {
           break;
         case MatchType.mixedDoubles:
           if (males.length < 2 || females.length < 2) {
-            throw Exception('Not enough players to generate matches');
+            throw Exception('混合Wのペアが不足しています');
           }
           final teamA = Team(males.removeAt(0), females.removeAt(0));
           final teamB = Team(males.removeAt(0), females.removeAt(0));
@@ -56,8 +56,9 @@ class RandomMatchAlgorithm implements MatchAlgorithm {
           break;
       }
     }
+    
     if (matchTypes.length != matches.length) {
-      throw Exception('Not enough player for match types');
+      throw Exception('試合を生成しきれませんでした');
     }
     return matches;
   }
