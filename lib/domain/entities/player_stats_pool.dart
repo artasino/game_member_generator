@@ -21,6 +21,21 @@ class PlayerStatsPool {
         _players.where((p) => p.player.gender == Gender.female).toList(),
       );
 
+  /// 試合数ごとのグループ（バケット）に分割して返す
+  /// Key: 出場回数, Value: その回数出場したプレイヤーのプール
+  Map<int, PlayerStatsPool> get buckets {
+    final Map<int, List<PlayerWithStats>> groups = {};
+    for (final p in _players) {
+      final count = p.stats.totalMatches;
+      groups.putIfAbsent(count, () => []).add(p);
+    }
+    // 回数（Key）でソートされたMapを作成
+    final sortedKeys = groups.keys.toList()..sort();
+    return {
+      for (var k in sortedKeys) k: PlayerStatsPool(groups[k]!)
+    };
+  }
+
   /// 試合数が少ない順にソートしたリストを返す（同じ回数ならランダム）
   List<PlayerWithStats> getByLeastPlayed(Random random) {
     final list = List<PlayerWithStats>.from(_players);
@@ -31,8 +46,6 @@ class PlayerStatsPool {
   }
 
   /// 指定した人数を「出場回数が少ない順」に選出し、残りのプールを返す
-  ///
-  /// 戻り値: [選出されたメンバのリスト, 残りのメンバによる新しいプール]
   SelectionResult pickCandidates(int count, Random random) {
     final sorted = getByLeastPlayed(random);
     final picked = sorted.take(count).toList();
