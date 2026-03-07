@@ -118,7 +118,7 @@ class PlayerListScreen extends StatelessWidget {
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: groupedPlayers[label]!.map((p) => _buildPlayerChip(context, p, theme)).toList(),
+                        children: groupedPlayers[label]!.map((p) => _buildPlayerChip(context, p, theme, showCheckbox: true)).toList(),
                       ),
                       const SizedBox(height: 20),
                     ],
@@ -182,7 +182,7 @@ class PlayerListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPlayerChip(BuildContext context, PlayerWithStats pWithStats, ThemeData theme) {
+  Widget _buildPlayerChip(BuildContext context, PlayerWithStats pWithStats, ThemeData theme, {bool showCheckbox = false}) {
     final player = pWithStats.player;
     final stats = pWithStats.stats;
     final genderColor = player.gender == Gender.male ? Colors.blue : Colors.pink;
@@ -192,55 +192,67 @@ class PlayerListScreen extends StatelessWidget {
       onLongPress: () => _showAddEditDialog(context, player: player),
       onDoubleTap: () => _showAddEditDialog(context, player: player),
       borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: player.isActive 
-              ? genderColor.withValues(alpha: 0.1) 
-              : theme.colorScheme.onSurface.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: player.isActive ? 1.0 : 0.9, // 透明度を0.7に改善
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
             color: player.isActive 
-                ? genderColor.withValues(alpha: 0.5) 
-                : theme.colorScheme.outlineVariant,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              player.gender == Gender.male ? Icons.male : Icons.female,
-              size: 16,
-              color: player.isActive ? genderColor : Colors.grey,
+                ? genderColor.withValues(alpha: 0.1) 
+                : genderColor.withValues(alpha: 0.1), // 性別色をうっすら残す
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: player.isActive 
+                  ? genderColor.withValues(alpha: 0.5) 
+                  : genderColor.withValues(alpha: 0.15), // 境界線も性別色を残す
+              width: player.isActive ? 1.2 : 1.0,
             ),
-            const SizedBox(width: 4),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  player.name,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: player.isActive ? FontWeight.bold : FontWeight.normal,
-                    decoration: player.isActive ? null : TextDecoration.lineThrough,
-                    color: player.isActive ? Colors.black87 : Colors.grey,
-                  ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (showCheckbox) ...[
+                Icon(
+                  player.isActive ? Icons.check_circle : Icons.radio_button_unchecked,
+                  size: 18,
+                  color: player.isActive ? genderColor : genderColor.withValues(alpha: 0.4),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    _buildStatsString(stats),
+                const SizedBox(width: 6),
+              ],
+              Icon(
+                player.gender == Gender.male ? Icons.male : Icons.female,
+                size: 16,
+                color: player.isActive ? genderColor : genderColor.withValues(alpha: 0.4),
+              ),
+              const SizedBox(width: 4),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    player.name,
                     style: TextStyle(
-                      fontSize: 12,
-                      color: player.isActive ? Colors.black54 : Colors.grey,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      fontWeight: player.isActive ? FontWeight.bold : FontWeight.normal,
+                      color: player.isActive ? Colors.black87 : Colors.black54,
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      _buildStatsString(stats),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: player.isActive ? Colors.black54 : Colors.grey,
+                        fontWeight: player.isActive ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
