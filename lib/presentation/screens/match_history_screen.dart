@@ -5,6 +5,7 @@ import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/player_stats_pool.dart';
+import '../../domain/entities/player_with_stats.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/entities/team.dart';
 import '../notifiers/session_notifier.dart';
@@ -12,8 +13,7 @@ import '../notifiers/session_notifier.dart';
 class MatchHistoryScreen extends StatefulWidget {
   final SessionNotifier notifier;
 
-  const MatchHistoryScreen({Key? key, required this.notifier})
-      : super(key: key);
+  const MatchHistoryScreen({Key? key, required this.notifier}) : super(key: key);
 
   @override
   State<MatchHistoryScreen> createState() => _MatchHistoryScreenState();
@@ -84,8 +84,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                           : null,
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(20),
@@ -117,10 +116,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                   padding: const EdgeInsets.only(bottom: 4.0),
                   child: Text(
                     '${_selectedPlayer!.name} と入れ替えるメンバを選択',
-                    style: const TextStyle(
-                        fontSize: 10,
-                        color: Colors.orange,
-                        fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold),
                   ),
                 ),
               Expanded(
@@ -129,61 +125,41 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                   child: Card(
                     elevation: 1,
                     margin: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           ...session.games.asMap().entries.map((entry) {
                             final index = entry.key;
                             final game = entry.value;
-
-                            // Poolから直接ペア回数を取得（現在のセッションを含む統計）
-                            final pairCountA =
-                                _getPairCountFromPool(pool, game.teamA);
-                            final pairCountB =
-                                _getPairCountFromPool(pool, game.teamB);
+                            final pairCountA = _getPairCountFromPool(pool, game.teamA);
+                            final pairCountB = _getPairCountFromPool(pool, game.teamB);
 
                             return Column(
                               children: [
                                 if (index > 0) const Divider(height: 20),
                                 Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       'コート ${index + 1} (${_matchTypeName(game.type)})',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: theme.colorScheme.primary
-                                              .withValues(alpha: 0.7)),
+                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: theme.colorScheme.primary.withValues(alpha: 0.7)),
                                     ),
                                     const SizedBox(width: 8),
                                     Flexible(
                                       child: SingleChildScrollView(
                                         scrollDirection: Axis.horizontal,
                                         child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.end,
+                                          mainAxisAlignment: MainAxisAlignment.end,
                                           children: [
-                                            _PairInfoLabel(
-                                                count: pairCountA,
-                                                team: game.teamA),
+                                            _PairInfoLabel(count: pairCountA, team: game.teamA),
                                             const Padding(
-                                              padding: EdgeInsets.symmetric(
-                                                  horizontal: 4),
-                                              child: Text('|',
-                                                  style: TextStyle(
-                                                      fontSize: 8,
-                                                      color: Colors.grey)),
+                                              padding: EdgeInsets.symmetric(horizontal: 4),
+                                              child: Text('|', style: TextStyle(fontSize: 8, color: Colors.grey)),
                                             ),
-                                            _PairInfoLabel(
-                                                count: pairCountB,
-                                                team: game.teamB),
+                                            _PairInfoLabel(count: pairCountB, team: game.teamB),
                                           ],
                                         ),
                                       ),
@@ -198,69 +174,43 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                                         children: [
                                           _PlayerTag(
                                             player: game.teamA.player1,
-                                            isSelected: _selectedPlayer?.id ==
-                                                game.teamA.player1.id,
-                                            onTap: () => _handlePlayerTap(
-                                                session, game.teamA.player1),
-                                            onLongPress: () =>
-                                                _handlePlayerLongPress(
-                                                    game.teamA.player1),
-                                            onDoubleTap : () =>
-                                                _handlePlayerLongPress(
-                                                    game.teamA.player1),
+                                            isSelected: _selectedPlayer?.id == game.teamA.player1.id,
+                                            onTap: () => _handlePlayerTap(session, game.teamA.player1),
+                                            onLongPress: () => _handlePlayerLongPress(game.teamA.player1),
+                                            onDoubleTap: () => _handlePlayerLongPress(game.teamA.player1),
                                           ),
                                           const SizedBox(height: 4),
                                           _PlayerTag(
                                             player: game.teamA.player2,
-                                            isSelected: _selectedPlayer?.id ==
-                                                game.teamA.player2.id,
-                                            onTap: () => _handlePlayerTap(
-                                                session, game.teamA.player2),
-                                            onLongPress: () =>
-                                                _handlePlayerLongPress(
-                                                    game.teamA.player2),
-                                            onDoubleTap: () => _handlePlayerLongPress(
-                                                game.teamA.player2),
+                                            isSelected: _selectedPlayer?.id == game.teamA.player2.id,
+                                            onTap: () => _handlePlayerTap(session, game.teamA.player2),
+                                            onLongPress: () => _handlePlayerLongPress(game.teamA.player2),
+                                            onDoubleTap: () => _handlePlayerLongPress(game.teamA.player2),
                                           ),
                                         ],
                                       ),
                                     ),
                                     const Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 8.0),
-                                      child: Text('vs',
-                                          style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.grey)),
+                                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                                      child: Text('vs', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
                                     ),
                                     Expanded(
                                       child: Column(
                                         children: [
                                           _PlayerTag(
                                             player: game.teamB.player1,
-                                            isSelected: _selectedPlayer?.id ==
-                                                game.teamB.player1.id,
-                                            onTap: () => _handlePlayerTap(
-                                                session, game.teamB.player1),
-                                            onLongPress: () =>
-                                                _handlePlayerLongPress(
-                                                    game.teamB.player1),
-                                            onDoubleTap: () => _handlePlayerLongPress(
-                                                game.teamB.player1),
+                                            isSelected: _selectedPlayer?.id == game.teamB.player1.id,
+                                            onTap: () => _handlePlayerTap(session, game.teamB.player1),
+                                            onLongPress: () => _handlePlayerLongPress(game.teamB.player1),
+                                            onDoubleTap: () => _handlePlayerLongPress(game.teamB.player1),
                                           ),
                                           const SizedBox(height: 4),
                                           _PlayerTag(
                                             player: game.teamB.player2,
-                                            isSelected: _selectedPlayer?.id ==
-                                                game.teamB.player2.id,
-                                            onTap: () => _handlePlayerTap(
-                                                session, game.teamB.player2),
-                                            onLongPress: () =>
-                                                _handlePlayerLongPress(
-                                                    game.teamB.player2),
-                                            onDoubleTap: () => _handlePlayerLongPress(
-                                                game.teamB.player2),
+                                            isSelected: _selectedPlayer?.id == game.teamB.player2.id,
+                                            onTap: () => _handlePlayerTap(session, game.teamB.player2),
+                                            onLongPress: () => _handlePlayerLongPress(game.teamB.player2),
+                                            onDoubleTap: () => _handlePlayerLongPress(game.teamB.player2),
                                           ),
                                         ],
                                       ),
@@ -276,10 +226,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                               padding: EdgeInsets.only(bottom: 6.0),
                               child: Text(
                                 'お休み',
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey),
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
                               ),
                             ),
                             Wrap(
@@ -305,18 +252,163 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showSettingsAndGenerate(context),
-        tooltip: '試合を生成',
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.small(
+            onPressed: () => _showSettingsAndGenerate(context, isRecalculate: true),
+            tooltip: 'この試合を再生成',
+            backgroundColor: theme.colorScheme.secondaryContainer,
+            child: const Icon(Icons.refresh),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            onPressed: () => _showSettingsAndGenerate(context, isRecalculate: false),
+            tooltip: '新しい試合を生成',
+            child: const Icon(Icons.add),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSettingsAndGenerate(BuildContext context, {required bool isRecalculate}) {
+    final sessions = widget.notifier.sessions;
+    final currentSession = (isRecalculate && _currentIndex != null && sessions.isNotEmpty) 
+        ? sessions[_currentIndex!] 
+        : null;
+
+    // 再生成の場合は現在のセッションのマッチタイプを初期値にする
+    final initialMatchTypes = currentSession?.games.map((g) => g.type).toList();
+
+    widget.notifier.getCurrentSettings().then((currentSettings) {
+      if (!context.mounted) return;
+      
+      List<MatchType> selectedTypes = initialMatchTypes != null 
+          ? List.from(initialMatchTypes) 
+          : List.from(currentSettings.matchTypes);
+
+      showDialog(
+        context: context,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                title: Text(isRecalculate ? '試合の再生成' : '次の試合の設定'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('マッチタイプを追加:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _TypeButton(
+                          label: '男子W',
+                          color: Colors.blue,
+                          onPressed: () => setState(() => selectedTypes.add(MatchType.menDoubles)),
+                        ),
+                        _TypeButton(
+                          label: '女子W',
+                          color: Colors.pink,
+                          onPressed: () => setState(() => selectedTypes.add(MatchType.womenDoubles)),
+                        ),
+                        _TypeButton(
+                          label: '混合W',
+                          color: Colors.purple,
+                          onPressed: () => setState(() => selectedTypes.add(MatchType.mixedDoubles)),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 32),
+                    const Text('設定内容:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const SizedBox(height: 8),
+                    if (selectedTypes.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text('試合が選択されていません', style: TextStyle(fontSize: 14)),
+                      ),
+                    Wrap(
+                      spacing: 8,
+                      children: selectedTypes.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final type = entry.value;
+                        return Chip(
+                          label: Text(_matchTypeName(type), style: const TextStyle(fontSize: 12)),
+                          onDeleted: () => setState(() => selectedTypes.removeAt(index)),
+                          deleteIconColor: Colors.red,
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('キャンセル'),
+                  ),
+                  ElevatedButton(
+                    onPressed: selectedTypes.isEmpty
+                        ? null
+                        : () async {
+                            Navigator.pop(context);
+                            if (isRecalculate && currentSession != null) {
+                              _recalculateSession(context, currentSession.index, CourtSettings(selectedTypes));
+                            } else {
+                              _generateWithSettings(context, CourtSettings(selectedTypes));
+                            }
+                          },
+                    child: Text(isRecalculate ? '再生成' : '生成'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    });
+  }
+
+  Future<void> _recalculateSession(BuildContext context, int sessionIndex, CourtSettings settings) async {
+    try {
+      await widget.notifier.recalculateSession(sessionIndex, settings);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('試合を再生成しました'), duration: Duration(seconds: 1)),
+      );
+    } catch (e) {
+      _showErrorDialog(context, e.toString());
+    }
+  }
+
+  Future<void> _generateWithSettings(BuildContext context, CourtSettings settings) async {
+    try {
+      await widget.notifier.generateSessionWithSettings(settings);
+      setState(() {
+        _currentIndex = widget.notifier.sessions.length - 1;
+        _selectedPlayer = null;
+      });
+    } catch (e) {
+      _showErrorDialog(context, e.toString());
+    }
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('エラー'),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+        ],
       ),
     );
   }
 
   int _getPairCountFromPool(PlayerStatsPool pool, Team team) {
     try {
-      final p1WithStats =
-          pool.all.firstWhere((p) => p.player.id == team.player1.id);
+      final p1WithStats = pool.all.firstWhere((p) => p.player.id == team.player1.id);
       return p1WithStats.stats.partnerCounts[team.player2.id] ?? 0;
     } catch (_) {
       return 0;
@@ -325,12 +417,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
 
   String _matchTypeName(MatchType type) {
     switch (type) {
-      case MatchType.menDoubles:
-        return '男子W';
-      case MatchType.womenDoubles:
-        return '女子W';
-      case MatchType.mixedDoubles:
-        return '混合W';
+      case MatchType.menDoubles: return '男子W';
+      case MatchType.womenDoubles: return '女子W';
+      case MatchType.mixedDoubles: return '混合W';
     }
   }
 
@@ -394,121 +483,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     return team.copyWith(player1: newP1, player2: newP2);
   }
 
-  void _showSettingsAndGenerate(BuildContext context) {
-    widget.notifier.getCurrentSettings().then((currentSettings) {
-      if (!context.mounted) return;
-      List<MatchType> selectedTypes = List.from(currentSettings.matchTypes);
-
-      showDialog(
-        context: context,
-        builder: (context) {
-          return StatefulBuilder(
-            builder: (context, setState) {
-              return AlertDialog(
-                title: const Text('次の試合の設定'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('マッチタイプを追加:',
-                        style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _TypeButton(
-                          label: '男子W',
-                          color: Colors.blue,
-                          onPressed: () => setState(
-                              () => selectedTypes.add(MatchType.menDoubles)),
-                        ),
-                        _TypeButton(
-                          label: '女子W',
-                          color: Colors.pink,
-                          onPressed: () => setState(
-                              () => selectedTypes.add(MatchType.womenDoubles)),
-                        ),
-                        _TypeButton(
-                          label: '混合W',
-                          color: Colors.purple,
-                          onPressed: () => setState(
-                              () => selectedTypes.add(MatchType.mixedDoubles)),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 32),
-                    const Text('生成する試合:',
-                        style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    const SizedBox(height: 8),
-                    if (selectedTypes.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text('試合が選択されていません',
-                            style: TextStyle(fontSize: 14)),
-                      ),
-                    Wrap(
-                      spacing: 8,
-                      children: selectedTypes.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final type = entry.value;
-                        return Chip(
-                          label: Text(_matchTypeName(type),
-                              style: const TextStyle(fontSize: 12)),
-                          onDeleted: () =>
-                              setState(() => selectedTypes.removeAt(index)),
-                          deleteIconColor: Colors.red,
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('キャンセル'),
-                  ),
-                  ElevatedButton(
-                    onPressed: selectedTypes.isEmpty
-                        ? null
-                        : () async {
-                            Navigator.pop(context);
-                            _generateWithSettings(
-                                context, CourtSettings(selectedTypes));
-                          },
-                    child: const Text('生成'),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      );
-    });
-  }
-
-  Future<void> _generateWithSettings(
-      BuildContext context, CourtSettings settings) async {
-    try {
-      await widget.notifier.generateSessionWithSettings(settings);
-      setState(() {
-        _currentIndex = widget.notifier.sessions.length - 1;
-        _selectedPlayer = null;
-      });
-    } catch (e) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('生成エラー'),
-          content: Text(e.toString()),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
-          ],
-        ),
-      );
-    }
-  }
-
   void _showClearConfirmDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -516,8 +490,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         title: const Text('履歴のクリア'),
         content: const Text('全ての試合履歴を削除しますか？'),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル')),
           TextButton(
             onPressed: () {
               widget.notifier.clearHistory();
@@ -546,7 +519,7 @@ class _PairInfoLabel extends StatelessWidget {
     return Text(
       '${team.player1.name} & ${team.player2.name}: $count回目',
       style: TextStyle(
-        fontSize: 12,
+        fontSize: 8,
         color: count > 1 ? Colors.orange.shade800 : Colors.grey.shade500,
         fontWeight: count > 1 ? FontWeight.bold : FontWeight.normal,
       ),
@@ -576,9 +549,7 @@ class _RestingChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.orange.withValues(alpha: 0.2)
-              : color.withValues(alpha: 0.08),
+          color: isSelected ? Colors.orange.withValues(alpha: 0.2) : color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected ? Colors.orange : color.withValues(alpha: 0.3),
@@ -588,8 +559,7 @@ class _RestingChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(player.gender == Gender.male ? Icons.male : Icons.female,
-                size: 12, color: isSelected ? Colors.orange : color),
+            Icon(player.gender == Gender.male ? Icons.male : Icons.female, size: 12, color: isSelected ? Colors.orange : color),
             const SizedBox(width: 4),
             Text(
               player.name,
@@ -611,8 +581,7 @@ class _TypeButton extends StatelessWidget {
   final Color color;
   final VoidCallback onPressed;
 
-  const _TypeButton(
-      {required this.label, required this.color, required this.onPressed});
+  const _TypeButton({required this.label, required this.color, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -669,7 +638,7 @@ class _PlayerTag extends StatelessWidget {
         child: Text(
           player.name,
           style: TextStyle(
-            fontSize: 15,
+            fontSize: 14,
             color: isSelected ? Colors.orange.shade900 : Colors.black87,
             fontWeight: FontWeight.bold,
           ),
