@@ -44,8 +44,14 @@ class PlayerListScreen extends StatelessWidget {
             );
           }
 
-          final activePlayers = pool.all
-              .where((p) => p.player.isActive)
+          // 「本日の参加メンバ」を男女別に抽出
+          final activeMales = pool.all
+              .where((p) => p.player.isActive && p.player.gender == Gender.male)
+              .toList()
+            ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
+
+          final activeFemales = pool.all
+              .where((p) => p.player.isActive && p.player.gender == Gender.female)
               .toList()
             ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
 
@@ -65,15 +71,30 @@ class PlayerListScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (activePlayers.isNotEmpty) ...[
-                  _buildSectionTitle(context, _buildActiveMemberTitle(activePlayers)),
+                if (activeMales.isNotEmpty || activeFemales.isNotEmpty) ...[
+                  _buildSectionTitle(context, _buildActiveMemberTitle(activeMales.length + activeFemales.length, activeMales.length, activeFemales.length)),
+                  const SizedBox(height: 12),
+                  if (activeMales.isNotEmpty) ...[
+                    const _GenderSubTitle(label: '男性', color: Colors.blue),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: activeMales.map((p) => _buildPlayerChip(context, p, theme)).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (activeFemales.isNotEmpty) ...[
+                    const _GenderSubTitle(label: '女性', color: Colors.pink),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: activeFemales.map((p) => _buildPlayerChip(context, p, theme)).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: activePlayers.map((p) => _buildPlayerChip(context, p, theme)).toList(),
-                  ),
-                  const SizedBox(height: 24),
                   const Divider(),
                   const SizedBox(height: 16),
                 ],
@@ -116,10 +137,8 @@ class PlayerListScreen extends StatelessWidget {
     );
   }
 
-  String _buildActiveMemberTitle(List<PlayerWithStats> activePlayers) {
-    final maleCount = activePlayers.where((p) => p.player.gender == Gender.male).length;
-    final femaleCount = activePlayers.where((p) => p.player.gender == Gender.female).length;
-    return '本日の参加メンバ (計${activePlayers.length}名: 男$maleCount 女$femaleCount)';
+  String _buildActiveMemberTitle(int total, int males, int females) {
+    return '本日の参加メンバ (計$total名: 男$males 女$females)';
   }
 
   String _getIndexLabel(String yomigana) {
@@ -231,8 +250,6 @@ class PlayerListScreen extends StatelessWidget {
     final m = stats.typeCounts[MatchType.menDoubles] ?? 0;
     final w = stats.typeCounts[MatchType.womenDoubles] ?? 0;
     final x = stats.typeCounts[MatchType.mixedDoubles] ?? 0;
-    
-    // お休み回数を追加して表示
     return '計${stats.totalMatches}(休${stats.totalRests}) [男$m 女$w 混$x]';
   }
 
@@ -341,6 +358,38 @@ class PlayerListScreen extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+class _GenderSubTitle extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _GenderSubTitle({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 14,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: color.withValues(alpha: 0.8),
+          ),
+        ),
+      ],
     );
   }
 }
