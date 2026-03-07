@@ -4,6 +4,8 @@ import 'match_type.dart';
 class PlayerStats {
   /// 合計出場回数
   final int totalMatches;
+  /// 合計お休み回数
+  final int totalRests;
   /// 種目別の出場回数
   final Map<MatchType, int> typeCounts;
   /// このプレイヤーが誰と何回ペア（味方）を組んだか (key: Player.id, value: 回数)
@@ -17,6 +19,7 @@ class PlayerStats {
 
   PlayerStats({
     required this.totalMatches,
+    required this.totalRests,
     required this.typeCounts,
     required this.partnerCounts,
     required this.opponentCounts,

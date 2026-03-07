@@ -171,6 +171,7 @@ class PlayerListScreen extends StatelessWidget {
     return InkWell(
       onTap: () => notifier.toggleActive(player),
       onLongPress: () => _showAddEditDialog(context, player: player),
+      onDoubleTap: () => _showAddEditDialog(context, player: player),
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -181,7 +182,7 @@ class PlayerListScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: player.isActive 
-                ? genderColor.withValues(alpha: 0.5)
+                ? genderColor.withValues(alpha: 0.5) 
                 : theme.colorScheme.outlineVariant,
           ),
         ),
@@ -212,8 +213,9 @@ class PlayerListScreen extends StatelessWidget {
                   child: Text(
                     _buildStatsString(stats),
                     style: TextStyle(
-                      fontSize: 9,
+                      fontSize: 12,
                       color: player.isActive ? Colors.black54 : Colors.grey,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -229,7 +231,9 @@ class PlayerListScreen extends StatelessWidget {
     final m = stats.typeCounts[MatchType.menDoubles] ?? 0;
     final w = stats.typeCounts[MatchType.womenDoubles] ?? 0;
     final x = stats.typeCounts[MatchType.mixedDoubles] ?? 0;
-    return '計${stats.totalMatches} (男$m 女$w 混$x)';
+    
+    // お休み回数を追加して表示
+    return '計${stats.totalMatches}(休${stats.totalRests}) [男$m 女$w 混$x]';
   }
 
   void _showAddEditDialog(BuildContext context, {Player? player}) {

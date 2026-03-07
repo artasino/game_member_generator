@@ -18,9 +18,11 @@ class SessionNotifier extends ChangeNotifier {
   final MatchMakingService matchMakingService;
 
   List<Session> _sessions = [];
+
   List<Session> get sessions => _sessions;
 
   PlayerStatsPool _cachedPool = PlayerStatsPool([]);
+
   PlayerStatsPool get playerStatsPool => _cachedPool;
 
   SessionNotifier({
@@ -38,6 +40,7 @@ class SessionNotifier extends ChangeNotifier {
 
   Future<void> _updateStats() async {
     final Map<String, int> totals = {};
+    final Map<String, int> rests = {}; // お休み回数用
     final Map<String, Map<MatchType, int>> typeBreakdowns = {};
     final Map<String, Map<String, int>> partnerBreakdowns = {};
     final Map<String, Map<String, int>> opponentBreakdowns = {};
@@ -46,12 +49,14 @@ class SessionNotifier extends ChangeNotifier {
     for (final player in allPlayers) {
       final id = player.id;
       totals[id] = 0;
+      rests[id] = 0;
       typeBreakdowns[id] = {};
       partnerBreakdowns[id] = {};
       opponentBreakdowns[id] = {};
     }
 
     for (final session in _sessions) {
+      // 試合に出たプレイヤーの統計
       for (final game in session.games) {
         final teamA = [game.teamA.player1, game.teamA.player2];
         final teamB = [game.teamB.player1, game.teamB.player2];
@@ -59,10 +64,13 @@ class SessionNotifier extends ChangeNotifier {
         void record(Player p, Player partner, List<Player> opponents) {
           final id = p.id;
           totals[id] = (totals[id] ?? 0) + 1;
-          typeBreakdowns[id]![game.type] = (typeBreakdowns[id]![game.type] ?? 0) + 1;
-          partnerBreakdowns[id]![partner.id] = (partnerBreakdowns[id]![partner.id] ?? 0) + 1;
+          typeBreakdowns[id]![game.type] =
+              (typeBreakdowns[id]![game.type] ?? 0) + 1;
+          partnerBreakdowns[id]![partner.id] =
+              (partnerBreakdowns[id]![partner.id] ?? 0) + 1;
           for (final opp in opponents) {
-            opponentBreakdowns[id]![opp.id] = (opponentBreakdowns[id]![opp.id] ?? 0) + 1;
+            opponentBreakdowns[id]![opp.id] =
+                (opponentBreakdowns[id]![opp.id] ?? 0) + 1;
           }
         }
 
@@ -71,13 +79,17 @@ class SessionNotifier extends ChangeNotifier {
         record(teamB[0], teamB[1], teamA);
         record(teamB[1], teamB[0], teamA);
       }
+
+      // お休みだったプレイヤーの統計
+      for (final rp in session.restingPlayers) {
+        rests[rp.id] = (rests[rp.id] ?? 0) + 1;
+      }
     }
 
     // 「休みからの試合間隔」の計算
     final Map<String, int> sessionsSinceLastRest = {};
     for (final player in allPlayers) {
       int count = 0;
-      // 履歴を新しい順に遡る
       for (final session in _sessions.reversed) {
         final rested = session.restingPlayers.any((p) => p.id == player.id);
         if (rested) break;
@@ -91,10 +103,13 @@ class SessionNotifier extends ChangeNotifier {
         player: p,
         stats: PlayerStats(
           totalMatches: totals[p.id] ?? 0,
+          totalRests: rests[p.id] ?? 0,
+          // 合計お休み回数をセット
           typeCounts: typeBreakdowns[p.id] ?? {},
           partnerCounts: partnerBreakdowns[p.id] ?? {},
           opponentCounts: opponentBreakdowns[p.id] ?? {},
-          restedLastTime: _sessions.isNotEmpty && _sessions.last.restingPlayers.any((rp) => rp.id == p.id),
+          restedLastTime: _sessions.isNotEmpty &&
+              _sessions.last.restingPlayers.any((rp) => rp.id == p.id),
           sessionsSinceLastRest: sessionsSinceLastRest[p.id] ?? 0,
         ),
       );
@@ -156,13 +171,15 @@ class SessionNotifier extends ChangeNotifier {
       playingPlayerIds.add(game.teamB.player2.id);
     }
 
-    final allActivePlayers = await matchMakingService.playerRepository.getActive();
+    final allActivePlayers =
+        await matchMakingService.playerRepository.getActive();
     final restingPlayers = allActivePlayers
         .where((p) => !playingPlayerIds.contains(p.id))
         .toList();
 
     final nextIndex = _sessions.length + 1;
-    final newSession = Session(nextIndex, games, restingPlayers: restingPlayers);
+    final newSession =
+        Session(nextIndex, games, restingPlayers: restingPlayers);
 
     await sessionRepository.add(newSession);
     await _refresh();

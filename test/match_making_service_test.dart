@@ -38,6 +38,7 @@ void main() {
 
   setUp(() {
     mockRepository = MockPlayerRepository();
+    // RepositoryをDIしてサービスを初期化
     service = MatchMakingService(RandomMatchAlgorithm(), mockRepository);
   });
 
@@ -50,10 +51,17 @@ void main() {
       final p4 = Player(id: '4', name: 'M4', yomigana: 'm4', gender: Gender.male);
       mockRepository.players = [p1, p2, p3, p4];
 
-      // 統計プールの準備
+      // 統計プールの準備（追加されたtotalRestsも含める）
       final pool = PlayerStatsPool(mockRepository.players.map((p) => PlayerWithStats(
         player: p,
-        stats: PlayerStats(totalMatches: 0, typeCounts: {}, partnerCounts: {}, opponentCounts: {}),
+        stats: PlayerStats(
+          totalMatches: 0, 
+          totalRests: 0, // 追加
+          typeCounts: {}, 
+          partnerCounts: {}, 
+          opponentCounts: {},
+          sessionsSinceLastRest: 0,
+        ),
       )).toList());
 
       // When
