@@ -7,7 +7,7 @@ import '../../domain/entities/player_with_stats.dart';
 import '../notifiers/player_notifier.dart';
 import '../notifiers/session_notifier.dart';
 
-class PlayerListScreen extends StatelessWidget {
+class PlayerListScreen extends StatefulWidget {
   final PlayerNotifier notifier;
   final SessionNotifier sessionNotifier;
 
@@ -18,19 +18,62 @@ class PlayerListScreen extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<PlayerListScreen> createState() => _PlayerListScreenState();
+}
+
+class _PlayerListScreenState extends State<PlayerListScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('メンバ一覧'),
+        title: _isSearching 
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: '名前・よみがなで検索...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: Colors.white70),
+                ),
+                style: const TextStyle(color: Colors.white, fontSize: 18),
+                onChanged: (value) => setState(() => _searchQuery = value.trim()),
+              )
+            : const Text('メンバ一覧'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
+        actions: [
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                if (_isSearching) {
+                  _isSearching = false;
+                  _searchQuery = '';
+                  _searchController.clear();
+                } else {
+                  _isSearching = true;
+                }
+              });
+            },
+          ),
+        ],
       ),
       body: AnimatedBuilder(
-        animation: Listenable.merge([notifier, sessionNotifier]),
+        animation: Listenable.merge([widget.notifier, widget.sessionNotifier]),
         builder: (context, _) {
-          final pool = sessionNotifier.playerStatsPool;
+          final pool = widget.sessionNotifier.playerStatsPool;
           if (pool.all.isEmpty) {
             return const Center(
               child: Column(
@@ -44,21 +87,29 @@ class PlayerListScreen extends StatelessWidget {
             );
           }
 
+          // 検索フィルタリング
+          final filteredPool = _searchQuery.isEmpty 
+              ? pool.all 
+              : pool.all.where((p) => 
+                  p.player.name.contains(_searchQuery) || 
+                  p.player.yomigana.contains(_searchQuery)).toList();
+
           // 「本日の参加メンバ」を男女別に抽出
-          final activeMales = pool.all
+          final activeMales = filteredPool
               .where((p) => p.player.isActive && p.player.gender == Gender.male)
               .toList()
             ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
 
-          final activeFemales = pool.all
+          final activeFemales = filteredPool
               .where((p) => p.player.isActive && p.player.gender == Gender.female)
               .toList()
             ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
 
-          final sortedAll = List<PlayerWithStats>.from(pool.all)
+          // 全メンバのグループ化
+          final groupedPlayers = <String, List<PlayerWithStats>>{};
+          final sortedAll = List<PlayerWithStats>.from(filteredPool)
             ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
 
-          final groupedPlayers = <String, List<PlayerWithStats>>{};
           for (var p in sortedAll) {
             final indexLabel = _getIndexLabel(p.player.yomigana);
             groupedPlayers.putIfAbsent(indexLabel, () => []).add(p);
@@ -67,39 +118,38 @@ class PlayerListScreen extends StatelessWidget {
             ..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (activeMales.isNotEmpty || activeFemales.isNotEmpty) ...[
-                  _buildSectionTitle(context, _buildActiveMemberTitle(activeMales.length + activeFemales.length, activeMales.length, activeFemales.length)),
+                  _buildSectionHeader(context, '本日の参加メンバ', 
+                      '計${activeMales.length + activeFemales.length}名 (男${activeMales.length} 女${activeFemales.length})'),
                   const SizedBox(height: 12),
                   if (activeMales.isNotEmpty) ...[
-                    const _GenderSubTitle(label: '男性', color: Colors.blue),
+                    const _GenderLabel(label: '男性', color: Colors.blue),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: activeMales.map((p) => _buildPlayerChip(context, p, theme)).toList(),
-                    ),
+                    _buildWrap(activeMales, theme),
                     const SizedBox(height: 16),
                   ],
                   if (activeFemales.isNotEmpty) ...[
-                    const _GenderSubTitle(label: '女性', color: Colors.pink),
+                    const _GenderLabel(label: '女性', color: Colors.pink),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: activeFemales.map((p) => _buildPlayerChip(context, p, theme)).toList(),
-                    ),
+                    _buildWrap(activeFemales, theme),
                     const SizedBox(height: 16),
                   ],
-                  const SizedBox(height: 8),
-                  const Divider(),
-                  const SizedBox(height: 16),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Divider(),
+                  ),
                 ],
-                _buildSectionTitle(context, '全メンバ (五十音順)'),
+                _buildSectionHeader(context, '全メンバ', '五十音順'),
                 const SizedBox(height: 16),
+                if (sortedLabels.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 32),
+                    child: Center(child: Text('該当するメンバが見つかりません', style: TextStyle(color: Colors.grey))),
+                  ),
                 ...sortedLabels.map((label) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,17 +160,13 @@ class PlayerListScreen extends StatelessWidget {
                           label,
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w900,
+                            color: theme.colorScheme.primary.withValues(alpha: 0.6),
                           ),
                         ),
                       ),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: groupedPlayers[label]!.map((p) => _buildPlayerChip(context, p, theme, showCheckbox: true)).toList(),
-                      ),
-                      const SizedBox(height: 20),
+                      _buildWrap(groupedPlayers[label]!, theme, showCheckbox: true),
+                      const SizedBox(height: 24),
                     ],
                   );
                 }).toList(),
@@ -137,8 +183,23 @@ class PlayerListScreen extends StatelessWidget {
     );
   }
 
-  String _buildActiveMemberTitle(int total, int males, int females) {
-    return '本日の参加メンバ (計$total名: 男$males 女$females)';
+  Widget _buildSectionHeader(BuildContext context, String title, String subtitle) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+        Text(subtitle, style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey.shade600)),
+      ],
+    );
+  }
+
+  Widget _buildWrap(List<PlayerWithStats> players, ThemeData theme, {bool showCheckbox = false}) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: players.map((p) => _buildPlayerChip(context, p, theme, showCheckbox: showCheckbox)).toList(),
+    );
   }
 
   String _getIndexLabel(String yomigana) {
@@ -172,97 +233,79 @@ class PlayerListScreen extends StatelessWidget {
     return 1000;
   }
 
-  Widget _buildSectionTitle(BuildContext context, String title) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade700,
-          ),
-    );
-  }
-
   Widget _buildPlayerChip(BuildContext context, PlayerWithStats pWithStats, ThemeData theme, {bool showCheckbox = false}) {
     final player = pWithStats.player;
     final stats = pWithStats.stats;
     final genderColor = player.gender == Gender.male ? Colors.blue : Colors.pink;
 
     return InkWell(
-      onTap: () => notifier.toggleActive(player),
+      onTap: () => widget.notifier.toggleActive(player),
       onLongPress: () => _showAddEditDialog(context, player: player),
       onDoubleTap: () => _showAddEditDialog(context, player: player),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
-        opacity: player.isActive ? 1.0 : 0.9, // 透明度を0.7に改善
+        opacity: player.isActive ? 1.0 : 0.7,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: player.isActive 
-                ? genderColor.withValues(alpha: 0.1) 
-                : genderColor.withValues(alpha: 0.1), // 性別色をうっすら残す
-            borderRadius: BorderRadius.circular(20),
+                ? genderColor.withValues(alpha: 0.12) 
+                : genderColor.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: player.isActive 
-                  ? genderColor.withValues(alpha: 0.5) 
-                  : genderColor.withValues(alpha: 0.15), // 境界線も性別色を残す
-              width: player.isActive ? 1.2 : 1.0,
+                  ? genderColor.withValues(alpha: 0.6) 
+                  : genderColor.withValues(alpha: 0.2),
+              width: player.isActive ? 1.5 : 1.0,
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (showCheckbox) ...[
+          child: IntrinsicWidth(
+            child: Row(
+              children: [
+                if (showCheckbox) ...[
+                  Icon(
+                    player.isActive ? Icons.check_circle : Icons.radio_button_unchecked,
+                    size: 20,
+                    color: player.isActive ? genderColor : genderColor.withValues(alpha: 0.4),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 Icon(
-                  player.isActive ? Icons.check_circle : Icons.radio_button_unchecked,
+                  player.gender == Gender.male ? Icons.male : Icons.female,
                   size: 18,
                   color: player.isActive ? genderColor : genderColor.withValues(alpha: 0.4),
                 ),
                 const SizedBox(width: 6),
-              ],
-              Icon(
-                player.gender == Gender.male ? Icons.male : Icons.female,
-                size: 16,
-                color: player.isActive ? genderColor : genderColor.withValues(alpha: 0.4),
-              ),
-              const SizedBox(width: 4),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    player.name,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: player.isActive ? FontWeight.bold : FontWeight.normal,
-                      color: player.isActive ? Colors.black87 : Colors.black54,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      _buildStatsString(stats),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      player.name,
                       style: TextStyle(
-                        fontSize: 12,
-                        color: player.isActive ? Colors.black54 : Colors.grey,
+                        fontSize: 15,
+                        fontWeight: player.isActive ? FontWeight.bold : FontWeight.w500,
+                        color: player.isActive ? Colors.black87 : Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '計${stats.totalMatches} (休${stats.totalRests})',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: player.isActive ? Colors.black54 : Colors.grey.shade600,
                         fontWeight: player.isActive ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
-  }
-
-  String _buildStatsString(PlayerStats stats) {
-    final m = stats.typeCounts[MatchType.menDoubles] ?? 0;
-    final w = stats.typeCounts[MatchType.womenDoubles] ?? 0;
-    final x = stats.typeCounts[MatchType.mixedDoubles] ?? 0;
-    return '計${stats.totalMatches}(休${stats.totalRests}) [男$m 女$w 混$x]';
   }
 
   void _showAddEditDialog(BuildContext context, {Player? player}) {
@@ -337,7 +380,7 @@ class PlayerListScreen extends StatelessWidget {
                 if (isEdit)
                   TextButton(
                     onPressed: () {
-                      notifier.removePlayer(player.id);
+                      widget.notifier.removePlayer(player.id);
                       Navigator.pop(context);
                     },
                     child: const Text('削除', style: TextStyle(color: Colors.red)),
@@ -348,13 +391,13 @@ class PlayerListScreen extends StatelessWidget {
                     final yomigana = yomiganaController.text.trim();
                     if (name.isEmpty || yomigana.isEmpty) return;
                     if (isEdit) {
-                      notifier.updatePlayer(player.copyWith(
+                      widget.notifier.updatePlayer(player.copyWith(
                         name: name,
                         yomigana: yomigana,
                         gender: selectedGender,
                       ));
                     } else {
-                      notifier.addPlayer(Player(
+                      widget.notifier.addPlayer(Player(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
                         name: name,
                         yomigana: yomigana,
@@ -374,11 +417,11 @@ class PlayerListScreen extends StatelessWidget {
   }
 }
 
-class _GenderSubTitle extends StatelessWidget {
+class _GenderLabel extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _GenderSubTitle({required this.label, required this.color});
+  const _GenderLabel({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -392,13 +435,13 @@ class _GenderSubTitle extends StatelessWidget {
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 8),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: color.withValues(alpha: 0.8),
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+            color: color.withValues(alpha: 0.85),
           ),
         ),
       ],
