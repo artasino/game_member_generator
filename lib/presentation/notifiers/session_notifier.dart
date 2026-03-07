@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
+import '../../domain/entities/gender.dart';
 import '../../domain/entities/player_stats.dart';
 import '../../domain/entities/player_stats_pool.dart';
 import '../../domain/entities/player_with_stats.dart';
@@ -10,6 +11,13 @@ import '../../domain/entities/team.dart';
 import '../../domain/repository/court_settings_repository.dart';
 import '../../domain/repository/session_repository/session_history_repository.dart';
 import '../../domain/services/match_making_service.dart';
+
+/// 人数不足などの判定結果を保持するクラス
+class RequirementResult {
+  final bool canGenerate;
+  final String? errorMessage;
+  RequirementResult(this.canGenerate, this.errorMessage);
+}
 
 /// 試合履歴（セッション）の状態管理と統計計算を行うNotifier
 class SessionNotifier extends ChangeNotifier {
@@ -25,12 +33,45 @@ class SessionNotifier extends ChangeNotifier {
   /// 全プレイヤーの出場統計プールを返す
   PlayerStatsPool get playerStatsPool => _cachedPool;
 
+  // 生成中フラグ
+  bool _isGenerating = false;
+  bool get isGenerating => _isGenerating;
+
   SessionNotifier({
     required this.sessionRepository,
     required this.courtSettingsRepository,
     required this.matchMakingService,
   }) {
     _refresh();
+  }
+
+  /// 現在のアクティブプレイヤーで、指定された試合形式が組めるかチェックする
+  RequirementResult checkRequirements(List<MatchType> types) {
+    int reqMale = 0;
+    int reqFemale = 0;
+    for (final type in types) {
+      if (type == MatchType.menDoubles) {
+        reqMale += 4;
+      } else if (type == MatchType.womenDoubles) {
+        reqFemale += 4;
+      } else if (type == MatchType.mixedDoubles) {
+        reqMale += 2;
+        reqFemale += 2;
+      }
+    }
+
+    final activeMales = _cachedPool.all.where((p) => p.player.isActive && p.player.gender == Gender.male).length;
+    final activeFemales = _cachedPool.all.where((p) => p.player.isActive && p.player.gender == Gender.female).length;
+
+    if (activeMales < reqMale && activeFemales < reqFemale) {
+      return RequirementResult(false, '男女ともに人数が足りません (男:${reqMale - activeMales}人, 女:${reqFemale - activeFemales}人不足)');
+    } else if (activeMales < reqMale) {
+      return RequirementResult(false, '男性が足りません (${reqMale - activeMales}人不足)');
+    } else if (activeFemales < reqFemale) {
+      return RequirementResult(false, '女性が足りません (${reqFemale - activeFemales}人不足)');
+    }
+
+    return RequirementResult(true, null);
   }
 
   Future<void> onPlayersUpdated() async {
@@ -116,15 +157,15 @@ class SessionNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 指定されたインデックスのセッションを、新しい設定で再生成する
   Future<void> recalculateSession(int sessionIndex, CourtSettings settings) async {
-    // 1. そのセッションを除いた状態での統計を一時的に計算する
+    _isGenerating = true;
+    notifyListeners();
+    
     final originalSessions = List<Session>.from(_sessions);
     _sessions.removeWhere((s) => s.index == sessionIndex);
     await _updateStats();
 
     try {
-      // 2. 新しい組み合わせを生成
       final games = await matchMakingService.generateMatches(
         matchTypes: settings.matchTypes,
         playerStats: _cachedPool,
@@ -135,19 +176,64 @@ class SessionNotifier extends ChangeNotifier {
       final restingPlayers = allActivePlayers.where((p) => !playingPlayerIds.contains(p.id)).toList();
 
       final updatedSession = Session(sessionIndex, games, restingPlayers: restingPlayers);
-
-      // 3. セッションを上書き保存
       await sessionRepository.update(updatedSession);
       
-      // 4. 全体を復元してリフレッシュ
       _sessions = originalSessions;
       final idx = _sessions.indexWhere((s) => s.index == sessionIndex);
       if (idx != -1) _sessions[idx] = updatedSession;
     } finally {
-      // エラーが起きても元の状態に戻す
       await _updateStats();
+      _isGenerating = false;
       notifyListeners();
     }
+  }
+
+  Future<void> generateSessionWithSettings(CourtSettings settings) async {
+    _isGenerating = true;
+    notifyListeners();
+    
+    await courtSettingsRepository.update(settings);
+    
+    try {
+      final games = await matchMakingService.generateMatches(
+        matchTypes: settings.matchTypes,
+        playerStats: _cachedPool,
+      );
+
+      final playingPlayerIds = games.expand((g) => [g.teamA.player1.id, g.teamA.player2.id, g.teamB.player1.id, g.teamB.player2.id]).toSet();
+      final allActivePlayers = await matchMakingService.playerRepository.getActive();
+      final restingPlayers = allActivePlayers.where((p) => !playingPlayerIds.contains(p.id)).toList();
+
+      final nextIndex = _sessions.length + 1;
+      final newSession = Session(nextIndex, games, restingPlayers: restingPlayers);
+
+      await sessionRepository.add(newSession);
+      await _refresh();
+    } finally {
+      _isGenerating = false;
+      notifyListeners();
+    }
+  }
+
+  int getPairCount(Team team, {int? upToIndex}) {
+    int count = 0;
+    final id1 = team.player1.id;
+    final id2 = team.player2.id;
+    for (final session in _sessions) {
+      if (upToIndex != null && session.index > upToIndex) break;
+      for (final game in session.games) {
+        if (_isMatch(game.teamA, id1, id2) || _isMatch(game.teamB, id1, id2)) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  bool _isMatch(Team team, String id1, String id2) {
+    final tId1 = team.player1.id;
+    final tId2 = team.player2.id;
+    return (tId1 == id1 && tId2 == id2) || (tId1 == id2 && tId2 == id1);
   }
 
   Future<void> updateSession(Session session) async {
@@ -158,24 +244,6 @@ class SessionNotifier extends ChangeNotifier {
       await _updateStats();
       notifyListeners();
     }
-  }
-
-  Future<void> generateSessionWithSettings(CourtSettings settings) async {
-    await courtSettingsRepository.update(settings);
-    final games = await matchMakingService.generateMatches(
-      matchTypes: settings.matchTypes,
-      playerStats: _cachedPool,
-    );
-
-    final playingPlayerIds = games.expand((g) => [g.teamA.player1.id, g.teamA.player2.id, g.teamB.player1.id, g.teamB.player2.id]).toSet();
-    final allActivePlayers = await matchMakingService.playerRepository.getActive();
-    final restingPlayers = allActivePlayers.where((p) => !playingPlayerIds.contains(p.id)).toList();
-
-    final nextIndex = _sessions.length + 1;
-    final newSession = Session(nextIndex, games, restingPlayers: restingPlayers);
-
-    await sessionRepository.add(newSession);
-    await _refresh();
   }
 
   Future<void> clearHistory() async {

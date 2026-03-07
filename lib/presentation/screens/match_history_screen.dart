@@ -67,69 +67,75 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           final restingMales = session.restingPlayers.where((p) => p.gender == Gender.male).toList();
           final restingFemales = session.restingPlayers.where((p) => p.gender == Gender.female).toList();
 
-          return Column(
+          return Stack(
             children: [
-              _buildNavigation(theme, session, sessions.length),
-              
-              if (_selectedPlayer != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  color: Colors.orange.withValues(alpha: 0.1),
-                  width: double.infinity,
-                  child: Row(
-                    children: [
-                      const Icon(Icons.swap_horizontal_circle, color: Colors.orange, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${_selectedPlayer!.name} と入れ替えるメンバを選択',
-                        style: const TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.bold),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () => setState(() => _selectedPlayer = null),
-                        child: const Text('キャンセル', style: TextStyle(fontSize: 12)),
-                      )
-                    ],
-                  ),
-                ),
-                
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final bool isWide = constraints.maxWidth > 700;
-                    
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              Column(
+                children: [
+                  _buildNavigation(theme, session, sessions.length),
+                  
+                  if (_selectedPlayer != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      width: double.infinity,
+                      child: Row(
                         children: [
-                          if (isWide)
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: session.games.asMap().entries.map((entry) {
-                                return SizedBox(
-                                  width: (constraints.maxWidth - 36) / 2,
-                                  child: _buildGameCard(context, entry.key, entry.value, session, pool, theme),
-                                );
-                              }).toList(),
-                            )
-                          else
-                            ...session.games.asMap().entries.map((entry) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: _buildGameCard(context, entry.key, entry.value, session, pool, theme),
-                              );
-                            }).toList(),
-                          
-                          if (session.restingPlayers.isNotEmpty) 
-                            _buildRestingContainer(session, restingMales, restingFemales, theme),
+                          const Icon(Icons.swap_horizontal_circle, color: Colors.orange, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${_selectedPlayer!.name} と入れ替えるメンバを選択',
+                            style: const TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.bold),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () => setState(() => _selectedPlayer = null),
+                            child: const Text('キャンセル', style: TextStyle(fontSize: 12)),
+                          )
                         ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                    
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final bool isWide = constraints.maxWidth > 700;
+                        
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (isWide)
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 12,
+                                  children: session.games.asMap().entries.map((entry) {
+                                    return SizedBox(
+                                      width: (constraints.maxWidth - 36) / 2,
+                                      child: _buildGameCard(context, entry.key, entry.value, session, pool, theme),
+                                    );
+                                  }).toList(),
+                                )
+                              else
+                                ...session.games.asMap().entries.map((entry) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: _buildGameCard(context, entry.key, entry.value, session, pool, theme),
+                                  );
+                                }).toList(),
+                              
+                              if (session.restingPlayers.isNotEmpty) 
+                                _buildRestingContainer(session, restingMales, restingFemales, theme),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
+              if (widget.notifier.isGenerating)
+                _buildProgressOverlay(theme),
             ],
           );
         },
@@ -138,18 +144,49 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           FloatingActionButton.small(
-            onPressed: () => _showSettingsAndGenerate(context, isRecalculate: true),
+            onPressed: widget.notifier.isGenerating ? null : () => _showSettingsAndGenerate(context, isRecalculate: true),
             tooltip: 'この試合を再生成',
             backgroundColor: theme.colorScheme.secondaryContainer,
             child: const Icon(Icons.refresh),
           ),
           const SizedBox(height: 12),
           FloatingActionButton(
-            onPressed: () => _showSettingsAndGenerate(context, isRecalculate: false),
+            onPressed: widget.notifier.isGenerating ? null : () => _showSettingsAndGenerate(context, isRecalculate: false),
             tooltip: '新しい試合を生成',
             child: const Icon(Icons.add),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProgressOverlay(ThemeData theme) {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.5),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 24),
+              Text(
+                '試合を生成中...',
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '最適な組み合わせを計算しています',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -363,7 +400,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
 
   void _showSettingsAndGenerate(BuildContext context, {required bool isRecalculate}) {
     widget.notifier.getCurrentSettings().then((currentSettings) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       final sessions = widget.notifier.sessions;
       final currentSession = (isRecalculate && _currentIndex != null && sessions.isNotEmpty) ? sessions[_currentIndex!] : null;
       final initialMatchTypes = currentSession?.games.map((g) => g.type).toList();
@@ -374,6 +411,10 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         context: context,
         builder: (context) {
           return StatefulBuilder(builder: (context, setState) {
+            final result = widget.notifier.checkRequirements(selectedTypes);
+            final bool canGenerate = result.canGenerate;
+            final String? errorMsg = result.errorMessage;
+
             return AlertDialog(
               title: Text(isRecalculate ? '試合の再生成' : '次の試合の設定'),
               content: Column(
@@ -391,22 +432,30 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                     ],
                   ),
                   const Divider(height: 32),
-                  Wrap(
-                    spacing: 8,
-                    children: selectedTypes.asMap().entries.map((entry) {
-                      return Chip(
-                        label: Text(_matchTypeName(entry.value).replaceAll('ダブルス', 'W'), style: const TextStyle(fontSize: 12)),
-                        onDeleted: () => setState(() => selectedTypes.removeAt(entry.key)),
-                        deleteIconColor: Colors.red,
-                      );
-                    }).toList(),
-                  ),
+                  if (selectedTypes.isNotEmpty) ...[
+                    Wrap(
+                      spacing: 8,
+                      children: selectedTypes.asMap().entries.map((entry) {
+                        return Chip(
+                          label: Text(_matchTypeName(entry.value).replaceAll('ダブルス', 'W'), style: const TextStyle(fontSize: 12)),
+                          onDeleted: () => setState(() => selectedTypes.removeAt(entry.key)),
+                          deleteIconColor: Colors.red,
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (!canGenerate && selectedTypes.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(errorMsg ?? '', style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
                 ],
               ),
               actions: [
                 TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
                 ElevatedButton(
-                  onPressed: selectedTypes.isEmpty ? null : () async {
+                  onPressed: (!canGenerate || selectedTypes.isEmpty) ? null : () async {
                     Navigator.pop(context);
                     if (isRecalculate && currentSession != null) {
                       _recalculateSession(context, currentSession.index, CourtSettings(selectedTypes));
@@ -427,18 +476,27 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   Future<void> _recalculateSession(BuildContext context, int sessionIndex, CourtSettings settings) async {
     try {
       await widget.notifier.recalculateSession(sessionIndex, settings);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('試合を再生成しました'), duration: Duration(seconds: 1)));
-    } catch (e) { _showErrorDialog(context, e.toString()); }
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorDialog(context, e.toString()); 
+    }
   }
 
   Future<void> _generateWithSettings(BuildContext context, CourtSettings settings) async {
     try {
       await widget.notifier.generateSessionWithSettings(settings);
+      if (!mounted) return;
       setState(() { _currentIndex = widget.notifier.sessions.length - 1; _selectedPlayer = null; });
-    } catch (e) { _showErrorDialog(context, e.toString()); }
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorDialog(context, e.toString()); 
+    }
   }
 
   void _showErrorDialog(BuildContext context, String message) {
+    if (!mounted) return;
     showDialog(context: context, builder: (ctx) => AlertDialog(title: const Text('エラー'), content: Text(message), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))]));
   }
 
@@ -487,8 +545,6 @@ class _PairInfoLabel extends StatelessWidget {
   const _PairInfoLabel({required this.count, required this.team});
   @override
   Widget build(BuildContext context) {
-    // 1回目でも表示されるように条件を削除。
-    // 2回目以上の場合は目立つようにオレンジ、1回目は控えめにグレー系の色にする。
     final isMultiple = count > 1;
     
     return Container(
