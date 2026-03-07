@@ -1,11 +1,14 @@
 import 'gender.dart';
 
+/// プレイヤーの情報を保持するクラス
 class Player {
   final String id;
   final String name;
   final String yomigana;
   final Gender gender;
   final bool isActive;
+  /// 次の試合で必ず休み（お休み固定）にするフラグ
+  final bool isMustRest;
 
   const Player({
     required this.id,
@@ -13,6 +16,7 @@ class Player {
     required this.yomigana,
     required this.gender,
     this.isActive = true,
+    this.isMustRest = false,
   });
 
   Player copyWith({
@@ -21,6 +25,7 @@ class Player {
     String? yomigana,
     Gender? gender,
     bool? isActive,
+    bool? isMustRest,
   }) {
     return Player(
       id: id ?? this.id,
@@ -28,6 +33,7 @@ class Player {
       yomigana: yomigana ?? this.yomigana,
       gender: gender ?? this.gender,
       isActive: isActive ?? this.isActive,
+      isMustRest: isMustRest ?? this.isMustRest,
     );
   }
 
@@ -38,6 +44,7 @@ class Player {
       'yomigana': yomigana,
       'gender': gender.index,
       'isActive': isActive ? 1 : 0,
+      'isMustRest': isMustRest ? 1 : 0,
     };
   }
 
@@ -48,6 +55,7 @@ class Player {
       yomigana: json['yomigana'] ?? '',
       gender: Gender.values[json['gender']],
       isActive: json['isActive'] == 1,
+      isMustRest: json['isMustRest'] == 1,
     );
   }
 }

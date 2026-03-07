@@ -68,6 +68,27 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               });
             },
           ),
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'export') {
+                await widget.notifier.exportPlayersToClipboard();
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('メンバリストをクリップボードにコピーしました')),
+                );
+              } else if (value == 'import') {
+                final message = await widget.notifier.importPlayersFromClipboard();
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(message)),
+                );
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'export', child: Text('メンバをエクスポート (JSON)')),
+              const PopupMenuItem(value: 'import', child: Text('メンバをインポート (JSON)')),
+            ],
+          ),
         ],
       ),
       body: AnimatedBuilder(
@@ -87,14 +108,12 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
             );
           }
 
-          // 検索フィルタリング
           final filteredPool = _searchQuery.isEmpty 
               ? pool.all 
               : pool.all.where((p) => 
                   p.player.name.contains(_searchQuery) || 
                   p.player.yomigana.contains(_searchQuery)).toList();
 
-          // 「本日の参加メンバ」を男女別に抽出
           final activeMales = filteredPool
               .where((p) => p.player.isActive && p.player.gender == Gender.male)
               .toList()
@@ -105,7 +124,6 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               .toList()
             ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
 
-          // 全メンバのグループ化
           final groupedPlayers = <String, List<PlayerWithStats>>{};
           final sortedAll = List<PlayerWithStats>.from(filteredPool)
             ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
@@ -281,13 +299,21 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      player.name,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: player.isActive ? FontWeight.bold : FontWeight.w500,
-                        color: player.isActive ? Colors.black87 : Colors.black54,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          player.name,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: player.isActive ? FontWeight.bold : FontWeight.w500,
+                            color: player.isActive ? Colors.black87 : Colors.black54,
+                          ),
+                        ),
+                        if (player.isMustRest) ...[
+                          const SizedBox(width: 4),
+                          const Icon(Icons. coffee_outlined, size: 14, color: Colors.orange),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -313,6 +339,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     final nameController = TextEditingController(text: player?.name ?? '');
     final yomiganaController = TextEditingController(text: player?.yomigana ?? '');
     Gender selectedGender = player?.gender ?? Gender.male;
+    bool isMustRest = player?.isMustRest ?? false;
 
     showDialog(
       context: context,
@@ -369,6 +396,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                         ),
                       ],
                     ),
+                    const Divider(height: 32),
+                    SwitchListTile(
+                      title: const Text('次の試合は必ず休み', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      subtitle: const Text('選出から除外します', style: TextStyle(fontSize: 12)),
+                      value: isMustRest,
+                      onChanged: (v) => setState(() => isMustRest = v),
+                      activeColor: Colors.orange,
+                    ),
                   ],
                 ),
               ),
@@ -395,6 +430,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                         name: name,
                         yomigana: yomigana,
                         gender: selectedGender,
+                        isMustRest: isMustRest,
                       ));
                     } else {
                       widget.notifier.addPlayer(Player(
@@ -402,6 +438,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                         name: name,
                         yomigana: yomigana,
                         gender: selectedGender,
+                        isMustRest: isMustRest,
                       ));
                     }
                     Navigator.pop(context);

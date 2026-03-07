@@ -30,8 +30,12 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     }
 
     // 2. 出場回数に基づいた選出（Must枠と抽選プールの分離）
-    final maleSelection = _splitMustAndCandidates(maleBuckets, requiredMale);
-    final femaleSelection = _splitMustAndCandidates(femaleBuckets, requiredFemale);
+    // ここで isMustRest が true のプレイヤーをあらかじめ除外（候補から外す）する
+    final filteredMaleBuckets = _filterMustRest(maleBuckets);
+    final filteredFemaleBuckets = _filterMustRest(femaleBuckets);
+
+    final maleSelection = _splitMustAndCandidates(filteredMaleBuckets, requiredMale);
+    final femaleSelection = _splitMustAndCandidates(filteredFemaleBuckets, requiredFemale);
 
     // 3. 最適な試合セットを探索
     return _findOptimalMatches(
@@ -41,6 +45,14 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
       requiredMale: requiredMale,
       requiredFemale: requiredFemale,
     );
+  }
+
+  /// isMustRest フラグが true のプレイヤーを除外したバケットを返す
+  Map<int, PlayerStatsPool> _filterMustRest(Map<int, PlayerStatsPool> buckets) {
+    return buckets.map((count, pool) {
+      final filtered = pool.all.where((p) => !p.player.isMustRest).toList();
+      return MapEntry(count, PlayerStatsPool(filtered));
+    });
   }
 
   /// 出場メンバーを確定させた後、最適な試合リストを返す

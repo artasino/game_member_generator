@@ -27,7 +27,7 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'game_member_generator.db');
     return await openDatabase(
       path,
-      version: 2, // バージョンを上げてマイグレーション
+      version: 3, // バージョンを 3 に上げました
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE players(
@@ -35,7 +35,8 @@ class DatabaseHelper {
             name TEXT,
             yomigana TEXT,
             gender INTEGER,
-            isActive INTEGER
+            isActive INTEGER,
+            isMustRest INTEGER DEFAULT 0
           )
         ''');
         await db.execute('''
@@ -44,7 +45,6 @@ class DatabaseHelper {
             content TEXT
           )
         ''');
-        // 設定用テーブル
         await db.execute('''
           CREATE TABLE settings(
             key TEXT PRIMARY KEY,
@@ -60,8 +60,11 @@ class DatabaseHelper {
               value TEXT
             )
           ''');
-          // 既存のsessionsテーブルに混じっている設定データを削除
           await db.delete('sessions', where: 'id = ?', whereArgs: [-1]);
+        }
+        if (oldVersion < 3) {
+          // playersテーブルに isMustRest カラムを追加
+          await db.execute('ALTER TABLE players ADD COLUMN isMustRest INTEGER DEFAULT 0');
         }
       },
     );
