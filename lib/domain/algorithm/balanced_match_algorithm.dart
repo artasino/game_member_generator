@@ -33,7 +33,7 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     final maleSelection = _splitMustAndCandidates(maleBuckets, requiredMale);
     final femaleSelection = _splitMustAndCandidates(femaleBuckets, requiredFemale);
 
-    // 3. 全ての選択肢の中から最適な試合セットを探索
+    // 3. 最適な試合セットを探索
     return _findOptimalMatches(
       matchTypes: matchTypes,
       maleSelection: maleSelection,
@@ -43,7 +43,7 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     );
   }
 
-  /// 全ての選出パターンとチーム分けパターンを評価し、ベストな試合リストを返す
+  /// 出場メンバーを確定させた後、最適な試合リストを返す
   List<Game> _findOptimalMatches({
     required List<MatchType> matchTypes,
     required _SelectionSplit maleSelection,
@@ -51,63 +51,57 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     required int requiredMale,
     required int requiredFemale,
   }) {
-    // 抽選候補から必要な人数を選ぶ全組み合わせを取得
-    final maleCombos = _getCombinations(
+    final random = Random();
+
+    // 1. メンバーを選出する (前回休みからの間隔が短い人を優先して固定)
+    final playingMales = _pickFinalMembers(
+      maleSelection.mustPlayers,
       maleSelection.candidatePool.all,
-      max(0, requiredMale - maleSelection.mustPlayers.length),
+      requiredMale,
+      random,
     );
-    final femaleCombos = _getCombinations(
+    final playingFemales = _pickFinalMembers(
+      femaleSelection.mustPlayers,
       femaleSelection.candidatePool.all,
-      max(0, requiredFemale - femaleSelection.mustPlayers.length),
+      requiredFemale,
+      random,
     );
 
-    double bestTotalScore = double.infinity;
-    List<Game> bestGames = [];
+    // 2. 固定されたメンバー内で最適な「コートへの割り振り」を探索
+    final assignmentResult = _searchBestAssignment(
+      matchTypes: matchTypes,
+      availableMales: playingMales,
+      availableFemales: playingFemales,
+    );
 
-    for (final mCombo in maleCombos) {
-      final playingMales = [...maleSelection.mustPlayers, ...mCombo];
-      final restingMales = maleSelection.candidatePool.all.where((p) => !mCombo.contains(p)).toList();
-
-      for (final fCombo in femaleCombos) {
-        final playingFemales = [...femaleSelection.mustPlayers, ...fCombo];
-        final restingFemales = femaleSelection.candidatePool.all.where((p) => !fCombo.contains(p)).toList();
-
-        // 優先度1: 休みが連続しないスコアを計算
-        double selectionScore = _calculateRestingScore([...restingMales, ...restingFemales]);
-
-        // 最適なコートへの割り振りを探索
-        final assignmentResult = _searchBestAssignment(
-          matchTypes: matchTypes,
-          availableMales: List.from(playingMales),
-          availableFemales: List.from(playingFemales),
-        );
-
-        double totalScore = selectionScore + assignmentResult.score;
-
-        if (totalScore < bestTotalScore) {
-          bestTotalScore = totalScore;
-          bestGames = assignmentResult.games;
-        }
-      }
+    if (assignmentResult.games.isEmpty) {
+      throw Exception('最適な試合構成が見つかりませんでした');
     }
-
-    if (bestGames.isEmpty) throw Exception('最適な試合構成が見つかりませんでした');
-    return bestGames;
+    return assignmentResult.games;
   }
 
-  /// 休みの偏りに対するペナルティ（優先度1位: 連続休み回避）
-  double _calculateRestingScore(List<PlayerWithStats> resting) {
-    double score = 0;
-    for (final r in resting) {
-      if (r.stats.restedLastTime) {
-        score += 10000.0;
-      }
-      score += 100.0 / (r.stats.totalMatches + 1);
-    }
-    return score;
+  /// 優先度（休み間隔が短い > ランダム）に基づいて最終的なメンバーを決定する
+  List<PlayerWithStats> _pickFinalMembers(
+    List<PlayerWithStats> must,
+    List<PlayerWithStats> candidates,
+    int requiredCount,
+    Random random,
+  ) {
+    final picked = List<PlayerWithStats>.from(must);
+    final needed = requiredCount - picked.length;
+    if (needed <= 0) return picked;
+
+    final sortedCandidates = List<PlayerWithStats>.from(candidates);
+    // 偏りを防ぐためにまずシャッフル
+    sortedCandidates.shuffle(random);
+    // 「前の休みからの試合間隔」が短い順（sessionsSinceLastRestが小さい＝直近で休んだ人）にソート
+    sortedCandidates.sort((a, b) => a.stats.sessionsSinceLastRest.compareTo(b.stats.sessionsSinceLastRest));
+
+    picked.addAll(sortedCandidates.take(needed));
+    return picked;
   }
 
-  /// 決定したメンバーを各コート（matchTypes）へ最適に振り分ける
+  /// 決定したメンバーを各コート（matchTypes）へ最適に割り振る
   _AssignmentResult _searchBestAssignment({
     required List<MatchType> matchTypes,
     required List<PlayerWithStats> availableMales,
@@ -116,6 +110,7 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     return _recurseAssignment(matchTypes, 0, availableMales, availableFemales);
   }
 
+  /// 再帰的にすべてのコートへのプレイヤーの割り振りを試す
   _AssignmentResult _recurseAssignment(
     List<MatchType> types,
     int typeIndex,
@@ -151,6 +146,7 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
         }
       }
     } else {
+      // 混合ダブルス
       final mCombos = _getCombinations(males, 2);
       final fCombos = _getCombinations(females, 2);
       for (final selectedM in mCombos) {
@@ -170,14 +166,17 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     return _AssignmentResult(bestScore, bestGames);
   }
 
+  /// 4人の中で最適なチーム分け（3パターン）を決定
   _GameScore _getBestGameForFour(MatchType type, List<PlayerWithStats> p) {
     final patterns = [
       [p[0], p[1], p[2], p[3]],
       [p[0], p[2], p[1], p[3]],
       [p[0], p[3], p[1], p[2]],
     ];
+
     double minScore = double.infinity;
     late Game bestGame;
+
     for (final pattern in patterns) {
       double score = _calculateGamePenalty(type, pattern[0], pattern[1], pattern[2], pattern[3]);
       if (score < minScore) {
@@ -188,6 +187,7 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     return _GameScore(minScore, bestGame);
   }
 
+  /// 混合ダブルスで最適なチーム分け（2パターン）を決定
   _GameScore _getBestMixedGame(MatchType type, List<PlayerWithStats> ms, List<PlayerWithStats> fs) {
     final patterns = [
       [ms[0], fs[0], ms[1], fs[1]],
@@ -265,7 +265,6 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
         must.addAll(pool.all);
         if (must.length == requiredCount) return _SelectionSplit(must, PlayerStatsPool([]));
       } else {
-        // 超える瞬間のバケットのみを Candidate にする
         return _SelectionSplit(must, PlayerStatsPool(pool.all));
       }
     }

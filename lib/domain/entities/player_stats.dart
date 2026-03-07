@@ -12,6 +12,8 @@ class PlayerStats {
   final Map<String, int> opponentCounts;
   /// 直近のセッションでお休みだったかどうか
   final bool restedLastTime;
+  /// 最後にお休みしてから何試合経過したか (0なら直前がお休み)
+  final int sessionsSinceLastRest;
 
   PlayerStats({
     required this.totalMatches,
@@ -19,6 +21,7 @@ class PlayerStats {
     required this.partnerCounts,
     required this.opponentCounts,
     this.restedLastTime = false,
+    this.sessionsSinceLastRest = 0,
   });
 
   /// 指定した相手と同じコートにいた（味方または敵）合計回数を返す

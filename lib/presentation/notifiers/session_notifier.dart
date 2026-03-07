@@ -73,9 +73,18 @@ class SessionNotifier extends ChangeNotifier {
       }
     }
 
-    final lastSessionRestingIds = _sessions.isNotEmpty 
-        ? _sessions.last.restingPlayers.map((p) => p.id).toSet() 
-        : <String>{};
+    // 「休みからの試合間隔」の計算
+    final Map<String, int> sessionsSinceLastRest = {};
+    for (final player in allPlayers) {
+      int count = 0;
+      // 履歴を新しい順に遡る
+      for (final session in _sessions.reversed) {
+        final rested = session.restingPlayers.any((p) => p.id == player.id);
+        if (rested) break;
+        count++;
+      }
+      sessionsSinceLastRest[player.id] = count;
+    }
 
     final playerWithStatsList = allPlayers.map((p) {
       return PlayerWithStats(
@@ -85,7 +94,8 @@ class SessionNotifier extends ChangeNotifier {
           typeCounts: typeBreakdowns[p.id] ?? {},
           partnerCounts: partnerBreakdowns[p.id] ?? {},
           opponentCounts: opponentBreakdowns[p.id] ?? {},
-          restedLastTime: lastSessionRestingIds.contains(p.id),
+          restedLastTime: _sessions.isNotEmpty && _sessions.last.restingPlayers.any((rp) => rp.id == p.id),
+          sessionsSinceLastRest: sessionsSinceLastRest[p.id] ?? 0,
         ),
       );
     }).toList();
