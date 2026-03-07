@@ -655,7 +655,7 @@ class _PlayerTag extends StatelessWidget {
       child: Container(
         width: double.infinity,
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
               ? Colors.orange.withValues(alpha: 0.2)
@@ -669,7 +669,7 @@ class _PlayerTag extends StatelessWidget {
         child: Text(
           player.name,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 15,
             color: isSelected ? Colors.orange.shade900 : Colors.black87,
             fontWeight: FontWeight.bold,
           ),
