@@ -62,11 +62,12 @@ class FixedMatchAlgorithm implements MatchAlgorithm {
     required Map<int, PlayerStatsPool> maleBuckets,
     required Map<int, PlayerStatsPool> femaleBuckets,
   }) {
-    // 男女両方のバケットからプレイヤーを抽出して結合
     final males = maleBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
     final females = femaleBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
     final allPlayers = [...males, ...females];
     
+    if (allPlayers.length < 4) return [];
+
     return [
       Game(
         MatchType.menDoubles,
@@ -98,11 +99,14 @@ void main() {
 
   group('SessionNotifier - 統計計算', () {
     test('試合履歴に基づいて正しく出場回数と詳細統計が計算されること', () async {
-      final p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
-      final p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
-      final p3 = Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
-      final p4 = Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
+      const p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
+      const p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
+      const p3 = Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
+      const p4 = Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
       playerRepo.players = [p1, p2, p3, p4];
+
+      // プレイヤーが追加されたことを通知して notifier 内部のキャッシュプールを更新する
+      await notifier.onPlayersUpdated();
 
       await notifier.generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
 
@@ -117,12 +121,14 @@ void main() {
 
   group('SessionNotifier - メンバー入れ替え', () {
     test('入れ替え後に詳細統計も再計算されること', () async {
-      final p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
-      final p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
-      final p3 = Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
-      final p4 = Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
-      final p5 = Player(id: '5', name: 'P5', yomigana: 'p5', gender: Gender.male);
+      const p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
+      const p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
+      const p3 = Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
+      const p4 = Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
+      const p5 = Player(id: '5', name: 'P5', yomigana: 'p5', gender: Gender.male);
       playerRepo.players = [p1, p2, p3, p4, p5];
+
+      await notifier.onPlayersUpdated();
 
       await notifier.generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
       
