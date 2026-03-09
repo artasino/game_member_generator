@@ -15,15 +15,10 @@ class PlayerNotifier extends ChangeNotifier {
   List<Player> _players = [];
   SessionNotifier? _sessionNotifier;
 
-  PlayerNotifier(this.repository) {
-    // コンストラクタで初期ロードを実行
-    _refresh();
-  }
+  PlayerNotifier(this.repository);
 
   void setSessionNotifier(SessionNotifier notifier) {
     _sessionNotifier = notifier;
-    // セッション側が既にデータを持っている可能性があるので同期
-    _refresh();
   }
 
   List<Player> get players => _players;
@@ -34,9 +29,19 @@ class PlayerNotifier extends ChangeNotifier {
     await _sessionNotifier?.onPlayersUpdated();
   }
 
-  Future<void> addPlayer(Player player) async {
+  /// 名前と性別が一致するプレイヤーが既に存在するかチェック
+  bool _exists(Player player) {
+    return _players.contains(player);
+  }
+
+  Future<bool> addPlayer(Player player) async {
+    await _refresh(); // 最新状態を確保
+    if (_exists(player)) {
+      return false; // 重複のため追加失敗
+    }
     await repository.add(player);
     await _refresh();
+    return true;
   }
 
   Future<void> updatePlayer(Player player) async {
@@ -57,10 +62,8 @@ class PlayerNotifier extends ChangeNotifier {
 
   /// クリップボードにJSONをエクスポート
   Future<void> exportPlayersToClipboard() async {
-    await _refresh(); // 最新の状態を確保
-    if (_players.isEmpty) return;
-
-    final List<Map<String, dynamic>> jsonList = _players.map((p) => p.toJson()).toList();
+    final List<Map<String, dynamic>> jsonList =
+        _players.map((p) => p.toJson()).toList();
     final String jsonString = jsonEncode(jsonList);
     await Clipboard.setData(ClipboardData(text: jsonString));
   }
@@ -82,17 +85,10 @@ class PlayerNotifier extends ChangeNotifier {
 
   /// ファイル(JSON/CSV)をエクスポート
   Future<void> exportPlayersToFile(String format) async {
-    // 書き出し前に最新データをリポジトリから取得
-    await _refresh();
-
-    if (_players.isEmpty) {
-      // メンバが0人の場合は何もしない（または警告を出すロジックを検討）
-      return;
-    }
-
     String content = '';
     String extension = format == 'json' ? 'json' : 'csv';
-    String fileName = 'players_${DateTime.now().millisecondsSinceEpoch}.$extension';
+    String fileName =
+        'players_${DateTime.now().millisecondsSinceEpoch}.$extension';
 
     if (format == 'json') {
       content = jsonEncode(_players.map((p) => p.toJson()).toList());
@@ -113,8 +109,8 @@ class PlayerNotifier extends ChangeNotifier {
       content = const ListToCsvConverter().convert(rows);
     }
 
-    if (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
-      // Ubuntu等のデスクトップ環境
+    if (!kIsWeb &&
+        (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
       String? outputFile = await FilePicker.platform.saveFile(
         dialogTitle: '保存先を選択してください',
         fileName: fileName,
@@ -123,15 +119,13 @@ class PlayerNotifier extends ChangeNotifier {
       );
 
       if (outputFile != null) {
-        // saveFile が拡張子を自動で付けない場合があるため補完
         if (!outputFile.endsWith('.$extension')) {
           outputFile = '$outputFile.$extension';
         }
         final file = File(outputFile);
-        await file.writeAsString(content, flush: true); // flushをtrueにして確実に書き込む
+        await file.writeAsString(content);
       }
     } else {
-      // モバイル環境ではShareを使用
       await Share.shareXFiles([
         XFile.fromData(
           utf8.encode(content),
@@ -166,7 +160,8 @@ class PlayerNotifier extends ChangeNotifier {
         final List<dynamic> decoded = jsonDecode(content);
         return await _importFromList(decoded);
       } else if (extension == 'csv') {
-        final List<List<dynamic>> rows = const CsvToListConverter().convert(content);
+        final List<List<dynamic>> rows =
+            const CsvToListConverter().convert(content);
         if (rows.length <= 1) return 'CSVデータが空か無効です';
 
         final dataRows = rows.sublist(1);
@@ -191,20 +186,38 @@ class PlayerNotifier extends ChangeNotifier {
   }
 
   Future<String> _importFromList(List<dynamic> list) async {
+    await _refresh();
     int count = 0;
+    int skipCount = 0;
     for (var item in list) {
       try {
         final player = Player.fromJson(item as Map<String, dynamic>);
-        final existing = await repository.getAll();
-        if (existing.any((p) => p.id == player.id)) {
+        
+        // ID一致チェック
+        final existingById = _players.any((p) => p.id == player.id);
+        if (existingById) {
           await repository.update(player);
-        } else {
-          await repository.add(player);
+          count++;
+          continue;
         }
+
+        // 名前と性別一致チェック (Playerクラスでオーバーライドした == を利用)
+        if (_exists(player)) {
+          skipCount++;
+          continue;
+        }
+
+        await repository.add(player);
         count++;
+        // 連続追加時にリストを更新しておく
+        _players.add(player);
       } catch (_) {}
     }
     await _refresh();
-    return '$count名のメンバをインポートしました';
+    String msg = '$count名のメンバをインポートしました';
+    if (skipCount > 0) {
+      msg += ' ($skipCount名は重複のためスキップ)';
+    }
+    return msg;
   }
 }

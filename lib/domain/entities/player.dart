@@ -58,4 +58,15 @@ class Player {
       isMustRest: json['isMustRest'] == 1,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Player &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          gender == other.gender;
+
+  @override
+  int get hashCode => name.hashCode ^ gender.hashCode;
 }
