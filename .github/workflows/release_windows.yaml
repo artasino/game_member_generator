@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -17,6 +20,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - name: Enable Windows build
         run: flutter config --enable-windows-desktop
@@ -28,14 +32,18 @@ jobs:
         run: flutter pub get
 
       - name: Build Windows
-        run: flutter build windows
+        run: flutter build windows --release
+
+      - name: Prepare release folder
+        run: |
+          mkdir release
+          xcopy build\windows\x64\runner\Release\* release\ /E /I
 
       - name: Zip build
-        run: |
-          Compress-Archive -Path build/windows/x64/runner/Release/* `
-          -DestinationPath game_member_generator_windows.zip
+        run: Compress-Archive -Path release\* -DestinationPath game_member_generator_windows.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          name: Release ${{ github.ref_name }}
           files: game_member_generator_windows.zip
