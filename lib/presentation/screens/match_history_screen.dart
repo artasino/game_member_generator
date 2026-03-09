@@ -25,132 +25,138 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final sessions = widget.notifier.sessions;
+    
+    return AnimatedBuilder(
+      animation: widget.notifier,
+      builder: (context, _) {
+        final sessions = widget.notifier.sessions;
+        final bool isEmpty = sessions.isEmpty;
 
-    if (sessions.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('試合履歴', style: TextStyle(fontWeight: FontWeight.w900)),
-          centerTitle: true,
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: theme.colorScheme.onPrimary,
-        ),
-        body: const Center(child: Text('試合履歴がありません')),
-      );
-    }
+        // インデックスの整合性チェック
+        if (isEmpty) {
+          _currentIndex = null;
+        } else if (_currentIndex == null || _currentIndex! >= sessions.length) {
+          _currentIndex = sessions.length - 1;
+        }
 
-    if (_currentIndex == null || _currentIndex! >= sessions.length) {
-      _currentIndex = sessions.length - 1;
-    }
-
-    final session = sessions[_currentIndex!];
-    final pool = widget.notifier.playerStatsPool;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double screenWidth = constraints.maxWidth;
-        final double screenHeight = constraints.maxHeight;
-        final int gameCount = session.games.length;
-
-        // 遠くからの視認性を維持しつつ、画面内に収めるためのスケール計算
-        double scale = (screenWidth / 900.0).clamp(1.1, 1.8);
-        if (gameCount >= 4) scale *= 0.85;
-        if (screenHeight < 700) scale *= 0.85;
-
+        final session = !isEmpty ? sessions[_currentIndex!] : null;
+        final pool = widget.notifier.playerStatsPool;
         final bool isSwapping = _selectedPlayer != null;
 
         return Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
             centerTitle: true,
-            toolbarHeight: 56, // 高さを固定して控えめに
+            toolbarHeight: 56,
             backgroundColor: isSwapping ? Colors.orange : theme.colorScheme.primary,
             foregroundColor: isSwapping ? Colors.white : theme.colorScheme.onPrimary,
-            title: !isSwapping
-                ? _buildNormalHeaderContent(theme, session, sessions.length, scale)
-                : _buildSwapHeaderContent(_selectedPlayer!, scale),
+            title: isEmpty 
+                ? const Text('試合履歴', style: TextStyle(fontWeight: FontWeight.w900))
+                : (!isSwapping
+                    ? _buildNormalHeaderContent(theme, session!, sessions.length)
+                    : _buildSwapHeaderContent(_selectedPlayer!)),
             actions: !isSwapping ? [
               IconButton(
                 icon: const Icon(Icons.delete_outline),
-                onPressed: () => _showClearConfirmDialog(context),
+                onPressed: isEmpty ? null : () => _showClearConfirmDialog(context),
                 tooltip: '履歴をクリア',
               ),
               const SizedBox(width: 8),
             ] : null,
           ),
-          body: AnimatedBuilder(
-            animation: widget.notifier,
-            builder: (context, _) {
-              final restingMales = session.restingPlayers.where((p) => p.gender == Gender.male).toList();
-              final restingFemales = session.restingPlayers.where((p) => p.gender == Gender.female).toList();
-
-              int crossAxisCount = 1;
-              if (gameCount == 4) {
-                crossAxisCount = screenWidth > 850 ? 2 : 1;
-              } else if (screenWidth > 1300 && gameCount >= 3) {
-                crossAxisCount = 3;
-              } else if (screenWidth > 800 && gameCount >= 2) {
-                crossAxisCount = 2;
-              }
-
-              final double spacing = 16 * scale;
-              final double cardWidth = (screenWidth - (spacing * (crossAxisCount + 1))) / crossAxisCount;
-
-              return Container(
-                color: theme.colorScheme.surface,
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(spacing, spacing, spacing, 120),
+          body: isEmpty 
+              ? const Center(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // 試合カードエリア
-                      Wrap(
-                        spacing: spacing,
-                        runSpacing: spacing,
-                        alignment: WrapAlignment.center,
-                        children: session.games.asMap().entries.map((entry) {
-                          return SizedBox(
-                            width: cardWidth,
-                            child: _buildGameCard(context, entry.key, entry.value, theme, pool, scale, session),
-                          );
-                        }).toList(),
-                      ),
-
-                      SizedBox(height: 32 * scale),
-
-                      // お休み中エリア
-                      if (session.restingPlayers.isNotEmpty)
-                        _buildRestingContainer(session, restingMales, restingFemales, theme, scale, screenWidth),
+                      Icon(Icons.history, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text('試合履歴がありません', style: TextStyle(color: Colors.grey)),
                     ],
                   ),
+                )
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final double screenWidth = constraints.maxWidth;
+                    final double screenHeight = constraints.maxHeight;
+                    final int gameCount = session!.games.length;
+
+                    // スケール計算
+                    double scale = (screenWidth / 900.0).clamp(1.1, 1.8);
+                    if (gameCount >= 4) scale *= 0.85;
+                    if (screenHeight < 700) scale *= 0.85;
+
+                    return Container(
+                      color: theme.colorScheme.surface,
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.fromLTRB(16 * scale, 16 * scale, 16 * scale, 120),
+                        child: Column(
+                          children: [
+                            _buildGamesArea(session, pool, scale, screenWidth),
+                            SizedBox(height: 32 * scale),
+                            if (session.restingPlayers.isNotEmpty)
+                              _buildRestingContainer(session, theme, scale, screenWidth),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
           floatingActionButton: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              FloatingActionButton.small(
-                heroTag: 'recalc',
-                onPressed: widget.notifier.isGenerating ? null : () => _showSettingsAndGenerate(context, isRecalculate: true),
-                tooltip: '再生成',
-                backgroundColor: theme.colorScheme.secondaryContainer,
-                child: const Icon(Icons.refresh),
-              ),
-              const SizedBox(height: 12),
-              FloatingActionButton(
+              if (!isEmpty) ...[
+                FloatingActionButton.small(
+                  heroTag: 'recalc',
+                  onPressed: widget.notifier.isGenerating ? null : () => _showSettingsAndGenerate(context, isRecalculate: true),
+                  tooltip: '再生成',
+                  backgroundColor: theme.colorScheme.secondaryContainer,
+                  child: const Icon(Icons.refresh),
+                ),
+                const SizedBox(height: 12),
+              ],
+              FloatingActionButton.extended(
                 heroTag: 'add',
                 onPressed: widget.notifier.isGenerating ? null : () => _showSettingsAndGenerate(context, isRecalculate: false),
-                tooltip: '追加',
-                child: const Icon(Icons.add),
+                tooltip: isEmpty ? '最初の試合を生成' : '次の試合を生成',
+                icon: Icon(isEmpty ? Icons.play_arrow : Icons.add),
+                label: Text(isEmpty ? '試合を生成' : '次を生成'),
               ),
             ],
           ),
         );
-      }
+      },
     );
   }
 
-  Widget _buildNormalHeaderContent(ThemeData theme, Session session, int total, double scale) {
+  Widget _buildGamesArea(Session session, PlayerStatsPool pool, double scale, double screenWidth) {
+    final int gameCount = session.games.length;
+    int crossAxisCount = 1;
+    if (gameCount == 4) {
+      crossAxisCount = screenWidth > 850 ? 2 : 1;
+    } else if (screenWidth > 1300 && gameCount >= 3) {
+      crossAxisCount = 3;
+    } else if (screenWidth > 800 && gameCount >= 2) {
+      crossAxisCount = 2;
+    }
+
+    final double spacing = 16 * scale;
+    final double cardWidth = (screenWidth - (spacing * (crossAxisCount + 1))) / crossAxisCount;
+
+    return Wrap(
+      spacing: spacing,
+      runSpacing: spacing,
+      alignment: WrapAlignment.center,
+      children: session.games.asMap().entries.map((entry) {
+        return SizedBox(
+          width: cardWidth,
+          child: _buildGameCard(context, entry.key, entry.value, Theme.of(context), pool, scale, session),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildNormalHeaderContent(ThemeData theme, Session session, int total) {
     final onPrimary = theme.colorScheme.onPrimary;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -167,15 +173,15 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
         ),
-        SizedBox(width: 24 * scale),
+        const SizedBox(width: 16),
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('第 ${session.index} 試合', style: TextStyle(fontSize: 18 * scale, fontWeight: FontWeight.w900, color: onPrimary)),
+            Text('第 ${session.index} 試合', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
             Text('$total 試合中', style: TextStyle(fontSize: 10, color: onPrimary.withOpacity(0.7), fontWeight: FontWeight.bold)),
           ],
         ),
-        SizedBox(width: 24 * scale),
+        const SizedBox(width: 16),
         IconButton(
           icon: const Icon(Icons.chevron_right, size: 32),
           onPressed: _currentIndex! < total - 1 ? () {
@@ -192,7 +198,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     );
   }
 
-  Widget _buildSwapHeaderContent(Player selected, double scale) {
+  Widget _buildSwapHeaderContent(Player selected) {
     return Row(
       children: [
         const Icon(Icons.swap_horizontal_circle, color: Colors.white, size: 28),
@@ -305,8 +311,10 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     );
   }
 
-  Widget _buildRestingContainer(Session session, List<Player> males, List<Player> females, ThemeData theme, double scale, double maxWidth) {
+  Widget _buildRestingContainer(Session session, ThemeData theme, double scale, double maxWidth) {
     final restingScale = (scale * 0.85).clamp(1.0, 1.5);
+    final males = session.restingPlayers.where((p) => p.gender == Gender.male).toList();
+    final females = session.restingPlayers.where((p) => p.gender == Gender.female).toList();
 
     return Container(
       width: maxWidth,
@@ -412,7 +420,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         return StatefulBuilder(builder: (context, setState) {
           final res = widget.notifier.checkRequirements(selectedTypes);
           return AlertDialog(
-            title: Text(isRecalculate ? '試合の再生成' : '次の試合の設定'),
+            title: Text(isRecalculate ? '試合の再生成' : '試合の設定'),
             content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('マッチタイプを追加:', style: TextStyle(fontSize: 12, color: Colors.grey)),
               const SizedBox(height: 8),
@@ -466,7 +474,23 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   }
 
   void _showClearConfirmDialog(BuildContext context) {
-    showDialog(context: context, builder: (ctx) => AlertDialog(title: const Text('クリア'), content: const Text('履歴を全て削除しますか？'), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('戻る')), TextButton(onPressed: () { widget.notifier.clearHistory(); setState(() { _currentIndex = null; _selectedPlayer = null; }); Navigator.pop(ctx); }, child: const Text('クリア', style: TextStyle(color: Colors.red)))]));
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('履歴クリア'), 
+      content: const Text('全ての試合履歴を削除しますか？\n（通算成績はリセットされません）'), 
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('戻る')), 
+        TextButton(onPressed: () async { 
+          Navigator.pop(ctx);
+          await widget.notifier.clearHistory(); 
+          if (mounted) {
+            setState(() { 
+              _currentIndex = null; 
+              _selectedPlayer = null; 
+            }); 
+          }
+        }, child: const Text('クリア', style: TextStyle(color: Colors.red)))
+      ]
+    ));
   }
 }
 
