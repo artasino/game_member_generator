@@ -67,75 +67,69 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           final restingMales = session.restingPlayers.where((p) => p.gender == Gender.male).toList();
           final restingFemales = session.restingPlayers.where((p) => p.gender == Gender.female).toList();
 
-          return Stack(
+          return Column(
             children: [
-              Column(
-                children: [
-                  _buildNavigation(theme, session, sessions.length),
-                  
-                  if (_selectedPlayer != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      width: double.infinity,
-                      child: Row(
+              _buildNavigation(theme, session, sessions.length),
+              
+              if (_selectedPlayer != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  width: double.infinity,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.swap_horizontal_circle, color: Colors.orange, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_selectedPlayer!.name} と入れ替えるメンバを選択',
+                        style: const TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => setState(() => _selectedPlayer = null),
+                        child: const Text('キャンセル', style: TextStyle(fontSize: 12)),
+                      )
+                    ],
+                  ),
+                ),
+                
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final bool isWide = constraints.maxWidth > 700;
+                    
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.swap_horizontal_circle, color: Colors.orange, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${_selectedPlayer!.name} と入れ替えるメンバを選択',
-                            style: const TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.bold),
-                          ),
-                          const Spacer(),
-                          TextButton(
-                            onPressed: () => setState(() => _selectedPlayer = null),
-                            child: const Text('キャンセル', style: TextStyle(fontSize: 12)),
-                          )
+                          if (isWide)
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: session.games.asMap().entries.map((entry) {
+                                return SizedBox(
+                                  width: (constraints.maxWidth - 36) / 2,
+                                  child: _buildGameCard(context, entry.key, entry.value, session, pool, theme),
+                                );
+                              }).toList(),
+                            )
+                          else
+                            ...session.games.asMap().entries.map((entry) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _buildGameCard(context, entry.key, entry.value, session, pool, theme),
+                              );
+                            }).toList(),
+                          
+                          if (session.restingPlayers.isNotEmpty) 
+                            _buildRestingContainer(session, restingMales, restingFemales, theme),
                         ],
                       ),
-                    ),
-                    
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final bool isWide = constraints.maxWidth > 700;
-                        
-                        return SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (isWide)
-                                Wrap(
-                                  spacing: 12,
-                                  runSpacing: 12,
-                                  children: session.games.asMap().entries.map((entry) {
-                                    return SizedBox(
-                                      width: (constraints.maxWidth - 36) / 2,
-                                      child: _buildGameCard(context, entry.key, entry.value, session, pool, theme),
-                                    );
-                                  }).toList(),
-                                )
-                              else
-                                ...session.games.asMap().entries.map((entry) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: _buildGameCard(context, entry.key, entry.value, session, pool, theme),
-                                  );
-                                }).toList(),
-                              
-                              if (session.restingPlayers.isNotEmpty) 
-                                _buildRestingContainer(session, restingMales, restingFemales, theme),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+                    );
+                  },
+                ),
               ),
-              if (widget.notifier.isGenerating)
-                _buildProgressOverlay(theme),
             ],
           );
         },
@@ -156,37 +150,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             child: const Icon(Icons.add),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildProgressOverlay(ThemeData theme) {
-    return Container(
-      color: Colors.black.withValues(alpha: 0.5),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 24),
-              Text(
-                '試合を生成中...',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '最適な組み合わせを計算しています',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -458,9 +421,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                   onPressed: (!canGenerate || selectedTypes.isEmpty) ? null : () async {
                     Navigator.pop(context);
                     if (isRecalculate && currentSession != null) {
-                      _recalculateSession(context, currentSession.index, CourtSettings(selectedTypes));
+                      _recalculateSession(currentSession.index, CourtSettings(selectedTypes));
                     } else {
-                      _generateWithSettings(context, CourtSettings(selectedTypes));
+                      _generateWithSettings(CourtSettings(selectedTypes));
                     }
                   },
                   child: Text(isRecalculate ? '再生成' : '生成'),
@@ -473,35 +436,77 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     });
   }
 
-  Future<void> _recalculateSession(BuildContext context, int sessionIndex, CourtSettings settings) async {
+  Future<void> _recalculateSession(int sessionIndex, CourtSettings settings) async {
     try {
       await widget.notifier.recalculateSession(sessionIndex, settings);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('試合を再生成しました'), duration: Duration(seconds: 1)));
+      
+      // 再生成したセッションのインデックスを探してそこに移動する
+      final sessions = widget.notifier.sessions;
+      final newIndex = sessions.indexWhere((s) => s.index == sessionIndex);
+      if (newIndex != -1) {
+        setState(() {
+          _currentIndex = newIndex;
+          _selectedPlayer = null;
+        });
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('試合を再生成しました'), duration: Duration(seconds: 1)),
+      );
     } catch (e) {
       if (!mounted) return;
-      _showErrorDialog(context, e.toString()); 
+      _showErrorDialog(e.toString()); 
     }
   }
 
-  Future<void> _generateWithSettings(BuildContext context, CourtSettings settings) async {
+  Future<void> _generateWithSettings(CourtSettings settings) async {
     try {
       await widget.notifier.generateSessionWithSettings(settings);
       if (!mounted) return;
-      setState(() { _currentIndex = widget.notifier.sessions.length - 1; _selectedPlayer = null; });
+      setState(() { 
+        _currentIndex = widget.notifier.sessions.length - 1; 
+        _selectedPlayer = null; 
+      });
     } catch (e) {
       if (!mounted) return;
-      _showErrorDialog(context, e.toString()); 
+      _showErrorDialog(e.toString()); 
     }
   }
 
-  void _showErrorDialog(BuildContext context, String message) {
+  void _showErrorDialog(String message) {
     if (!mounted) return;
-    showDialog(context: context, builder: (ctx) => AlertDialog(title: const Text('エラー'), content: Text(message), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))]));
+    showDialog(
+      context: this.context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('エラー'), 
+        content: Text(message), 
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))
+        ]
+      )
+    );
   }
 
   void _showClearConfirmDialog(BuildContext context) {
-    showDialog(context: context, builder: (ctx) => AlertDialog(title: const Text('履歴のクリア'), content: const Text('全ての試合履歴を削除しますか？'), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル')), TextButton(onPressed: () { widget.notifier.clearHistory(); setState(() { _currentIndex = null; _selectedPlayer = null; }); Navigator.pop(ctx); }, child: const Text('クリア', style: TextStyle(color: Colors.red)))]));
+    showDialog(
+      context: context, 
+      builder: (ctx) => AlertDialog(
+        title: const Text('履歴のクリア'), 
+        content: const Text('全ての試合履歴を削除しますか？'), 
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル')), 
+          TextButton(
+            onPressed: () { 
+              widget.notifier.clearHistory(); 
+              setState(() { _currentIndex = null; _selectedPlayer = null; }); 
+              Navigator.pop(ctx); 
+            }, 
+            child: const Text('クリア', style: TextStyle(color: Colors.red))
+          )
+        ]
+      )
+    );
   }
 }
 
