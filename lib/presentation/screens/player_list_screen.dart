@@ -70,23 +70,31 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           ),
           PopupMenuButton<String>(
             onSelected: (value) async {
-              if (value == 'export') {
+              String? message;
+              if (value == 'export_clipboard') {
                 await widget.notifier.exportPlayersToClipboard();
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('メンバリストをクリップボードにコピーしました')),
-                );
-              } else if (value == 'import') {
-                final message = await widget.notifier.importPlayersFromClipboard();
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(message)),
-                );
+                message = 'クリップボードにコピーしました';
+              } else if (value == 'import_clipboard') {
+                message = await widget.notifier.importPlayersFromClipboard();
+              } else if (value == 'export_json') {
+                await widget.notifier.exportPlayersToFile('json');
+              } else if (value == 'export_csv') {
+                await widget.notifier.exportPlayersToFile('csv');
+              } else if (value == 'import_file') {
+                message = await widget.notifier.importPlayersFromFile();
+              }
+
+              if (message != null && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(value: 'export', child: Text('メンバをエクスポート (JSON)')),
-              const PopupMenuItem(value: 'import', child: Text('メンバをインポート (JSON)')),
+              const PopupMenuItem(value: 'export_clipboard', child: ListTile(leading: Icon(Icons.copy), title: Text('クリップボードへコピー'))),
+              const PopupMenuItem(value: 'import_clipboard', child: ListTile(leading: Icon(Icons.paste), title: Text('クリップボードから追加'))),
+              const PopupMenuDivider(),
+              const PopupMenuItem(value: 'export_json', child: ListTile(leading: Icon(Icons.save_alt), title: Text('JSONファイルで保存'))),
+              const PopupMenuItem(value: 'export_csv', child: ListTile(leading: Icon(Icons.grid_on), title: Text('CSVファイルで保存'))),
+              const PopupMenuItem(value: 'import_file', child: ListTile(leading: Icon(Icons.file_open), title: Text('ファイルからインポート'))),
             ],
           ),
         ],
