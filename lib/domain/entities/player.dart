@@ -1,7 +1,9 @@
+import 'package:equatable/equatable.dart';
+
 import 'gender.dart';
 
 /// プレイヤーの情報を保持するクラス
-class Player {
+class Player extends Equatable{
   final String id;
   final String name;
   final String yomigana;
@@ -60,13 +62,5 @@ class Player {
   }
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Player &&
-          runtimeType == other.runtimeType &&
-          name == other.name &&
-          gender == other.gender;
-
-  @override
-  int get hashCode => name.hashCode ^ gender.hashCode;
+  List<Object?> get props => [name, gender];
 }
