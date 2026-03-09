@@ -103,6 +103,9 @@ class SessionNotifier extends ChangeNotifier {
 
         void record(Player p, Player partner, List<Player> opponents) {
           final id = p.id;
+          // 削除済みプレイヤーの場合はスキップ
+          if (!typeBreakdowns.containsKey(id)) return;
+
           totals[id] = (totals[id] ?? 0) + 1;
           typeBreakdowns[id]![game.type] = (typeBreakdowns[id]![game.type] ?? 0) + 1;
           partnerBreakdowns[id]![partner.id] = (partnerBreakdowns[id]![partner.id] ?? 0) + 1;
@@ -117,7 +120,9 @@ class SessionNotifier extends ChangeNotifier {
         record(teamB[1], teamB[0], teamA);
       }
       for (final rp in session.restingPlayers) {
-        rests[rp.id] = (rests[rp.id] ?? 0) + 1;
+        if (rests.containsKey(rp.id)) {
+          rests[rp.id] = (rests[rp.id] ?? 0) + 1;
+        }
       }
     }
 
