@@ -124,16 +124,26 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               .toList()
             ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
 
-          final groupedPlayers = <String, List<PlayerWithStats>>{};
-          final sortedAll = List<PlayerWithStats>.from(filteredPool)
-            ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
-
-          for (var p in sortedAll) {
-            final indexLabel = _getIndexLabel(p.player.yomigana);
-            groupedPlayers.putIfAbsent(indexLabel, () => []).add(p);
+          // 性別ごとに分けてグループ化
+          Map<String, List<PlayerWithStats>> getGrouped(List<PlayerWithStats> players) {
+            final grouped = <String, List<PlayerWithStats>>{};
+            final sorted = List<PlayerWithStats>.from(players)
+              ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
+            for (var p in sorted) {
+              final label = _getIndexLabel(p.player.yomigana);
+              grouped.putIfAbsent(label, () => []).add(p);
+            }
+            return grouped;
           }
-          final sortedLabels = groupedPlayers.keys.toList()
-            ..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
+
+          final malePlayers = filteredPool.where((p) => p.player.gender == Gender.male).toList();
+          final femalePlayers = filteredPool.where((p) => p.player.gender == Gender.female).toList();
+          
+          final groupedMales = getGrouped(malePlayers);
+          final groupedFemales = getGrouped(femalePlayers);
+          
+          final maleLabels = groupedMales.keys.toList()..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
+          final femaleLabels = groupedFemales.keys.toList()..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
 
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
@@ -144,50 +154,61 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   _buildSectionHeader(context, '本日の参加メンバ', 
                       '計${activeMales.length + activeFemales.length}名 (男${activeMales.length} 女${activeFemales.length})'),
                   const SizedBox(height: 12),
-                  if (activeMales.isNotEmpty) ...[
-                    const _GenderLabel(label: '男性', color: Colors.blue),
-                    const SizedBox(height: 8),
-                    _buildWrap(activeMales, theme),
-                    const SizedBox(height: 16),
-                  ],
-                  if (activeFemales.isNotEmpty) ...[
-                    const _GenderLabel(label: '女性', color: Colors.pink),
-                    const SizedBox(height: 8),
-                    _buildWrap(activeFemales, theme),
-                    const SizedBox(height: 16),
-                  ],
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (activeMales.isNotEmpty) ...[
+                              _GenderLabel(label: '男性 ${activeMales.length}名', color: Colors.blue),
+                              const SizedBox(height: 8),
+                              _buildWrap(activeMales, theme),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (activeFemales.isNotEmpty) ...[
+                              _GenderLabel(label: '女性 ${activeFemales.length}名', color: Colors.pink),
+                              const SizedBox(height: 8),
+                              _buildWrap(activeFemales, theme),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                   const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    padding: EdgeInsets.symmetric(vertical: 12.0),
                     child: Divider(),
                   ),
                 ],
                 _buildSectionHeader(context, '全メンバ', '五十音順'),
                 const SizedBox(height: 16),
-                if (sortedLabels.isEmpty)
+                if (maleLabels.isEmpty && femaleLabels.isEmpty)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 32),
                     child: Center(child: Text('該当するメンバが見つかりません', style: TextStyle(color: Colors.grey))),
-                  ),
-                ...sortedLabels.map((label) {
-                  return Column(
+                  )
+                else
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 8),
-                        child: Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                            color: theme.colorScheme.primary.withValues(alpha: 0.6),
-                          ),
-                        ),
+                      Expanded(
+                        child: _buildGroupedList(groupedMales, maleLabels, theme),
                       ),
-                      _buildWrap(groupedPlayers[label]!, theme, showCheckbox: true),
-                      const SizedBox(height: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildGroupedList(groupedFemales, femaleLabels, theme),
+                      ),
                     ],
-                  );
-                }).toList(),
+                  ),
               ],
             ),
           );
@@ -209,6 +230,32 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
         Text(subtitle, style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey.shade600)),
       ],
+    );
+  }
+
+  Widget _buildGroupedList(Map<String, List<PlayerWithStats>> grouped, List<String> labels, ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: labels.map((label) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.primary.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+            _buildWrap(grouped[label]!, theme, showCheckbox: true),
+            const SizedBox(height: 24),
+          ],
+        );
+      }).toList(),
     );
   }
 
@@ -255,80 +302,113 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     final player = pWithStats.player;
     final stats = pWithStats.stats;
     final genderColor = player.gender == Gender.male ? Colors.blue : Colors.pink;
+    
+    // 性別に応じた履歴
+    final sameGenderCount = player.gender == Gender.male 
+        ? (stats.typeCounts[MatchType.menDoubles] ?? 0)
+        : (stats.typeCounts[MatchType.womenDoubles] ?? 0);
+    final mxCount = stats.typeCounts[MatchType.mixedDoubles] ?? 0;
 
     return InkWell(
       onTap: () => widget.notifier.toggleActive(player),
       onLongPress: () => _showAddEditDialog(context, player: player),
       onDoubleTap: () => _showAddEditDialog(context, player: player),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
-        opacity: player.isActive ? 1.0 : 0.7,
+        opacity: player.isActive ? 1.0 : 0.6,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: player.isActive 
                 ? genderColor.withValues(alpha: 0.12) 
                 : genderColor.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: player.isActive 
-                  ? genderColor.withValues(alpha: 0.6) 
+                  ? genderColor.withValues(alpha: 0.5) 
                   : genderColor.withValues(alpha: 0.2),
               width: player.isActive ? 1.5 : 1.0,
             ),
           ),
           child: IntrinsicWidth(
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 if (showCheckbox) ...[
                   Icon(
                     player.isActive ? Icons.check_circle : Icons.radio_button_unchecked,
-                    size: 20,
+                    size: 18,
                     color: player.isActive ? genderColor : genderColor.withValues(alpha: 0.4),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                 ],
-                Icon(
-                  player.gender == Gender.male ? Icons.male : Icons.female,
-                  size: 18,
-                  color: player.isActive ? genderColor : genderColor.withValues(alpha: 0.4),
-                ),
-                const SizedBox(width: 6),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           player.name,
                           style: TextStyle(
                             fontSize: 15,
-                            fontWeight: player.isActive ? FontWeight.bold : FontWeight.w500,
+                            fontWeight: FontWeight.bold,
                             color: player.isActive ? Colors.black87 : Colors.black54,
                           ),
                         ),
                         if (player.isMustRest) ...[
-                          const SizedBox(width: 4),
-                          const Icon(Icons. coffee_outlined, size: 14, color: Colors.orange),
+                          const SizedBox(width: 3),
+                          const Icon(Icons.coffee_outlined, size: 13, color: Colors.orange),
                         ],
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '計${stats.totalMatches} (休${stats.totalRests})',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: player.isActive ? Colors.black54 : Colors.grey.shade600,
-                        fontWeight: player.isActive ? FontWeight.bold : FontWeight.normal,
-                      ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildCountBadge('出${stats.totalMatches}', Colors.indigo, isActive: player.isActive),
+                        const SizedBox(width: 4),
+                        _buildCountBadge('休${stats.totalRests}', Colors.deepOrange, isActive: player.isActive),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${player.gender == Gender.male ? "男" : "女"}$sameGenderCount 混$mxCount',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: player.isActive ? Colors.black54 : Colors.grey.shade600,
+                            fontWeight: player.isActive ? FontWeight.w500 : FontWeight.normal,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCountBadge(String label, Color color, {required bool isActive}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: isActive ? color.withValues(alpha: 0.15) : color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isActive ? color.withValues(alpha: 0.4) : color.withValues(alpha: 0.2),
+          width: 0.5,
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          color: isActive ? color : color.withValues(alpha: 0.6),
         ),
       ),
     );
