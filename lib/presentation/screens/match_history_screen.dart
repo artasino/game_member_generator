@@ -32,7 +32,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         final sessions = widget.notifier.sessions;
         final bool isEmpty = sessions.isEmpty;
 
-        // インデックスの整合性チェック
         if (isEmpty) {
           _currentIndex = null;
         } else if (_currentIndex == null || _currentIndex! >= sessions.length) {
@@ -81,7 +80,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                     final double screenHeight = constraints.maxHeight;
                     final int gameCount = session!.games.length;
 
-                    // スケール計算
                     double scale = (screenWidth / 900.0).clamp(1.1, 1.8);
                     if (gameCount >= 4) scale *= 0.85;
                     if (screenHeight < 700) scale *= 0.85;
@@ -416,6 +414,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
       final currentSession = (isRecalculate && _currentIndex != null && sessions.isNotEmpty) ? sessions[_currentIndex!] : null;
       final initialMatchTypes = currentSession?.games.map((g) => g.type).toList();
       List<MatchType> selectedTypes = initialMatchTypes != null ? List.from(initialMatchTypes) : List.from(currentSettings.matchTypes);
+
       showDialog(context: context, builder: (context) {
         return StatefulBuilder(builder: (context, setState) {
           final res = widget.notifier.checkRequirements(selectedTypes);
