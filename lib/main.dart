@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:game_member_generator/domain/algorithm/court_assignment/court_assignment_algorithm.dart';
+
 import 'domain/algorithm/balanced_match_algorithm.dart';
+import 'domain/algorithm/court_assignment/best_force_court_assignment.dart';
+import 'domain/algorithm/game_evaluator.dart';
 import 'domain/entities/gender.dart';
 import 'domain/entities/player.dart';
 import 'domain/services/match_making_service.dart';
@@ -23,7 +27,12 @@ void main() async {
   final courtSettingsRepo = SqliteCourtSettingsRepository();
 
   // 3. サービスとNotifierの準備
-  final algorithm = BalancedMatchAlgorithm(); // Balancedに変更
+  final GameEvaluator gameEvaluator = GameEvaluator();
+  final CourtAssignmentAlgorithm courtAssignmentAlgorithm =
+      BestForceCourtAssignmentAlgorithm(gameEvaluator: gameEvaluator);
+  final algorithm = BalancedMatchAlgorithm(
+      gameEvaluator: gameEvaluator,
+      courtAssignmentAlgorithm: courtAssignmentAlgorithm); // Balancedに変更
   final matchService = MatchMakingService(algorithm, playerRepo);
 
   final playerNotifier = PlayerNotifier(playerRepo);

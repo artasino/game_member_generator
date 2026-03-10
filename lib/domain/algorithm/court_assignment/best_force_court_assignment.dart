@@ -1,0 +1,96 @@
+import 'package:game_member_generator/domain/algorithm/court_assignment/court_assignment_algorithm.dart';
+import 'package:game_member_generator/domain/algorithm/session_score.dart';
+import 'package:game_member_generator/domain/entities/game.dart';
+import 'package:game_member_generator/domain/entities/match_type.dart';
+import 'package:game_member_generator/domain/entities/player_with_stats.dart';
+
+import '../game_evaluator.dart';
+
+class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
+  GameEvaluator gameEvaluator;
+
+  BestForceCourtAssignmentAlgorithm({required this.gameEvaluator});
+
+  @override
+  SessionScore searchBestAssignment(
+      {required List<MatchType> matchTypes,
+      required List<PlayerWithStats> availableMales,
+      required List<PlayerWithStats> availableFemales}) {
+    return _recurseAssignment(matchTypes, 0, availableMales, availableFemales);
+  }
+
+  /// 再帰的にすべてのコートへのプレイヤーの割り振りを試す
+  SessionScore _recurseAssignment(
+    List<MatchType> types,
+    int typeIndex,
+    List<PlayerWithStats> males,
+    List<PlayerWithStats> females,
+  ) {
+    if (typeIndex >= types.length) {
+      return SessionScore(0, []);
+    }
+
+    final type = types[typeIndex];
+    double bestScore = double.infinity;
+    List<Game> bestGames = [];
+
+    if (type == MatchType.menDoubles) {
+      final combos = _getCombinations(males, 4);
+      for (final selected in combos) {
+        final remaining = males.where((m) => !selected.contains(m)).toList();
+        final gameScore = gameEvaluator.getBestGameForFour(type, selected);
+        final next =
+            _recurseAssignment(types, typeIndex + 1, remaining, females);
+        if (gameScore.score + next.score < bestScore) {
+          bestScore = gameScore.score + next.score;
+          bestGames = [gameScore.game, ...next.games];
+        }
+      }
+    } else if (type == MatchType.womenDoubles) {
+      final combos = _getCombinations(females, 4);
+      for (final selected in combos) {
+        final remaining = females.where((f) => !selected.contains(f)).toList();
+        final gameScore = gameEvaluator.getBestGameForFour(type, selected);
+        final next = _recurseAssignment(types, typeIndex + 1, males, remaining);
+        if (gameScore.score + next.score < bestScore) {
+          bestScore = gameScore.score + next.score;
+          bestGames = [gameScore.game, ...next.games];
+        }
+      }
+    } else {
+      // 混合ダブルス
+      final mCombos = _getCombinations(males, 2);
+      final fCombos = _getCombinations(females, 2);
+      for (final selectedM in mCombos) {
+        final remainingM = males.where((m) => !selectedM.contains(m)).toList();
+        for (final selectedF in fCombos) {
+          final remainingF =
+              females.where((f) => !selectedF.contains(f)).toList();
+          final gameScore =
+              gameEvaluator.getBestMixedGame(type, selectedM, selectedF);
+          final next =
+              _recurseAssignment(types, typeIndex + 1, remainingM, remainingF);
+          if (gameScore.score + next.score < bestScore) {
+            bestScore = gameScore.score + next.score;
+            bestGames = [gameScore.game, ...next.games];
+          }
+        }
+      }
+    }
+
+    return SessionScore(bestScore, bestGames);
+  }
+
+  List<List<T>> _getCombinations<T>(List<T> items, int n) {
+    if (n <= 0) return [[]];
+    if (items.isEmpty) return [];
+    final result = <List<T>>[];
+    for (int i = 0; i <= items.length - n; i++) {
+      final first = items[i];
+      for (final combo in _getCombinations(items.sublist(i + 1), n - 1)) {
+        result.add([first, ...combo]);
+      }
+    }
+    return result;
+  }
+}
