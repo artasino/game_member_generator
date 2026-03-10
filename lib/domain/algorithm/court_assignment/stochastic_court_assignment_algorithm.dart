@@ -113,14 +113,22 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
 
     if (isMale) {
       int index1 = random.nextInt(tempMales.length);
-      int index2 = random.nextInt(tempMales.length);
+      int index2;
+      // index2 should not equal to index1
+      do {
+        index2 = random.nextInt(tempMales.length);
+      } while (index1 == index2);
       PlayerWithStats temp = tempMales[index1];
       tempMales[index1] = tempMales[index2];
       tempMales[index2] = temp;
       return (tempMales, tempFemales);
     }
     int index1 = random.nextInt(tempFemales.length);
-    int index2 = random.nextInt(tempFemales.length);
+    int index2;
+    // index2 should not equal to index1
+    do {
+      index2 = random.nextInt(tempMales.length);
+    } while (index1 == index2);
     PlayerWithStats temp = tempFemales[index1];
     tempFemales[index1] = tempFemales[index2];
     tempFemales[index2] = temp;
