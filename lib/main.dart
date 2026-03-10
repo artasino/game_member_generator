@@ -56,10 +56,10 @@ class MyApp extends StatelessWidget {
   final SessionNotifier sessionNotifier;
 
   const MyApp({
-    Key? key,
+    super.key,
     required this.playerNotifier,
     required this.sessionNotifier,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

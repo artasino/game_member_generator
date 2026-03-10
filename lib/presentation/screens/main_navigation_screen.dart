@@ -9,10 +9,10 @@ class MainNavigationScreen extends StatefulWidget {
   final SessionNotifier sessionNotifier;
 
   const MainNavigationScreen({
-    Key? key,
+    super.key,
     required this.playerNotifier,
     required this.sessionNotifier,
-  }) : super(key: key);
+  });
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();

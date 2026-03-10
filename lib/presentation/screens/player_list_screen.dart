@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
-import '../../domain/entities/player_stats.dart';
 import '../../domain/entities/player_with_stats.dart';
 import '../notifiers/player_notifier.dart';
 import '../notifiers/session_notifier.dart';
@@ -12,10 +11,10 @@ class PlayerListScreen extends StatefulWidget {
   final SessionNotifier sessionNotifier;
 
   const PlayerListScreen({
-    Key? key,
+    super.key,
     required this.notifier,
     required this.sessionNotifier,
-  }) : super(key: key);
+  });
 
   @override
   State<PlayerListScreen> createState() => _PlayerListScreenState();
@@ -490,7 +489,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       subtitle: const Text('選出から除外します', style: TextStyle(fontSize: 12)),
                       value: isMustRest,
                       onChanged: (v) => setState(() => isMustRest = v),
-                      activeColor: Colors.orange,
+                      activeThumbColor: Colors.orange,
                     ),
                   ],
                 ),

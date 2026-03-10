@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:game_member_generator/domain/entities/player_stats_pool.dart';
 
 import '../entities/game.dart';
-import '../entities/gender.dart';
 import '../entities/match_type.dart';
 import '../entities/team.dart';
 import 'match_algorithm.dart';
