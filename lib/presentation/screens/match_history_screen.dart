@@ -203,7 +203,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             Text('$total 試合中',
                 style: TextStyle(
                     fontSize: 10,
-                    color: onPrimary.withOpacity(0.7),
+                    color: onPrimary.withValues(alpha: 0.7),
                     fontWeight: FontWeight.bold)),
           ],
         ),
@@ -273,7 +273,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16 * scale),
         side: BorderSide(
-            color: theme.colorScheme.outlineVariant.withOpacity(0.6),
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
             width: 1.5),
       ),
       child: Column(
@@ -282,7 +282,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             padding: EdgeInsets.symmetric(
                 horizontal: 14 * scale, vertical: 8 * scale),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
               borderRadius:
                   BorderRadius.vertical(top: Radius.circular(16 * scale)),
             ),
@@ -308,8 +308,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                     color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                        color:
-                            theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                        color: theme.colorScheme.outlineVariant
+                            .withValues(alpha: 0.5)),
                   ),
                   child: Text(_matchTypeName(game.type),
                       style: TextStyle(
@@ -336,13 +336,13 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                           style: TextStyle(
                               fontSize: 16 * scale,
                               fontWeight: FontWeight.w900,
-                              color:
-                                  theme.colorScheme.outline.withOpacity(0.3))),
+                              color: theme.colorScheme.outline
+                                  .withValues(alpha: 0.3))),
                       Container(
                           width: 1.5,
                           height: 50 * scale,
                           color: theme.colorScheme.outlineVariant
-                              .withOpacity(0.2)),
+                              .withValues(alpha: 0.2)),
                     ],
                   ),
                 ),
@@ -396,10 +396,10 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
       width: maxWidth,
       padding: EdgeInsets.all(16 * restingScale),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.1),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20 * restingScale),
         border: Border.all(
-            color: theme.colorScheme.outlineVariant.withOpacity(0.3)),
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -415,7 +415,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
+                  color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text('計 ${session.restingPlayers.length} 名',
@@ -507,7 +507,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     List<Player> newResting = session.restingPlayers.map((p) {
       if (p.id == p1.id) {
         return p2;
-      } else if (p.id == p2.id) return p1;
+      } else if (p.id == p2.id) {
+        return p1;
+      }
       return p;
     }).toList();
 
@@ -521,10 +523,14 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     Player newP2 = team.player2;
     if (team.player1.id == p1.id) {
       newP1 = p2;
-    } else if (team.player1.id == p2.id) newP1 = p1;
+    } else if (team.player1.id == p2.id) {
+      newP1 = p1;
+    }
     if (team.player2.id == p1.id) {
       newP2 = p2;
-    } else if (team.player2.id == p2.id) newP2 = p1;
+    } else if (team.player2.id == p2.id) {
+      newP2 = p1;
+    }
     return team.copyWith(player1: newP1, player2: newP2);
   }
 
@@ -727,7 +733,7 @@ class _RestingSubSection extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 12 * scale,
                       fontWeight: FontWeight.w900,
-                      color: color.withOpacity(0.85))),
+                      color: color.withValues(alpha: 0.85))),
             ],
           )),
       Wrap(
@@ -761,12 +767,12 @@ class _PairInfoLabel extends StatelessWidget {
           EdgeInsets.symmetric(horizontal: 10 * scale, vertical: 2.5 * scale),
       decoration: BoxDecoration(
           color: isMultiple
-              ? Colors.orange.withOpacity(0.1)
+              ? Colors.orange.withValues(alpha: 0.1)
               : Colors.grey.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(10 * scale),
           border: Border.all(
               color: isMultiple
-                  ? Colors.orange.withOpacity(0.3)
+                  ? Colors.orange.withValues(alpha: 0.3)
                   : Colors.grey.withValues(alpha: 0.2),
               width: 1.0)),
       child: Text('ペア $count回目',
@@ -803,11 +809,12 @@ class _RestingChip extends StatelessWidget {
             EdgeInsets.symmetric(horizontal: 12 * scale, vertical: 8 * scale),
         decoration: BoxDecoration(
             color: isSelected
-                ? Colors.orange.withOpacity(0.25)
-                : color.withOpacity(0.08),
+                ? Colors.orange.withValues(alpha: 0.25)
+                : color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(16 * scale),
             border: Border.all(
-                color: isSelected ? Colors.orange : color.withOpacity(0.3),
+                color:
+                    isSelected ? Colors.orange : color.withValues(alpha: 0.3),
                 width: 1.5)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Text(player.name,
@@ -833,7 +840,7 @@ class _TypeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ElevatedButton(
         style: ElevatedButton.styleFrom(
-            backgroundColor: color.withOpacity(0.1),
+            backgroundColor: color.withValues(alpha: 0.1),
             foregroundColor: color,
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 8)),
@@ -871,8 +878,8 @@ class _PlayerTag extends StatelessWidget {
               horizontal: 14 * scale, vertical: 10 * scale),
           decoration: BoxDecoration(
               color: isSelected
-                  ? Colors.orange.withOpacity(0.3)
-                  : color.withOpacity(0.1),
+                  ? Colors.orange.withValues(alpha: 0.3)
+                  : color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14 * scale),
               border: Border.all(
                   color:
