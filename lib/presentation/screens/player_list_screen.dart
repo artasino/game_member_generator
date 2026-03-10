@@ -34,10 +34,10 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
-        title: _isSearching 
+        title: _isSearching
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
@@ -47,7 +47,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   hintStyle: TextStyle(color: Colors.white70),
                 ),
                 style: const TextStyle(color: Colors.white, fontSize: 18),
-                onChanged: (value) => setState(() => _searchQuery = value.trim()),
+                onChanged: (value) =>
+                    setState(() => _searchQuery = value.trim()),
               )
             : const Text('メンバ一覧'),
         backgroundColor: theme.colorScheme.primary,
@@ -84,16 +85,34 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               }
 
               if (message != null && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(message)));
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(value: 'export_clipboard', child: ListTile(leading: Icon(Icons.copy), title: Text('クリップボードへコピー'))),
-              const PopupMenuItem(value: 'import_clipboard', child: ListTile(leading: Icon(Icons.paste), title: Text('クリップボードから追加'))),
+              const PopupMenuItem(
+                  value: 'export_clipboard',
+                  child: ListTile(
+                      leading: Icon(Icons.copy), title: Text('クリップボードへコピー'))),
+              const PopupMenuItem(
+                  value: 'import_clipboard',
+                  child: ListTile(
+                      leading: Icon(Icons.paste), title: Text('クリップボードから追加'))),
               const PopupMenuDivider(),
-              const PopupMenuItem(value: 'export_json', child: ListTile(leading: Icon(Icons.save_alt), title: Text('JSONファイルで保存'))),
-              const PopupMenuItem(value: 'export_csv', child: ListTile(leading: Icon(Icons.grid_on), title: Text('CSVファイルで保存'))),
-              const PopupMenuItem(value: 'import_file', child: ListTile(leading: Icon(Icons.file_open), title: Text('ファイルからインポート'))),
+              const PopupMenuItem(
+                  value: 'export_json',
+                  child: ListTile(
+                      leading: Icon(Icons.save_alt),
+                      title: Text('JSONファイルで保存'))),
+              const PopupMenuItem(
+                  value: 'export_csv',
+                  child: ListTile(
+                      leading: Icon(Icons.grid_on), title: Text('CSVファイルで保存'))),
+              const PopupMenuItem(
+                  value: 'import_file',
+                  child: ListTile(
+                      leading: Icon(Icons.file_open),
+                      title: Text('ファイルからインポート'))),
             ],
           ),
         ],
@@ -115,11 +134,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
             );
           }
 
-          final filteredPool = _searchQuery.isEmpty 
-              ? pool.all 
-              : pool.all.where((p) => 
-                  p.player.name.contains(_searchQuery) || 
-                  p.player.yomigana.contains(_searchQuery)).toList();
+          final filteredPool = _searchQuery.isEmpty
+              ? pool.all
+              : pool.all
+                  .where((p) =>
+                      p.player.name.contains(_searchQuery) ||
+                      p.player.yomigana.contains(_searchQuery))
+                  .toList();
 
           final activeMales = filteredPool
               .where((p) => p.player.isActive && p.player.gender == Gender.male)
@@ -127,12 +148,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
             ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
 
           final activeFemales = filteredPool
-              .where((p) => p.player.isActive && p.player.gender == Gender.female)
+              .where(
+                  (p) => p.player.isActive && p.player.gender == Gender.female)
               .toList()
             ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
 
           // 性別ごとに分けてグループ化
-          Map<String, List<PlayerWithStats>> getGrouped(List<PlayerWithStats> players) {
+          Map<String, List<PlayerWithStats>> getGrouped(
+              List<PlayerWithStats> players) {
             final grouped = <String, List<PlayerWithStats>>{};
             final sorted = List<PlayerWithStats>.from(players)
               ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
@@ -143,14 +166,20 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
             return grouped;
           }
 
-          final malePlayers = filteredPool.where((p) => p.player.gender == Gender.male).toList();
-          final femalePlayers = filteredPool.where((p) => p.player.gender == Gender.female).toList();
-          
+          final malePlayers = filteredPool
+              .where((p) => p.player.gender == Gender.male)
+              .toList();
+          final femalePlayers = filteredPool
+              .where((p) => p.player.gender == Gender.female)
+              .toList();
+
           final groupedMales = getGrouped(malePlayers);
           final groupedFemales = getGrouped(femalePlayers);
-          
-          final maleLabels = groupedMales.keys.toList()..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
-          final femaleLabels = groupedFemales.keys.toList()..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
+
+          final maleLabels = groupedMales.keys.toList()
+            ..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
+          final femaleLabels = groupedFemales.keys.toList()
+            ..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
 
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
@@ -158,7 +187,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (activeMales.isNotEmpty || activeFemales.isNotEmpty) ...[
-                  _buildSectionHeader(context, '本日の参加メンバ', 
+                  _buildSectionHeader(context, '本日の参加メンバ',
                       '計${activeMales.length + activeFemales.length}名 (男${activeMales.length} 女${activeFemales.length})'),
                   const SizedBox(height: 12),
                   Row(
@@ -169,7 +198,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (activeMales.isNotEmpty) ...[
-                              _GenderLabel(label: '男性 ${activeMales.length}名', color: Colors.blue),
+                              _GenderLabel(
+                                  label: '男性 ${activeMales.length}名',
+                                  color: Colors.blue),
                               const SizedBox(height: 8),
                               _buildWrap(activeMales, theme),
                             ],
@@ -182,7 +213,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (activeFemales.isNotEmpty) ...[
-                              _GenderLabel(label: '女性 ${activeFemales.length}名', color: Colors.pink),
+                              _GenderLabel(
+                                  label: '女性 ${activeFemales.length}名',
+                                  color: Colors.pink),
                               const SizedBox(height: 8),
                               _buildWrap(activeFemales, theme),
                             ],
@@ -201,18 +234,22 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 if (maleLabels.isEmpty && femaleLabels.isEmpty)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 32),
-                    child: Center(child: Text('該当するメンバが見つかりません', style: TextStyle(color: Colors.grey))),
+                    child: Center(
+                        child: Text('該当するメンバが見つかりません',
+                            style: TextStyle(color: Colors.grey))),
                   )
                 else
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: _buildGroupedList(groupedMales, maleLabels, theme),
+                        child:
+                            _buildGroupedList(groupedMales, maleLabels, theme),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _buildGroupedList(groupedFemales, femaleLabels, theme),
+                        child: _buildGroupedList(
+                            groupedFemales, femaleLabels, theme),
                       ),
                     ],
                   ),
@@ -229,18 +266,24 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, String subtitle) {
+  Widget _buildSectionHeader(
+      BuildContext context, String title, String subtitle) {
     final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
-        Text(subtitle, style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey.shade600)),
+        Text(title,
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w900)),
+        Text(subtitle,
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: Colors.grey.shade600)),
       ],
     );
   }
 
-  Widget _buildGroupedList(Map<String, List<PlayerWithStats>> grouped, List<String> labels, ThemeData theme) {
+  Widget _buildGroupedList(Map<String, List<PlayerWithStats>> grouped,
+      List<String> labels, ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: labels.map((label) {
@@ -266,11 +309,15 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     );
   }
 
-  Widget _buildWrap(List<PlayerWithStats> players, ThemeData theme, {bool showCheckbox = false}) {
+  Widget _buildWrap(List<PlayerWithStats> players, ThemeData theme,
+      {bool showCheckbox = false}) {
     return Wrap(
       spacing: 10,
       runSpacing: 10,
-      children: players.map((p) => _buildPlayerChip(context, p, theme, showCheckbox: showCheckbox)).toList(),
+      children: players
+          .map((p) =>
+              _buildPlayerChip(context, p, theme, showCheckbox: showCheckbox))
+          .toList(),
     );
   }
 
@@ -278,23 +325,81 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     if (yomigana.isEmpty) return '#';
     final firstChar = yomigana.substring(0, 1);
     const mapping = {
-      'あ': 'あ', 'い': 'あ', 'う': 'あ', 'え': 'あ', 'お': 'あ',
-      'か': 'か', 'き': 'か', 'く': 'か', 'け': 'か', 'こ': 'か',
-      'さ': 'さ', 'し': 'さ', 'す': 'さ', 'せ': 'さ', 'そ': 'さ',
-      'た': 'た', 'ち': 'た', 'つ': 'た', 'て': 'た', 'と': 'た',
-      'な': 'な', 'に': 'な', 'ぬ': 'な', 'ね': 'な', 'の': 'な',
-      'は': 'は', 'ひ': 'は', 'ふ': 'は', 'へ': 'は', 'ほ': 'は',
-      'ま': 'ま', 'み': 'ま', 'む': 'ま', 'め': 'ま', 'も': 'ま',
-      'や': 'や', 'ゆ': 'や', 'よ': 'や',
-      'ら': 'ら', 'り': 'ら', 'る': 'ら', 'れ': 'ら', 'ろ': 'ら',
-      'わ': 'わ', 'を': 'わ', 'ん': 'わ',
-      'が': 'か', 'ぎ': 'か', 'ぐ': 'か', 'げ': 'か', 'ご': 'か',
-      'ざ': 'さ', 'じ': 'さ', 'ず': 'さ', 'ぜ': 'さ', 'ぞ': 'さ',
-      'だ': 'た', 'ぢ': 'た', 'づ': 'た', 'で': 'た', 'ど': 'た',
-      'ば': 'は', 'び': 'は', 'ぶ': 'は', 'べ': 'は',
-      'ぱ': 'は', 'ぴ': 'は', 'ぷ': 'は', 'ぺ': 'は', 'ぽ': 'は',
+      'あ': 'あ',
+      'い': 'あ',
+      'う': 'あ',
+      'え': 'あ',
+      'お': 'あ',
+      'か': 'か',
+      'き': 'か',
+      'く': 'か',
+      'け': 'か',
+      'こ': 'か',
+      'さ': 'さ',
+      'し': 'さ',
+      'す': 'さ',
+      'せ': 'さ',
+      'そ': 'さ',
+      'た': 'た',
+      'ち': 'た',
+      'つ': 'た',
+      'て': 'た',
+      'と': 'た',
+      'な': 'な',
+      'に': 'な',
+      'ぬ': 'な',
+      'ね': 'な',
+      'の': 'な',
+      'は': 'は',
+      'ひ': 'は',
+      'ふ': 'は',
+      'へ': 'は',
+      'ほ': 'は',
+      'ま': 'ま',
+      'み': 'ま',
+      'む': 'ま',
+      'め': 'ま',
+      'も': 'ま',
+      'や': 'や',
+      'ゆ': 'や',
+      'よ': 'や',
+      'ら': 'ら',
+      'り': 'ら',
+      'る': 'ら',
+      'れ': 'ら',
+      'ろ': 'ら',
+      'わ': 'わ',
+      'を': 'わ',
+      'ん': 'わ',
+      'が': 'か',
+      'ぎ': 'か',
+      'ぐ': 'か',
+      'げ': 'か',
+      'ご': 'か',
+      'ざ': 'さ',
+      'じ': 'さ',
+      'ず': 'さ',
+      'ぜ': 'さ',
+      'ぞ': 'さ',
+      'だ': 'た',
+      'ぢ': 'た',
+      'づ': 'た',
+      'で': 'た',
+      'ど': 'た',
+      'ば': 'は',
+      'び': 'は',
+      'ぶ': 'は',
+      'べ': 'は',
+      'ぱ': 'は',
+      'ぴ': 'は',
+      'ぷ': 'は',
+      'ぺ': 'は',
+      'ぽ': 'は',
     };
-    return mapping[firstChar] ?? (RegExp(r'^[a-zA-Z]').hasMatch(firstChar) ? firstChar.toUpperCase() : '#');
+    return mapping[firstChar] ??
+        (RegExp(r'^[a-zA-Z]').hasMatch(firstChar)
+            ? firstChar.toUpperCase()
+            : '#');
   }
 
   int _labelOrder(String label) {
@@ -305,13 +410,16 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     return 1000;
   }
 
-  Widget _buildPlayerChip(BuildContext context, PlayerWithStats pWithStats, ThemeData theme, {bool showCheckbox = false}) {
+  Widget _buildPlayerChip(
+      BuildContext context, PlayerWithStats pWithStats, ThemeData theme,
+      {bool showCheckbox = false}) {
     final player = pWithStats.player;
     final stats = pWithStats.stats;
-    final genderColor = player.gender == Gender.male ? Colors.blue : Colors.pink;
-    
+    final genderColor =
+        player.gender == Gender.male ? Colors.blue : Colors.pink;
+
     // 性別に応じた履歴
-    final sameGenderCount = player.gender == Gender.male 
+    final sameGenderCount = player.gender == Gender.male
         ? (stats.typeCounts[MatchType.menDoubles] ?? 0)
         : (stats.typeCounts[MatchType.womenDoubles] ?? 0);
     final mxCount = stats.typeCounts[MatchType.mixedDoubles] ?? 0;
@@ -327,13 +435,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: player.isActive 
-                ? genderColor.withValues(alpha: 0.12) 
+            color: player.isActive
+                ? genderColor.withValues(alpha: 0.12)
                 : genderColor.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: player.isActive 
-                  ? genderColor.withValues(alpha: 0.5) 
+              color: player.isActive
+                  ? genderColor.withValues(alpha: 0.5)
                   : genderColor.withValues(alpha: 0.2),
               width: player.isActive ? 1.5 : 1.0,
             ),
@@ -344,9 +452,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               children: [
                 if (showCheckbox) ...[
                   Icon(
-                    player.isActive ? Icons.check_circle : Icons.radio_button_unchecked,
+                    player.isActive
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
                     size: 18,
-                    color: player.isActive ? genderColor : genderColor.withValues(alpha: 0.4),
+                    color: player.isActive
+                        ? genderColor
+                        : genderColor.withValues(alpha: 0.4),
                   ),
                   const SizedBox(width: 6),
                 ],
@@ -362,12 +474,15 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: player.isActive ? Colors.black87 : Colors.black54,
+                            color: player.isActive
+                                ? Colors.black87
+                                : Colors.black54,
                           ),
                         ),
                         if (player.isMustRest) ...[
                           const SizedBox(width: 3),
-                          const Icon(Icons.coffee_outlined, size: 13, color: Colors.orange),
+                          const Icon(Icons.coffee_outlined,
+                              size: 13, color: Colors.orange),
                         ],
                       ],
                     ),
@@ -375,16 +490,24 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildCountBadge('出${stats.totalMatches}', Colors.indigo, isActive: player.isActive),
+                        _buildCountBadge(
+                            '出${stats.totalMatches}', Colors.indigo,
+                            isActive: player.isActive),
                         const SizedBox(width: 4),
-                        _buildCountBadge('休${stats.totalRests}', Colors.deepOrange, isActive: player.isActive),
+                        _buildCountBadge(
+                            '休${stats.totalRests}', Colors.deepOrange,
+                            isActive: player.isActive),
                         const SizedBox(width: 8),
                         Text(
                           '${player.gender == Gender.male ? "男" : "女"}$sameGenderCount 混$mxCount',
                           style: TextStyle(
                             fontSize: 10,
-                            color: player.isActive ? Colors.black54 : Colors.grey.shade600,
-                            fontWeight: player.isActive ? FontWeight.w500 : FontWeight.normal,
+                            color: player.isActive
+                                ? Colors.black54
+                                : Colors.grey.shade600,
+                            fontWeight: player.isActive
+                                ? FontWeight.w500
+                                : FontWeight.normal,
                           ),
                         ),
                       ],
@@ -403,10 +526,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
       decoration: BoxDecoration(
-        color: isActive ? color.withValues(alpha: 0.15) : color.withValues(alpha: 0.05),
+        color: isActive
+            ? color.withValues(alpha: 0.15)
+            : color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: isActive ? color.withValues(alpha: 0.4) : color.withValues(alpha: 0.2),
+          color: isActive
+              ? color.withValues(alpha: 0.4)
+              : color.withValues(alpha: 0.2),
           width: 0.5,
         ),
       ),
@@ -424,7 +551,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   void _showAddEditDialog(BuildContext context, {Player? player}) {
     final isEdit = player != null;
     final nameController = TextEditingController(text: player?.name ?? '');
-    final yomiganaController = TextEditingController(text: player?.yomigana ?? '');
+    final yomiganaController =
+        TextEditingController(text: player?.yomigana ?? '');
     Gender selectedGender = player?.gender ?? Gender.male;
     bool isMustRest = player?.isMustRest ?? false;
 
@@ -461,7 +589,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                     const SizedBox(height: 20),
                     const Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('性別', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text('性別',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                     Row(
                       children: [
@@ -470,7 +599,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                             title: const Text('男性'),
                             value: Gender.male,
                             groupValue: selectedGender,
-                            onChanged: (v) => setState(() => selectedGender = v!),
+                            onChanged: (v) =>
+                                setState(() => selectedGender = v!),
                           ),
                         ),
                         Expanded(
@@ -478,15 +608,19 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                             title: const Text('女性'),
                             value: Gender.female,
                             groupValue: selectedGender,
-                            onChanged: (v) => setState(() => selectedGender = v!),
+                            onChanged: (v) =>
+                                setState(() => selectedGender = v!),
                           ),
                         ),
                       ],
                     ),
                     const Divider(height: 32),
                     SwitchListTile(
-                      title: const Text('次の試合は必ず休み', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                      subtitle: const Text('選出から除外します', style: TextStyle(fontSize: 12)),
+                      title: const Text('次の試合は必ず休み',
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.bold)),
+                      subtitle: const Text('選出から除外します',
+                          style: TextStyle(fontSize: 12)),
                       value: isMustRest,
                       onChanged: (v) => setState(() => isMustRest = v),
                       activeThumbColor: Colors.orange,
@@ -505,7 +639,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       widget.notifier.removePlayer(player.id);
                       Navigator.pop(context);
                     },
-                    child: const Text('削除', style: TextStyle(color: Colors.red)),
+                    child:
+                        const Text('削除', style: TextStyle(color: Colors.red)),
                   ),
                 ElevatedButton(
                   onPressed: () {
