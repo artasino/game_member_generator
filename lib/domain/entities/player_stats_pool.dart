@@ -20,6 +20,7 @@ class PlayerStatsPool {
       return 0;
     }
   }
+
   /// 男性のみのプールを返す
   PlayerStatsPool get males => PlayerStatsPool(
         _players.where((p) => p.player.gender == Gender.male).toList(),
@@ -40,9 +41,7 @@ class PlayerStatsPool {
     }
     // 回数（Key）でソートされたMapを作成
     final sortedKeys = groups.keys.toList()..sort();
-    return {
-      for (var k in sortedKeys) k: PlayerStatsPool(groups[k]!)
-    };
+    return {for (var k in sortedKeys) k: PlayerStatsPool(groups[k]!)};
   }
 
   /// 試合数が少ない順にソートしたリストを返す（同じ回数ならランダム）
@@ -62,7 +61,6 @@ class PlayerStatsPool {
 
     return SelectionResult(picked, PlayerStatsPool(remaining));
   }
-
 }
 
 /// 選出結果を保持するデータ構造

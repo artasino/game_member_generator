@@ -19,12 +19,11 @@ class MatchMakingService {
     // 1. 保存されている「アクティブな」プレイヤーのIDを取得
     final activePlayers = await playerRepository.getActive();
     final activeIds = activePlayers.map((p) => p.id).toSet();
-    
+
     // 2. アクティブなプレイヤーのみのプールを作成
     final activePool = PlayerStatsPool(
-      playerStats.all.where((p) => activeIds.contains(p.player.id)).toList()
-    );
-    
+        playerStats.all.where((p) => activeIds.contains(p.player.id)).toList());
+
     // 3. 男女別にプールを分け、それぞれのバケットを取得してアルゴリズムに渡す
     return algorithm.generateMatches(
       matchTypes: matchTypes,

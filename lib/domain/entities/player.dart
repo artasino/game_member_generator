@@ -3,12 +3,13 @@ import 'package:equatable/equatable.dart';
 import 'gender.dart';
 
 /// プレイヤーの情報を保持するクラス
-class Player extends Equatable{
+class Player extends Equatable {
   final String id;
   final String name;
   final String yomigana;
   final Gender gender;
   final bool isActive;
+
   /// 次の試合で必ず休み（お休み固定）にするフラグ
   final bool isMustRest;
 

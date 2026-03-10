@@ -17,37 +17,50 @@ import 'package:game_member_generator/domain/repository/player_repository/player
 // モッククラスの定義
 class MockSessionHistoryRepository implements SessionHistoryRepository {
   List<Session> sessions = [];
+
   @override
   Future<List<Session>> getAll() async => sessions;
+
   @override
   Future<void> add(Session session) async => sessions.add(session);
+
   @override
   Future<void> update(Session session) async {
     final index = sessions.indexWhere((s) => s.index == session.index);
     if (index != -1) sessions[index] = session;
   }
+
   @override
   Future<void> clear() async => sessions.clear();
 }
 
 class MockCourtSettingsRepository implements CourtSettingsRepository {
   CourtSettings settings = CourtSettings([MatchType.menDoubles]);
+
   @override
   Future<CourtSettings> get() async => settings;
+
   @override
   Future<void> update(CourtSettings settings) async => this.settings = settings;
 }
 
 class MockPlayerRepository implements PlayerRepository {
   List<Player> players = [];
+
   @override
-  Future<List<Player>> getActive() async => players.where((p) => p.isActive).toList();
+  Future<List<Player>> getActive() async =>
+      players.where((p) => p.isActive).toList();
+
   @override
   Future<List<Player>> getAll() async => players;
+
   @override
   Future<void> add(Player player) async => players.add(player);
+
   @override
-  Future<void> remove(String id) async => players.removeWhere((p) => p.id == id);
+  Future<void> remove(String id) async =>
+      players.removeWhere((p) => p.id == id);
+
   @override
   Future<void> update(Player player) async {
     final index = players.indexWhere((p) => p.id == player.id);
@@ -62,10 +75,16 @@ class FixedMatchAlgorithm implements MatchAlgorithm {
     required Map<int, PlayerStatsPool> maleBuckets,
     required Map<int, PlayerStatsPool> femaleBuckets,
   }) {
-    final males = maleBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
-    final females = femaleBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
+    final males = maleBuckets.values
+        .expand((pool) => pool.all)
+        .map((ps) => ps.player)
+        .toList();
+    final females = femaleBuckets.values
+        .expand((pool) => pool.all)
+        .map((ps) => ps.player)
+        .toList();
     final allPlayers = [...males, ...females];
-    
+
     if (allPlayers.length < 4) return [];
 
     return [
@@ -99,19 +118,26 @@ void main() {
 
   group('SessionNotifier - 統計計算', () {
     test('試合履歴に基づいて正しく出場回数と詳細統計が計算されること', () async {
-      const p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
-      const p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
-      const p3 = Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
-      const p4 = Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
+      const p1 =
+          Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
+      const p2 =
+          Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
+      const p3 =
+          Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
+      const p4 =
+          Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
       playerRepo.players = [p1, p2, p3, p4];
 
       // プレイヤーが追加されたことを通知して notifier 内部のキャッシュプールを更新する
       await notifier.onPlayersUpdated();
 
-      await notifier.generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
+      await notifier
+          .generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
 
-      final stats1 = notifier.playerStatsPool.all.firstWhere((p) => p.player.id == '1').stats;
-      
+      final stats1 = notifier.playerStatsPool.all
+          .firstWhere((p) => p.player.id == '1')
+          .stats;
+
       expect(stats1.totalMatches, 1);
       expect(stats1.partnerCounts['2'], 1);
       expect(stats1.opponentCounts['3'], 1);
@@ -121,27 +147,34 @@ void main() {
 
   group('SessionNotifier - メンバー入れ替え', () {
     test('入れ替え後に詳細統計も再計算されること', () async {
-      const p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
-      const p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
-      const p3 = Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
-      const p4 = Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
-      const p5 = Player(id: '5', name: 'P5', yomigana: 'p5', gender: Gender.male);
+      const p1 =
+          Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
+      const p2 =
+          Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
+      const p3 =
+          Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
+      const p4 =
+          Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
+      const p5 =
+          Player(id: '5', name: 'P5', yomigana: 'p5', gender: Gender.male);
       playerRepo.players = [p1, p2, p3, p4, p5];
 
       await notifier.onPlayersUpdated();
 
-      await notifier.generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
-      
+      await notifier
+          .generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
+
       final session = notifier.sessions.first;
       // P1 と P5 を入れ替える
-      final newGames = [
-        Game(MatchType.menDoubles, Team(p5, p2), Team(p3, p4))
-      ];
-      await notifier.updateSession(session.copyWith(games: newGames, restingPlayers: [p1]));
+      final newGames = [Game(MatchType.menDoubles, Team(p5, p2), Team(p3, p4))];
+      await notifier.updateSession(
+          session.copyWith(games: newGames, restingPlayers: [p1]));
 
       final pool = notifier.playerStatsPool;
-      expect(pool.all.firstWhere((p) => p.player.id == '1').stats.totalMatches, 0);
-      expect(pool.all.firstWhere((p) => p.player.id == '5').stats.totalMatches, 1);
+      expect(
+          pool.all.firstWhere((p) => p.player.id == '1').stats.totalMatches, 0);
+      expect(
+          pool.all.firstWhere((p) => p.player.id == '5').stats.totalMatches, 1);
     });
   });
 }

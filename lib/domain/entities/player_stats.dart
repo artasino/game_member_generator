@@ -4,16 +4,22 @@ import 'match_type.dart';
 class PlayerStats {
   /// 合計出場回数
   final int totalMatches;
+
   /// 合計お休み回数
   final int totalRests;
+
   /// 種目別の出場回数
   final Map<MatchType, int> typeCounts;
+
   /// このプレイヤーが誰と何回ペア（味方）を組んだか (key: Player.id, value: 回数)
   final Map<String, int> partnerCounts;
+
   /// このプレイヤーが誰と何回対戦（敵）したか (key: Player.id, value: 回数)
   final Map<String, int> opponentCounts;
+
   /// 直近のセッションでお休みだったかどうか
   final bool restedLastTime;
+
   /// 最後にお休みしてから何試合経過したか (0なら直前がお休み)
   final int sessionsSinceLastRest;
 

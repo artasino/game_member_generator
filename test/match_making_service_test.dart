@@ -14,7 +14,8 @@ class MockPlayerRepository implements PlayerRepository {
   List<Player> players = [];
 
   @override
-  Future<List<Player>> getActive() async => players.where((p) => p.isActive).toList();
+  Future<List<Player>> getActive() async =>
+      players.where((p) => p.isActive).toList();
 
   @override
   Future<List<Player>> getAll() async => players;
@@ -23,7 +24,8 @@ class MockPlayerRepository implements PlayerRepository {
   Future<void> add(Player player) async => players.add(player);
 
   @override
-  Future<void> remove(String id) async => players.removeWhere((p) => p.id == id);
+  Future<void> remove(String id) async =>
+      players.removeWhere((p) => p.id == id);
 
   @override
   Future<void> update(Player player) async {
@@ -45,24 +47,31 @@ void main() {
   group('MatchMakingService - 正常系', () {
     test('リポジトリのアクティブプレイヤーから試合が生成されること', () async {
       // Given: 4人のアクティブプレイヤー
-      final p1 = Player(id: '1', name: 'M1', yomigana: 'm1', gender: Gender.male);
-      final p2 = Player(id: '2', name: 'M2', yomigana: 'm2', gender: Gender.male);
-      final p3 = Player(id: '3', name: 'M3', yomigana: 'm3', gender: Gender.male);
-      final p4 = Player(id: '4', name: 'M4', yomigana: 'm4', gender: Gender.male);
+      final p1 =
+          Player(id: '1', name: 'M1', yomigana: 'm1', gender: Gender.male);
+      final p2 =
+          Player(id: '2', name: 'M2', yomigana: 'm2', gender: Gender.male);
+      final p3 =
+          Player(id: '3', name: 'M3', yomigana: 'm3', gender: Gender.male);
+      final p4 =
+          Player(id: '4', name: 'M4', yomigana: 'm4', gender: Gender.male);
       mockRepository.players = [p1, p2, p3, p4];
 
       // 統計プールの準備（追加されたtotalRestsも含める）
-      final pool = PlayerStatsPool(mockRepository.players.map((p) => PlayerWithStats(
-        player: p,
-        stats: PlayerStats(
-          totalMatches: 0, 
-          totalRests: 0, // 追加
-          typeCounts: {}, 
-          partnerCounts: {}, 
-          opponentCounts: {},
-          sessionsSinceLastRest: 0,
-        ),
-      )).toList());
+      final pool = PlayerStatsPool(mockRepository.players
+          .map((p) => PlayerWithStats(
+                player: p,
+                stats: PlayerStats(
+                  totalMatches: 0,
+                  totalRests: 0,
+                  // 追加
+                  typeCounts: {},
+                  partnerCounts: {},
+                  opponentCounts: {},
+                  sessionsSinceLastRest: 0,
+                ),
+              ))
+          .toList());
 
       // When
       final result = await service.generateMatches(
