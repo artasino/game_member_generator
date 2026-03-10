@@ -92,7 +92,7 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
 
     // 2. 固定されたメンバー内で最適な「コートへの割り振り」を探索
     final assignmentResult = courtAssignmentAlgorithm.searchBestAssignment(
-      matchTypes: matchTypes,
+      types: matchTypes,
       availableMales: playingMales,
       availableFemales: playingFemales,
     );

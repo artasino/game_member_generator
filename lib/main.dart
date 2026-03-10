@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:game_member_generator/domain/algorithm/court_assignment/court_assignment_algorithm.dart';
 
 import 'domain/algorithm/balanced_match_algorithm.dart';
-import 'domain/algorithm/court_assignment/best_force_court_assignment.dart';
+import 'domain/algorithm/court_assignment/stochastic_court_assignment_algorithm.dart';
 import 'domain/algorithm/game_evaluator.dart';
 import 'domain/entities/gender.dart';
 import 'domain/entities/player.dart';
@@ -29,7 +29,7 @@ void main() async {
   // 3. サービスとNotifierの準備
   final GameEvaluator gameEvaluator = GameEvaluator();
   final CourtAssignmentAlgorithm courtAssignmentAlgorithm =
-      BestForceCourtAssignmentAlgorithm(gameEvaluator: gameEvaluator);
+      StochasticCourtAssignmentAlgorithm(gameEvaluator: gameEvaluator);
   final algorithm = BalancedMatchAlgorithm(
       gameEvaluator: gameEvaluator,
       courtAssignmentAlgorithm: courtAssignmentAlgorithm); // Balancedに変更
