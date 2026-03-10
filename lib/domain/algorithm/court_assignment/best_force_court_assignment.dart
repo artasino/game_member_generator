@@ -12,11 +12,10 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
   BestForceCourtAssignmentAlgorithm({required this.gameEvaluator});
 
   @override
-  SessionScore searchBestAssignment(
-      {required List<MatchType> matchTypes,
+  SessionScore searchBestAssignment({required List<MatchType> types,
       required List<PlayerWithStats> availableMales,
       required List<PlayerWithStats> availableFemales}) {
-    return _recurseAssignment(matchTypes, 0, availableMales, availableFemales);
+    return _recurseAssignment(types, 0, availableMales, availableFemales);
   }
 
   /// 再帰的にすべてのコートへのプレイヤーの割り振りを試す
