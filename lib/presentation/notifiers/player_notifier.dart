@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../../domain/entities/player.dart';
 import '../../domain/repository/player_repository/player_repository.dart';
 import 'session_notifier.dart';
@@ -76,8 +77,11 @@ class PlayerNotifier extends ChangeNotifier {
         return 'クリップボードが空です';
       }
 
-      final List<dynamic> decoded = jsonDecode(data.text!);
-      return await _importFromList(decoded);
+      final dynamic decoded = jsonDecode(data.text!);
+      if (decoded is List) {
+        return await _importFromList(decoded);
+      }
+      return 'インポートに失敗しました: 無効な形式です';
     } catch (e) {
       return 'インポートに失敗しました: 無効な形式です';
     }
@@ -86,8 +90,8 @@ class PlayerNotifier extends ChangeNotifier {
   /// ファイル(JSON/CSV)をエクスポート
   Future<void> exportPlayersToFile(String format) async {
     String content = '';
-    String extension = format == 'json' ? 'json' : 'csv';
-    String fileName =
+    final String extension = format == 'json' ? 'json' : 'csv';
+    final String fileName =
         'players_${DateTime.now().millisecondsSinceEpoch}.$extension';
 
     if (format == 'json') {
@@ -106,12 +110,13 @@ class PlayerNotifier extends ChangeNotifier {
           p.isMustRest ? 1 : 0,
         ]);
       }
-      content = const ListToCsvConverter().convert(rows);
+      content = CsvCodec().encode(rows);
     }
 
     if (!kIsWeb &&
         (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
-      String? outputFile = await FilePicker.platform.saveFile(
+      // デスクトップ環境
+      final String? outputFile = await FilePicker.platform.saveFile(
         dialogTitle: '保存先を選択してください',
         fileName: fileName,
         type: FileType.custom,
@@ -119,20 +124,27 @@ class PlayerNotifier extends ChangeNotifier {
       );
 
       if (outputFile != null) {
-        if (!outputFile.endsWith('.$extension')) {
-          outputFile = '$outputFile.$extension';
+        String finalPath = outputFile;
+        if (!outputFile.toLowerCase().endsWith('.$extension')) {
+          finalPath = '$outputFile.$extension';
         }
-        final file = File(outputFile);
+        final file = File(finalPath);
         await file.writeAsString(content);
       }
     } else {
-      await Share.shareXFiles([
-        XFile.fromData(
-          utf8.encode(content),
-          name: fileName,
-          mimeType: format == 'json' ? 'application/json' : 'text/csv',
-        )
-      ]);
+      // モバイル環境
+      final Uint8List bytes = Uint8List.fromList(utf8.encode(content));
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(
+              bytes,
+              name: fileName,
+              mimeType: format == 'json' ? 'application/json' : 'text/csv',
+            ),
+          ],
+        ),
+      );
     }
   }
 
@@ -157,11 +169,12 @@ class PlayerNotifier extends ChangeNotifier {
       }
 
       if (extension == 'json') {
-        final List<dynamic> decoded = jsonDecode(content);
-        return await _importFromList(decoded);
+        final dynamic decoded = jsonDecode(content);
+        if (decoded is List) {
+          return await _importFromList(decoded);
+        }
       } else if (extension == 'csv') {
-        final List<List<dynamic>> rows =
-            const CsvToListConverter().convert(content);
+        final List<List<dynamic>> rows = CsvCodec().decode(content);
         if (rows.length <= 1) return 'CSVデータが空か無効です';
 
         final dataRows = rows.sublist(1);
@@ -190,10 +203,10 @@ class PlayerNotifier extends ChangeNotifier {
     int count = 0;
     int skipCount = 0;
     for (var item in list) {
+      if (item is! Map<String, dynamic>) continue;
       try {
-        final player = Player.fromJson(item as Map<String, dynamic>);
-        
-        // ID一致チェック
+        final player = Player.fromJson(item);
+
         final existingById = _players.any((p) => p.id == player.id);
         if (existingById) {
           await repository.update(player);
@@ -201,7 +214,6 @@ class PlayerNotifier extends ChangeNotifier {
           continue;
         }
 
-        // 名前と性別一致チェック (Playerクラスでオーバーライドした == を利用)
         if (_exists(player)) {
           skipCount++;
           continue;
@@ -209,7 +221,6 @@ class PlayerNotifier extends ChangeNotifier {
 
         await repository.add(player);
         count++;
-        // 連続追加時にリストを更新しておく
         _players.add(player);
       } catch (_) {}
     }
