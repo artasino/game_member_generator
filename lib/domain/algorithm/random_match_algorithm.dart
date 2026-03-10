@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:game_member_generator/domain/entities/player_stats_pool.dart';
 
 import '../entities/game.dart';
-import '../entities/gender.dart';
 import '../entities/match_type.dart';
 import '../entities/team.dart';
 import 'match_algorithm.dart';
@@ -17,11 +16,17 @@ class RandomMatchAlgorithm implements MatchAlgorithm {
     required Map<int, PlayerStatsPool> femaleBuckets,
   }) {
     final random = Random();
-    
+
     // 男女それぞれのバケットからプレイヤーリストを平坦化して作成
-    final males = maleBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
-    final females = femaleBuckets.values.expand((pool) => pool.all).map((ps) => ps.player).toList();
-    
+    final males = maleBuckets.values
+        .expand((pool) => pool.all)
+        .map((ps) => ps.player)
+        .toList();
+    final females = femaleBuckets.values
+        .expand((pool) => pool.all)
+        .map((ps) => ps.player)
+        .toList();
+
     // 完全にランダムにするためにシャッフル
     males.shuffle(random);
     females.shuffle(random);
@@ -55,7 +60,7 @@ class RandomMatchAlgorithm implements MatchAlgorithm {
           break;
       }
     }
-    
+
     if (matchTypes.length != matches.length) {
       throw Exception('試合を生成しきれませんでした');
     }

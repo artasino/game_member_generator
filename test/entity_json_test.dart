@@ -29,8 +29,10 @@ void main() {
     });
 
     test('Team: toJson / fromJson roundtrip', () {
-      final p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
-      final p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.female);
+      final p1 =
+          Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
+      final p2 =
+          Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.female);
       final team = Team(p1, p2);
 
       final json = team.toJson();
@@ -42,11 +44,16 @@ void main() {
 
     test('Session: complex nested toJson / fromJson roundtrip', () {
       // 複雑なネスト構造を持つSessionデータを作成
-      final p1 = Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
-      final p2 = Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
-      final p3 = Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
-      final p4 = Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
-      final pRest = Player(id: '5', name: 'Rest', yomigana: 'rest', gender: Gender.female);
+      final p1 =
+          Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
+      final p2 =
+          Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
+      final p3 =
+          Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
+      final p4 =
+          Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
+      final pRest = Player(
+          id: '5', name: 'Rest', yomigana: 'rest', gender: Gender.female);
 
       final game = Game(
         MatchType.menDoubles,

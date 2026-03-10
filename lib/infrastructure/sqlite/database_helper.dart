@@ -64,7 +64,8 @@ class DatabaseHelper {
         }
         if (oldVersion < 3) {
           // playersテーブルに isMustRest カラムを追加
-          await db.execute('ALTER TABLE players ADD COLUMN isMustRest INTEGER DEFAULT 0');
+          await db.execute(
+              'ALTER TABLE players ADD COLUMN isMustRest INTEGER DEFAULT 0');
         }
       },
     );

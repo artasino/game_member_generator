@@ -16,6 +16,7 @@ import '../../domain/services/match_making_service.dart';
 class RequirementResult {
   final bool canGenerate;
   final String? errorMessage;
+
   RequirementResult(this.canGenerate, this.errorMessage);
 }
 
@@ -26,15 +27,18 @@ class SessionNotifier extends ChangeNotifier {
   final MatchMakingService matchMakingService;
 
   List<Session> _sessions = [];
+
   /// 保存されている全セッション（試合履歴）のリスト
   List<Session> get sessions => _sessions;
 
   PlayerStatsPool _cachedPool = PlayerStatsPool([]);
+
   /// 全プレイヤーの出場統計プールを返す
   PlayerStatsPool get playerStatsPool => _cachedPool;
 
   // 生成中フラグ
   bool _isGenerating = false;
+
   bool get isGenerating => _isGenerating;
 
   SessionNotifier({
@@ -60,15 +64,21 @@ class SessionNotifier extends ChangeNotifier {
       }
     }
 
-    final activeMales = _cachedPool.all.where((p) => p.player.isActive && p.player.gender == Gender.male).length;
-    final activeFemales = _cachedPool.all.where((p) => p.player.isActive && p.player.gender == Gender.female).length;
+    final activeMales = _cachedPool.all
+        .where((p) => p.player.isActive && p.player.gender == Gender.male)
+        .length;
+    final activeFemales = _cachedPool.all
+        .where((p) => p.player.isActive && p.player.gender == Gender.female)
+        .length;
 
     if (activeMales < reqMale && activeFemales < reqFemale) {
-      return RequirementResult(false, '男女ともに人数が足りません (男:${reqMale - activeMales}人, 女:${reqFemale - activeFemales}人不足)');
+      return RequirementResult(false,
+          '男女ともに人数が足りません (男:${reqMale - activeMales}人, 女:${reqFemale - activeFemales}人不足)');
     } else if (activeMales < reqMale) {
       return RequirementResult(false, '男性が足りません (${reqMale - activeMales}人不足)');
     } else if (activeFemales < reqFemale) {
-      return RequirementResult(false, '女性が足りません (${reqFemale - activeFemales}人不足)');
+      return RequirementResult(
+          false, '女性が足りません (${reqFemale - activeFemales}人不足)');
     }
 
     return RequirementResult(true, null);
@@ -81,7 +91,7 @@ class SessionNotifier extends ChangeNotifier {
 
   Future<void> _updateStats() async {
     final Map<String, int> totals = {};
-    final Map<String, int> rests = {}; 
+    final Map<String, int> rests = {};
     final Map<String, Map<MatchType, int>> typeBreakdowns = {};
     final Map<String, Map<String, int>> partnerBreakdowns = {};
     final Map<String, Map<String, int>> opponentBreakdowns = {};
@@ -107,10 +117,13 @@ class SessionNotifier extends ChangeNotifier {
           if (!typeBreakdowns.containsKey(id)) return;
 
           totals[id] = (totals[id] ?? 0) + 1;
-          typeBreakdowns[id]![game.type] = (typeBreakdowns[id]![game.type] ?? 0) + 1;
-          partnerBreakdowns[id]![partner.id] = (partnerBreakdowns[id]![partner.id] ?? 0) + 1;
+          typeBreakdowns[id]![game.type] =
+              (typeBreakdowns[id]![game.type] ?? 0) + 1;
+          partnerBreakdowns[id]![partner.id] =
+              (partnerBreakdowns[id]![partner.id] ?? 0) + 1;
           for (final opp in opponents) {
-            opponentBreakdowns[id]![opp.id] = (opponentBreakdowns[id]![opp.id] ?? 0) + 1;
+            opponentBreakdowns[id]![opp.id] =
+                (opponentBreakdowns[id]![opp.id] ?? 0) + 1;
           }
         }
 
@@ -146,7 +159,8 @@ class SessionNotifier extends ChangeNotifier {
           typeCounts: typeBreakdowns[p.id] ?? {},
           partnerCounts: partnerBreakdowns[p.id] ?? {},
           opponentCounts: opponentBreakdowns[p.id] ?? {},
-          restedLastTime: _sessions.isNotEmpty && _sessions.last.restingPlayers.any((rp) => rp.id == p.id),
+          restedLastTime: _sessions.isNotEmpty &&
+              _sessions.last.restingPlayers.any((rp) => rp.id == p.id),
           sessionsSinceLastRest: sessionsSinceLastRest[p.id] ?? 0,
         ),
       );
@@ -162,10 +176,11 @@ class SessionNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> recalculateSession(int sessionIndex, CourtSettings settings) async {
+  Future<void> recalculateSession(
+      int sessionIndex, CourtSettings settings) async {
     _isGenerating = true;
     notifyListeners();
-    
+
     final originalSessions = List<Session>.from(_sessions);
     _sessions.removeWhere((s) => s.index == sessionIndex);
     await _updateStats();
@@ -176,13 +191,24 @@ class SessionNotifier extends ChangeNotifier {
         playerStats: _cachedPool,
       );
 
-      final playingPlayerIds = games.expand((g) => [g.teamA.player1.id, g.teamA.player2.id, g.teamB.player1.id, g.teamB.player2.id]).toSet();
-      final allActivePlayers = await matchMakingService.playerRepository.getActive();
-      final restingPlayers = allActivePlayers.where((p) => !playingPlayerIds.contains(p.id)).toList();
+      final playingPlayerIds = games
+          .expand((g) => [
+                g.teamA.player1.id,
+                g.teamA.player2.id,
+                g.teamB.player1.id,
+                g.teamB.player2.id
+              ])
+          .toSet();
+      final allActivePlayers =
+          await matchMakingService.playerRepository.getActive();
+      final restingPlayers = allActivePlayers
+          .where((p) => !playingPlayerIds.contains(p.id))
+          .toList();
 
-      final updatedSession = Session(sessionIndex, games, restingPlayers: restingPlayers);
+      final updatedSession =
+          Session(sessionIndex, games, restingPlayers: restingPlayers);
       await sessionRepository.update(updatedSession);
-      
+
       _sessions = originalSessions;
       final idx = _sessions.indexWhere((s) => s.index == sessionIndex);
       if (idx != -1) _sessions[idx] = updatedSession;
@@ -196,21 +222,32 @@ class SessionNotifier extends ChangeNotifier {
   Future<void> generateSessionWithSettings(CourtSettings settings) async {
     _isGenerating = true;
     notifyListeners();
-    
+
     await courtSettingsRepository.update(settings);
-    
+
     try {
       final games = await matchMakingService.generateMatches(
         matchTypes: settings.matchTypes,
         playerStats: _cachedPool,
       );
 
-      final playingPlayerIds = games.expand((g) => [g.teamA.player1.id, g.teamA.player2.id, g.teamB.player1.id, g.teamB.player2.id]).toSet();
-      final allActivePlayers = await matchMakingService.playerRepository.getActive();
-      final restingPlayers = allActivePlayers.where((p) => !playingPlayerIds.contains(p.id)).toList();
+      final playingPlayerIds = games
+          .expand((g) => [
+                g.teamA.player1.id,
+                g.teamA.player2.id,
+                g.teamB.player1.id,
+                g.teamB.player2.id
+              ])
+          .toSet();
+      final allActivePlayers =
+          await matchMakingService.playerRepository.getActive();
+      final restingPlayers = allActivePlayers
+          .where((p) => !playingPlayerIds.contains(p.id))
+          .toList();
 
       final nextIndex = _sessions.length + 1;
-      final newSession = Session(nextIndex, games, restingPlayers: restingPlayers);
+      final newSession =
+          Session(nextIndex, games, restingPlayers: restingPlayers);
 
       await sessionRepository.add(newSession);
       await _refresh();

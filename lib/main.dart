@@ -40,8 +40,10 @@ void main() async {
   final players = await playerRepo.getAll();
   if (players.isEmpty) {
     for (int i = 1; i <= 5; i++) {
-      await playerNotifier.addPlayer(Player(id: 'M$i', name: '男子$i', yomigana: 'だんし$i', gender: Gender.male));
-      await playerNotifier.addPlayer(Player(id: 'F$i', name: '女子$i', yomigana: 'じょし$i', gender: Gender.female));
+      await playerNotifier.addPlayer(Player(
+          id: 'M$i', name: '男子$i', yomigana: 'だんし$i', gender: Gender.male));
+      await playerNotifier.addPlayer(Player(
+          id: 'F$i', name: '女子$i', yomigana: 'じょし$i', gender: Gender.female));
     }
   }
 
@@ -56,10 +58,10 @@ class MyApp extends StatelessWidget {
   final SessionNotifier sessionNotifier;
 
   const MyApp({
-    Key? key,
+    super.key,
     required this.playerNotifier,
     required this.sessionNotifier,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
