@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:game_member_generator/config/app_config.dart';
 import 'package:game_member_generator/domain/algorithm/court_assignment/court_assignment_algorithm.dart';
 
 import 'domain/algorithm/balanced_match_algorithm.dart';
@@ -20,6 +21,8 @@ void main() async {
 
   // 1. Linux/デスクトップ環境用のSQLite初期化 (FFI)
   DatabaseHelper.initFfi();
+  // 設定ファイルの読み込み
+  await AppConfig.load();
 
   // 2. リポジトリの準備
   final playerRepo = SqlitePlayerRepository();

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:game_member_generator/config/app_config.dart';
 import 'package:game_member_generator/domain/algorithm/court_assignment/court_assignment_algorithm.dart';
 import 'package:game_member_generator/domain/algorithm/game_evaluator.dart';
 import 'package:game_member_generator/domain/algorithm/session_score.dart';
@@ -19,9 +20,10 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
       required List<PlayerWithStats> availableMales,
       required List<PlayerWithStats> availableFemales}) {
     Random random = Random();
+    final loopCount = AppConfig.loopCount;
     availableMales.shuffle(random);
     availableFemales.shuffle(random);
-    return _findBestSession(1000, types, availableMales, availableFemales);
+    return _findBestSession(loopCount, types, availableMales, availableFemales);
   }
 
   SessionScore _findBestSession(
