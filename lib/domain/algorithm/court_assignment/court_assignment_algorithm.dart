@@ -7,8 +7,8 @@ import '../../entities/player_with_stats.dart';
 abstract class CourtAssignmentAlgorithm {
   SessionScore searchBestAssignment({
     required List<MatchType> types,
-    required List<PlayerWithStats> availableMales,
-    required List<PlayerWithStats> availableFemales,
+    required List<PlayerWithStats> mustMales,
+    required List<PlayerWithStats> mustFemales,
     required List<PlayerWithStats> candidateMales,
     required List<PlayerWithStats> candidateFemales,
   });

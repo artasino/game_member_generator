@@ -9,6 +9,7 @@ import 'package:game_member_generator/domain/entities/match_type.dart';
 import 'package:game_member_generator/domain/entities/player_with_stats.dart';
 
 import '../../entities/game.dart';
+import '../player_selector_util.dart';
 
 class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
   GameEvaluator gameEvaluator;
@@ -18,44 +19,37 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
   @override
   SessionScore searchBestAssignment(
       {required List<MatchType> types,
-      required List<PlayerWithStats> availableMales,
-      required List<PlayerWithStats> availableFemales,
+      required List<PlayerWithStats> mustMales,
+      required List<PlayerWithStats> mustFemales,
       required List<PlayerWithStats> candidateMales,
       required List<PlayerWithStats> candidateFemales}) {
     Random random = Random();
     final loopCount = AppConfig.loopCount;
-    availableMales.shuffle(random);
-    availableFemales.shuffle(random);
-    return _findBestSession(loopCount, types, availableMales, availableFemales,
+    mustMales.shuffle(random);
+    mustFemales.shuffle(random);
+    return _findBestSession(loopCount, types, mustMales, mustFemales,
         candidateMales, candidateFemales);
   }
 
   SessionScore _findBestSession(
       int count,
       List<MatchType> types,
-      List<PlayerWithStats> selectedMales,
-      List<PlayerWithStats> selectedFemales,
+      List<PlayerWithStats> mustMales,
+      List<PlayerWithStats> mustFemales,
       List<PlayerWithStats> candidateMales,
       List<PlayerWithStats> candidateFemales) {
-    final selectedMaleSet = selectedMales.toSet();
-    List<PlayerWithStats> benchMales =
-        candidateMales.where((p) => !selectedMaleSet.contains(p)).toList();
-    final selectedFemaleSet = selectedFemales.toSet();
-    List<PlayerWithStats> benchFemales =
-        candidateFemales.where((p) => !selectedFemaleSet.contains(p)).toList();
-
-    // 名前付き引数に修正
-    AlgorithmsState state = AlgorithmsState(
-      selectedMales: List<PlayerWithStats>.from(selectedMales),
-      benchMales: List<PlayerWithStats>.from(benchMales),
-      candidateMales: List<PlayerWithStats>.from(candidateMales),
-      selectedFemales: List<PlayerWithStats>.from(selectedFemales),
-      benchFemales: List<PlayerWithStats>.from(benchFemales),
-      candidateFemales: List<PlayerWithStats>.from(candidateFemales),
-    );
+    var requiredMale = types.requiredPlayerCount(isMale: true);
+    var requiredFemale = types.requiredPlayerCount(isMale: false);
+    var state = AlgorithmsState.initial(
+        mustMales: mustMales,
+        candidateMales: candidateMales,
+        requiredMale: requiredMale,
+        mustFemales: mustFemales,
+        candidateFemales: candidateFemales,
+        requiredFemale: requiredFemale);
 
     SessionScore bestSession =
-        _calculateScore(types, selectedMales, selectedFemales);
+        _calculateScore(types, state.selectedMales, state.selectedFemales);
     for (int i = 0; i < count; i++) {
       AlgorithmsState newState = state.copyWithSwap();
 
@@ -148,6 +142,33 @@ class AlgorithmsState {
     required this.benchFemales,
     required this.candidateFemales,
   });
+
+  factory AlgorithmsState.initial(
+      {required List<PlayerWithStats> mustMales,
+      required List<PlayerWithStats> candidateMales,
+      required int requiredMale,
+      required List<PlayerWithStats> mustFemales,
+      required List<PlayerWithStats> candidateFemales,
+      required int requiredFemale}) {
+    final selectedMales = PlayerSelectorUtil.pickCourtMembers(
+        mustMales, candidateMales, requiredMale);
+    final selectedMaleSet = selectedMales.toSet();
+    List<PlayerWithStats> benchMales =
+        candidateMales.where((p) => !selectedMaleSet.contains(p)).toList();
+    final selectedFemales = PlayerSelectorUtil.pickCourtMembers(
+        mustFemales, candidateFemales, requiredFemale);
+    final selectedFemaleSet = selectedFemales.toSet();
+    List<PlayerWithStats> benchFemales =
+        candidateFemales.where((p) => !selectedFemaleSet.contains(p)).toList();
+
+    return AlgorithmsState(
+        selectedMales: selectedMales,
+        benchMales: benchMales,
+        candidateMales: candidateMales,
+        selectedFemales: selectedFemales,
+        benchFemales: benchFemales,
+        candidateFemales: candidateFemales);
+  }
 
   AlgorithmsState copyWithSwap() {
     final random = Random();
