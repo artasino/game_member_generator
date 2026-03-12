@@ -9,5 +9,7 @@ abstract class CourtAssignmentAlgorithm {
     required List<MatchType> types,
     required List<PlayerWithStats> availableMales,
     required List<PlayerWithStats> availableFemales,
+    required List<PlayerWithStats> candidateMales,
+    required List<PlayerWithStats> candidateFemales,
   });
 }
