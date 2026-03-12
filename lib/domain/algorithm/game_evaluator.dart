@@ -13,23 +13,60 @@ class GameEvaluator {
     if (ps.player.gender == Gender.male) {
       final md = counts[MatchType.menDoubles] ?? 0;
       final mx = counts[MatchType.mixedDoubles] ?? 0;
+      final total = md + mx;
+      if (total == 0) {
+        return 0;
+      }
       if (type == MatchType.menDoubles) {
-        return md > mx ? (md - mx).toDouble() : 0;
+        return md / total;
       }
       if (type == MatchType.mixedDoubles) {
-        return mx > md ? (mx - md).toDouble() : 0;
+        return mx / total;
       }
     } else {
       final wd = counts[MatchType.womenDoubles] ?? 0;
       final mx = counts[MatchType.mixedDoubles] ?? 0;
+      final total = wd + mx;
+      if (total == 0) {
+        return 0;
+      }
       if (type == MatchType.womenDoubles) {
-        return wd > mx ? (wd - mx).toDouble() : 0;
+        return wd / total;
       }
       if (type == MatchType.mixedDoubles) {
-        return mx > wd ? (mx - wd).toDouble() : 0;
+        return mx / total;
       }
     }
     return 0;
+  }
+
+  double _calculatePariCountPenalty(PlayerWithStats p1, PlayerWithStats p2,
+      PlayerWithStats p3, PlayerWithStats p4) {
+    // 優先度3位: ペア重複
+    var penalty = 0.0;
+    final normalizedPairCount = 10.0;
+    penalty += (p1.stats.partnerCounts[p2.player.id] ?? 0) /
+        normalizedPairCount *
+        50.0;
+    penalty += (p3.stats.partnerCounts[p4.player.id] ?? 0) /
+        normalizedPairCount *
+        50.0;
+    return penalty;
+  }
+
+  double _calculateOpponentCountPenalty(PlayerWithStats p1, PlayerWithStats p2,
+      PlayerWithStats p3, PlayerWithStats p4) {
+    // 優先度4位: 敵重複 (Weight: 10.0)
+    final normalizedOpponentCount = 10.0;
+    var penalty = 0.0;
+    for (var a in [p1, p2]) {
+      for (var b in [p3, p4]) {
+        penalty += (a.stats.opponentCounts[b.player.id] ?? 0) /
+            normalizedOpponentCount *
+            10.0;
+      }
+    }
+    return penalty;
   }
 
   /// 試合のペナルティ計算
@@ -37,21 +74,12 @@ class GameEvaluator {
       PlayerWithStats p2, PlayerWithStats p3, PlayerWithStats p4) {
     double penalty = 0;
 
-    // 優先度2位: 種目バランス (Weight: 200.0)
+    // 優先度2位: 種目バランス
     for (var ps in [p1, p2, p3, p4]) {
-      penalty += _calculateTypeImbalancePenalty(ps, type) * 200.0;
+      penalty += _calculateTypeImbalancePenalty(ps, type) * 100.0;
     }
-
-    // 優先度3位: ペア重複 (Weight: 50.0)
-    penalty += (p1.stats.partnerCounts[p2.player.id] ?? 0) * 50.0;
-    penalty += (p3.stats.partnerCounts[p4.player.id] ?? 0) * 50.0;
-
-    // 優先度4位: 敵重複 (Weight: 10.0)
-    for (var a in [p1, p2]) {
-      for (var b in [p3, p4]) {
-        penalty += (a.stats.opponentCounts[b.player.id] ?? 0) * 10.0;
-      }
-    }
+    penalty += _calculatePariCountPenalty(p1, p2, p3, p4);
+    penalty += _calculateOpponentCountPenalty(p1, p2, p3, p4);
     return penalty;
   }
 

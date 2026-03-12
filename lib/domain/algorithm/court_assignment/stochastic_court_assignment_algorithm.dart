@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:game_member_generator/config/app_config.dart';
 import 'package:game_member_generator/domain/algorithm/court_assignment/court_assignment_algorithm.dart';
 import 'package:game_member_generator/domain/algorithm/game_evaluator.dart';
@@ -45,6 +46,14 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
         availableMales = nextMales;
         availableFemales = nextFemales;
       }
+      if (kDebugMode) {
+        if (i % 1000 == 0) {
+          print('Best score: ${bestSession.score} at $i');
+        }
+      }
+    }
+    if (kDebugMode) {
+      print('Best score: ${bestSession.score}');
     }
     return bestSession;
   }
@@ -129,7 +138,7 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
     int index2;
     // index2 should not equal to index1
     do {
-      index2 = random.nextInt(tempMales.length);
+      index2 = random.nextInt(tempFemales.length);
     } while (index1 == index2);
     PlayerWithStats temp = tempFemales[index1];
     tempFemales[index1] = tempFemales[index2];
