@@ -14,7 +14,9 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
   @override
   SessionScore searchBestAssignment({required List<MatchType> types,
       required List<PlayerWithStats> availableMales,
-      required List<PlayerWithStats> availableFemales}) {
+      required List<PlayerWithStats> availableFemales,
+      required List<PlayerWithStats> candidateMales,
+      required List<PlayerWithStats> candidateFemales}) {
     return _recurseAssignment(types, 0, availableMales, availableFemales);
   }
 

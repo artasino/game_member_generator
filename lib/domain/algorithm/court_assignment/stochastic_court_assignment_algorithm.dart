@@ -19,35 +19,52 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
   SessionScore searchBestAssignment(
       {required List<MatchType> types,
       required List<PlayerWithStats> availableMales,
-      required List<PlayerWithStats> availableFemales}) {
+      required List<PlayerWithStats> availableFemales,
+      required List<PlayerWithStats> candidateMales,
+      required List<PlayerWithStats> candidateFemales}) {
     Random random = Random();
     final loopCount = AppConfig.loopCount;
     availableMales.shuffle(random);
     availableFemales.shuffle(random);
-    return _findBestSession(loopCount, types, availableMales, availableFemales);
+    return _findBestSession(loopCount, types, availableMales, availableFemales,
+        candidateMales, candidateFemales);
   }
 
   SessionScore _findBestSession(
       int count,
       List<MatchType> types,
-      List<PlayerWithStats> availableMales,
-      List<PlayerWithStats> availableFemales) {
-    // create first random session
+      List<PlayerWithStats> selectedMales,
+      List<PlayerWithStats> selectedFemales,
+      List<PlayerWithStats> candidateMales,
+      List<PlayerWithStats> candidateFemales) {
+    final selectedMaleSet = selectedMales.toSet();
+    List<PlayerWithStats> benchMales =
+        candidateMales.where((p) => !selectedMaleSet.contains(p)).toList();
+    final selectedFemaleSet = selectedFemales.toSet();
+    List<PlayerWithStats> benchFemales =
+        candidateFemales.where((p) => !selectedFemaleSet.contains(p)).toList();
+
+    // 名前付き引数に修正
+    AlgorithmsState state = AlgorithmsState(
+      selectedMales: List<PlayerWithStats>.from(selectedMales),
+      benchMales: List<PlayerWithStats>.from(benchMales),
+      candidateMales: List<PlayerWithStats>.from(candidateMales),
+      selectedFemales: List<PlayerWithStats>.from(selectedFemales),
+      benchFemales: List<PlayerWithStats>.from(benchFemales),
+      candidateFemales: List<PlayerWithStats>.from(candidateFemales),
+    );
+
     SessionScore bestSession =
-        _calculateScore(types, availableMales, availableFemales);
-    List<PlayerWithStats> nextMales;
-    List<PlayerWithStats> nextFemales;
+        _calculateScore(types, selectedMales, selectedFemales);
     for (int i = 0; i < count; i++) {
-      (nextMales, nextFemales) =
-          _swapRandomPlayers(availableMales, availableFemales);
-      final nextScore = _calculateScore(types, nextMales, nextFemales);
+      AlgorithmsState newState = state.copyWithSwap();
+
+      final nextScore = _calculateScore(
+          types, newState.selectedMales, newState.selectedFemales);
       if (nextScore.score < bestSession.score) {
         bestSession = nextScore;
-        availableMales = nextMales;
-        availableFemales = nextFemales;
-      }
-      if (kDebugMode) {
-        if (i % 1000 == 0) {
+        state = newState;
+        if (kDebugMode) {
           print('Best score: ${bestSession.score} at $i');
         }
       }
@@ -113,36 +130,137 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
     }
     return SessionScore(score, bestGames);
   }
+}
 
-  (List<PlayerWithStats>, List<PlayerWithStats>) _swapRandomPlayers(
-      List<PlayerWithStats> availableMales,
-      List<PlayerWithStats> availableFemales) {
-    Random random = Random();
-    bool isMale = random.nextBool();
-    var tempMales = List<PlayerWithStats>.from(availableMales);
-    var tempFemales = List<PlayerWithStats>.from(availableFemales);
+class AlgorithmsState {
+  final List<PlayerWithStats> selectedMales;
+  final List<PlayerWithStats> benchMales;
+  final List<PlayerWithStats> candidateMales;
+  final List<PlayerWithStats> selectedFemales;
+  final List<PlayerWithStats> benchFemales;
+  final List<PlayerWithStats> candidateFemales;
 
-    if (isMale) {
-      int index1 = random.nextInt(tempMales.length);
-      int index2;
-      // index2 should not equal to index1
-      do {
-        index2 = random.nextInt(tempMales.length);
-      } while (index1 == index2);
-      PlayerWithStats temp = tempMales[index1];
-      tempMales[index1] = tempMales[index2];
-      tempMales[index2] = temp;
-      return (tempMales, tempFemales);
+  AlgorithmsState({
+    required this.selectedMales,
+    required this.benchMales,
+    required this.candidateMales,
+    required this.selectedFemales,
+    required this.benchFemales,
+    required this.candidateFemales,
+  });
+
+  AlgorithmsState copyWithSwap() {
+    final random = Random();
+    final isMale = random.nextBool();
+    final benchSwapProb = 0.2;
+
+    final canSwapBench =
+        isMale ? benchMales.isNotEmpty : benchFemales.isNotEmpty;
+    final isSwapToBench = random.nextDouble() < benchSwapProb;
+
+    if (canSwapBench && isSwapToBench) {
+      return _copyWithSwapBench(isMale);
+    } else {
+      return _copyWithSwapPosition(isMale);
     }
-    int index1 = random.nextInt(tempFemales.length);
+  }
+
+  AlgorithmsState _copyWithSwapBench(bool isMale) {
+    if (isMale) {
+      var (newMales, newBenchMales) = _copyWithSwapBenchEachGender(
+          selectedMales, benchMales, candidateMales);
+      return AlgorithmsState(
+        selectedMales: newMales,
+        benchMales: newBenchMales,
+        candidateMales: candidateMales,
+        selectedFemales: selectedFemales,
+        benchFemales: benchFemales,
+        candidateFemales: candidateFemales,
+      );
+    } else {
+      var (newFemales, newBenchFemales) = _copyWithSwapBenchEachGender(
+          selectedFemales, benchFemales, candidateFemales);
+      return AlgorithmsState(
+        selectedMales: selectedMales,
+        benchMales: benchMales,
+        candidateMales: candidateMales,
+        selectedFemales: newFemales,
+        benchFemales: newBenchFemales,
+        candidateFemales: candidateFemales,
+      );
+    }
+  }
+
+  (List<PlayerWithStats>, List<PlayerWithStats>) _copyWithSwapBenchEachGender(
+      List<PlayerWithStats> selectedPlayers,
+      List<PlayerWithStats> benchPlayers,
+      List<PlayerWithStats> candidatePlayers) {
+    Random random = Random();
+    final tempSelected = List<PlayerWithStats>.from(selectedPlayers);
+    final tempBench = List<PlayerWithStats>.from(benchPlayers);
+
+    final candidateSet = candidatePlayers.toSet();
+    final indicesInSelected = [
+      for (int i = 0; i < tempSelected.length; i++)
+        if (candidateSet.contains(tempSelected[i])) i
+    ];
+
+    // RangeError対策：入れ替え可能な人がいない場合はそのまま返す
+    if (indicesInSelected.isEmpty || tempBench.isEmpty) {
+      return (tempSelected, tempBench);
+    }
+
+    final activeIdx =
+        indicesInSelected[random.nextInt(indicesInSelected.length)];
+    final benchIndex = random.nextInt(tempBench.length);
+
+    final temp = tempSelected[activeIdx];
+    tempSelected[activeIdx] = tempBench[benchIndex];
+    tempBench[benchIndex] = temp;
+
+    return (tempSelected, tempBench);
+  }
+
+  AlgorithmsState _copyWithSwapPosition(bool isMale) {
+    if (isMale) {
+      final newMales = _copyWithSwapPositionEachGender(selectedMales);
+      return AlgorithmsState(
+        selectedMales: newMales,
+        benchMales: benchMales,
+        candidateMales: candidateMales,
+        selectedFemales: selectedFemales,
+        benchFemales: benchFemales,
+        candidateFemales: candidateFemales,
+      );
+    }
+    final newFemales = _copyWithSwapPositionEachGender(selectedFemales);
+    return AlgorithmsState(
+      selectedMales: selectedMales,
+      benchMales: benchMales,
+      candidateMales: candidateMales,
+      selectedFemales: newFemales,
+      benchFemales: benchFemales,
+      candidateFemales: candidateFemales,
+    );
+  }
+
+  List<PlayerWithStats> _copyWithSwapPositionEachGender(
+      List<PlayerWithStats> playerList) {
+    // RangeError対策：2人以上いないと位置の入れ替えは不可
+    if (playerList.length < 2) return playerList;
+
+    final tempPlayerList = List<PlayerWithStats>.from(playerList);
+    final random = Random();
+    int index1 = random.nextInt(tempPlayerList.length);
     int index2;
-    // index2 should not equal to index1
     do {
-      index2 = random.nextInt(tempFemales.length);
+      index2 = random.nextInt(tempPlayerList.length);
     } while (index1 == index2);
-    PlayerWithStats temp = tempFemales[index1];
-    tempFemales[index1] = tempFemales[index2];
-    tempFemales[index2] = temp;
-    return (tempMales, tempFemales);
+
+    PlayerWithStats temp = tempPlayerList[index1];
+    tempPlayerList[index1] = tempPlayerList[index2];
+    tempPlayerList[index2] = temp;
+
+    return tempPlayerList;
   }
 }

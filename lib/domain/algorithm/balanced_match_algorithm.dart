@@ -95,6 +95,8 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
       types: matchTypes,
       availableMales: playingMales,
       availableFemales: playingFemales,
+      candidateMales: maleSelection.candidatePool.all,
+      candidateFemales: femaleSelection.candidatePool.all,
     );
 
     if (assignmentResult.games.isEmpty) {
