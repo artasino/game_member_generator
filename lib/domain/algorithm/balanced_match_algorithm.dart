@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:game_member_generator/domain/algorithm/court_assignment/court_assignment_algorithm.dart';
 import 'package:game_member_generator/domain/algorithm/game_evaluator.dart';
 import 'package:game_member_generator/domain/algorithm/match_algorithm.dart';
@@ -25,18 +23,8 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     required Map<int, PlayerStatsPool> femaleBuckets,
   }) {
     // 1. 必要人数の計算
-    int requiredMale = 0;
-    int requiredFemale = 0;
-    for (final type in matchTypes) {
-      if (type == MatchType.menDoubles) {
-        requiredMale += 4;
-      } else if (type == MatchType.womenDoubles) {
-        requiredFemale += 4;
-      } else if (type == MatchType.mixedDoubles) {
-        requiredMale += 2;
-        requiredFemale += 2;
-      }
-    }
+    int requiredMale = matchTypes.requiredPlayerCount(isMale: true);
+    int requiredFemale = matchTypes.requiredPlayerCount(isMale: false);
 
     // 2. 出場回数に基づいた選出（Must枠と抽選プールの分離）
     // ここで isMustRest が true のプレイヤーをあらかじめ除外（候補から外す）する
@@ -53,8 +41,6 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
       matchTypes: matchTypes,
       maleSelection: maleSelection,
       femaleSelection: femaleSelection,
-      requiredMale: requiredMale,
-      requiredFemale: requiredFemale,
     );
   }
 
@@ -66,35 +52,16 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     });
   }
 
-  /// 出場メンバーを確定させた後、最適な試合リストを返す
   List<Game> _findOptimalMatches({
     required List<MatchType> matchTypes,
     required _SelectionSplit maleSelection,
     required _SelectionSplit femaleSelection,
-    required int requiredMale,
-    required int requiredFemale,
   }) {
-    final random = Random();
-
-    // 1. メンバーを選出する (前回休みからの間隔が短い人を優先して固定)
-    final playingMales = _pickFinalMembers(
-      maleSelection.mustPlayers,
-      maleSelection.candidatePool.all,
-      requiredMale,
-      random,
-    );
-    final playingFemales = _pickFinalMembers(
-      femaleSelection.mustPlayers,
-      femaleSelection.candidatePool.all,
-      requiredFemale,
-      random,
-    );
-
-    // 2. 固定されたメンバー内で最適な「コートへの割り振り」を探索
+    // 2. 試合セットを探索する
     final assignmentResult = courtAssignmentAlgorithm.searchBestAssignment(
       types: matchTypes,
-      availableMales: playingMales,
-      availableFemales: playingFemales,
+      mustMales: maleSelection.mustPlayers,
+      mustFemales: femaleSelection.mustPlayers,
       candidateMales: maleSelection.candidatePool.all,
       candidateFemales: femaleSelection.candidatePool.all,
     );
@@ -103,28 +70,6 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
       throw Exception('最適な試合構成が見つかりませんでした');
     }
     return assignmentResult.games;
-  }
-
-  /// 優先度（休み間隔が短い > ランダム）に基づいて最終的なメンバーを決定する
-  List<PlayerWithStats> _pickFinalMembers(
-    List<PlayerWithStats> must,
-    List<PlayerWithStats> candidates,
-    int requiredCount,
-    Random random,
-  ) {
-    final picked = List<PlayerWithStats>.from(must);
-    final needed = requiredCount - picked.length;
-    if (needed <= 0) return picked;
-
-    final sortedCandidates = List<PlayerWithStats>.from(candidates);
-    // 偏りを防ぐためにまずシャッフル
-    sortedCandidates.shuffle(random);
-    // 「前の休みからの試合間隔」が短い順（sessionsSinceLastRestが小さい＝直近で休んだ人）にソート
-    sortedCandidates.sort((a, b) =>
-        a.stats.sessionsSinceLastRest.compareTo(b.stats.sessionsSinceLastRest));
-
-    picked.addAll(sortedCandidates.take(needed));
-    return picked;
   }
 
   _SelectionSplit _splitMustAndCandidates(

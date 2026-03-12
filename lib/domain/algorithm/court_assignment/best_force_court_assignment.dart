@@ -1,4 +1,5 @@
 import 'package:game_member_generator/domain/algorithm/court_assignment/court_assignment_algorithm.dart';
+import 'package:game_member_generator/domain/algorithm/player_selector_util.dart';
 import 'package:game_member_generator/domain/algorithm/session_score.dart';
 import 'package:game_member_generator/domain/entities/game.dart';
 import 'package:game_member_generator/domain/entities/match_type.dart';
@@ -12,12 +13,20 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
   BestForceCourtAssignmentAlgorithm({required this.gameEvaluator});
 
   @override
-  SessionScore searchBestAssignment({required List<MatchType> types,
-      required List<PlayerWithStats> availableMales,
-      required List<PlayerWithStats> availableFemales,
+  SessionScore searchBestAssignment(
+      {required List<MatchType> types,
+      required List<PlayerWithStats> mustMales,
+      required List<PlayerWithStats> mustFemales,
       required List<PlayerWithStats> candidateMales,
       required List<PlayerWithStats> candidateFemales}) {
-    return _recurseAssignment(types, 0, availableMales, availableFemales);
+    var requiredMale = types.requiredPlayerCount(isMale: true);
+    var requiredFemale = types.requiredPlayerCount(isMale: false);
+
+    List<PlayerWithStats> selectedMales = PlayerSelectorUtil.pickCourtMembers(
+        mustMales, candidateMales, requiredMale);
+    List<PlayerWithStats> selectedFemales = PlayerSelectorUtil.pickCourtMembers(
+        mustFemales, candidateFemales, requiredFemale);
+    return _recurseAssignment(types, 0, selectedMales, selectedFemales);
   }
 
   /// 再帰的にすべてのコートへのプレイヤーの割り振りを試す

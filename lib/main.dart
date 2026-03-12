@@ -51,7 +51,7 @@ void main() async {
   // 4. 初回起動時のみサンプルデータを投入するロジック
   final players = await playerRepo.getAll();
   if (players.isEmpty) {
-    for (int i = 1; i <= 5; i++) {
+    for (int i = 1; i <= 2; i++) {
       await playerNotifier.addPlayer(Player(
           id: 'M$i', name: '男子$i', yomigana: 'だんし$i', gender: Gender.male));
       await playerNotifier.addPlayer(Player(
