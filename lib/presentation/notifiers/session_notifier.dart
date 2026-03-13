@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../domain/entities/court_settings.dart';
+import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
-import '../../domain/entities/gender.dart';
 import '../../domain/entities/player_stats.dart';
 import '../../domain/entities/player_stats_pool.dart';
 import '../../domain/entities/player_with_stats.dart';
@@ -276,6 +277,40 @@ class SessionNotifier extends ChangeNotifier {
     final tId1 = team.player1.id;
     final tId2 = team.player2.id;
     return (tId1 == id1 && tId2 == id2) || (tId1 == id2 && tId2 == id1);
+  }
+
+  Future<void> swapPlayers(Session session, Player p1, Player p2) async {
+    final newGames = session.games.map((game) {
+      final newTeamA = _swapInTeam(game.teamA, p1, p2);
+      final newTeamB = _swapInTeam(game.teamB, p1, p2);
+      return game.copyWith(teamA: newTeamA, teamB: newTeamB);
+    }).toList();
+
+    final newResting = session.restingPlayers.map((p) {
+      if (p.id == p1.id) return p2;
+      if (p.id == p2.id) return p1;
+      return p;
+    }).toList();
+
+    await updateSession(
+      session.copyWith(games: newGames, restingPlayers: newResting),
+    );
+  }
+
+  Team _swapInTeam(Team team, Player p1, Player p2) {
+    Player newP1 = team.player1;
+    Player newP2 = team.player2;
+    if (team.player1.id == p1.id) {
+      newP1 = p2;
+    } else if (team.player1.id == p2.id) {
+      newP1 = p1;
+    }
+    if (team.player2.id == p1.id) {
+      newP2 = p2;
+    } else if (team.player2.id == p2.id) {
+      newP2 = p1;
+    }
+    return team.copyWith(player1: newP1, player2: newP2);
   }
 
   Future<void> updateSession(Session session) async {
