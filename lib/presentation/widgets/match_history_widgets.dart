@@ -499,7 +499,7 @@ class PlayerTag extends StatelessWidget {
               fit: BoxFit.scaleDown,
               child: Text(player.name,
                   style: TextStyle(
-                      fontSize: 20 * scale,
+                      fontSize: 28 * scale,
                       color:
                           isSelected ? Colors.orange.shade900 : Colors.black87,
                       fontWeight: FontWeight.w900))),
