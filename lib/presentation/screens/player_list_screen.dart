@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
@@ -592,27 +593,29 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       child: Text('性別',
                           style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: RadioListTile<Gender>(
-                            title: const Text('男性'),
-                            value: Gender.male,
-                            groupValue: selectedGender,
-                            onChanged: (v) =>
-                                setState(() => selectedGender = v!),
+                    RadioGroup<Gender>(
+                      groupValue: selectedGender,
+                      onChanged: (v) {
+                        if (v != null) setState(() => selectedGender = v);
+                      },
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<Gender>(
+                              title: const Text('男性'),
+                              value: Gender.male,
+                              // groupValue と onChanged は不要（親から継承される）
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          child: RadioListTile<Gender>(
-                            title: const Text('女性'),
-                            value: Gender.female,
-                            groupValue: selectedGender,
-                            onChanged: (v) =>
-                                setState(() => selectedGender = v!),
+                          Expanded(
+                            child: RadioListTile<Gender>(
+                              title: const Text('女性'),
+                              value: Gender.female,
+                              // groupValue と onChanged は不要
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const Divider(height: 32),
                     SwitchListTile(
