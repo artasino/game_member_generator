@@ -556,6 +556,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         TextEditingController(text: player?.yomigana ?? '');
     Gender selectedGender = player?.gender ?? Gender.male;
     bool isMustRest = player?.isMustRest ?? false;
+    String? currentExcludedPartnerId = player?.excludedPartnerId;
 
     showDialog(
       context: context,
@@ -604,7 +605,6 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                             child: RadioListTile<Gender>(
                               title: const Text('男性'),
                               value: Gender.male,
-                              // groupValue と onChanged は不要（親から継承される）
                             ),
                           ),
                           Expanded(
@@ -616,6 +616,46 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           ),
                         ],
                       ),
+                    ),
+                    const Divider(
+                      height: 32,
+                    ),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('同時出場制限',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        currentExcludedPartnerId != null
+                            ? Icons.link
+                            : Icons.link_off,
+                        color: currentExcludedPartnerId != null
+                            ? Colors.blue
+                            : Colors.grey,
+                      ),
+                      title: Text(
+                        currentExcludedPartnerId != null
+                            ? 'ペア: ${_getPartnerName(currentExcludedPartnerId)}'
+                            : 'ペア相手を設定していません',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      subtitle: const Text('子連れ夫婦など、同時出場させない相手を選択',
+                          style: TextStyle(fontSize: 12)),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        _showPartnerSelector(
+                          context,
+                          player?.id,
+                          nameController.text.isEmpty
+                              ? '新規メンバ'
+                              : nameController.text,
+                          currentExcludedPartnerId,
+                          (newId) =>
+                              setState(() => currentExcludedPartnerId = newId),
+                        );
+                      },
                     ),
                     const Divider(height: 32),
                     SwitchListTile(
@@ -646,29 +686,177 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                         const Text('削除', style: TextStyle(color: Colors.red)),
                   ),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final name = nameController.text.trim();
                     final yomigana = yomiganaController.text.trim();
                     if (name.isEmpty || yomigana.isEmpty) return;
+
+                    String finalPlayerId;
                     if (isEdit) {
-                      widget.notifier.updatePlayer(player.copyWith(
+                      finalPlayerId = player.id;
+                      await widget.notifier.updatePlayer(player.copyWith(
                         name: name,
                         yomigana: yomigana,
                         gender: selectedGender,
                         isMustRest: isMustRest,
                       ));
                     } else {
-                      widget.notifier.addPlayer(Player(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      finalPlayerId =
+                          DateTime.now().millisecondsSinceEpoch.toString();
+                      await widget.notifier.addPlayer(Player(
+                        id: finalPlayerId,
                         name: name,
                         yomigana: yomigana,
                         gender: selectedGender,
                         isMustRest: isMustRest,
                       ));
                     }
-                    Navigator.pop(context);
+
+                    // パートナー設定の更新
+                    final originalPartnerId = player?.excludedPartnerId;
+                    if (currentExcludedPartnerId != originalPartnerId) {
+                      if (currentExcludedPartnerId == null) {
+                        await widget.notifier.unlinkPartner(finalPlayerId);
+                      } else {
+                        await widget.notifier.linkPartner(
+                            finalPlayerId, currentExcludedPartnerId!);
+                      }
+                    }
+
+                    if (context.mounted) Navigator.pop(context);
                   },
                   child: Text(isEdit ? '更新' : '登録'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String? _getPartnerName(String? excludedPartnerId) {
+    if (excludedPartnerId == null) {
+      return null;
+    }
+    return widget.notifier.getPlayerNameById(excludedPartnerId);
+  }
+
+  void _showPartnerSelector(
+    BuildContext context,
+    String? currentPlayerId,
+    String currentPlayerName,
+    String? currentPartnerId,
+    ValueChanged<String?> onSelected,
+  ) {
+    // 選択肢となるプレイヤーリスト
+    final allPlayers = widget.notifier.players;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            // 候補者のフィルタリング
+            final candidates = allPlayers.where((p) {
+              if (currentPlayerId != null && p.id == currentPlayerId)
+                return false;
+              if (p.excludedPartnerId == null) return true;
+              if (currentPlayerId != null &&
+                  p.excludedPartnerId == currentPlayerId) return true;
+              return false;
+            }).toList();
+
+            return Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        '同時出場制限ペアの設定',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '「$currentPlayerName」と同じ試合・回に出さない相手を選択してください',
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+
+                // ペア解除ボタン
+                if (currentPartnerId != null)
+                  ListTile(
+                    leading: const Icon(Icons.link_off, color: Colors.red),
+                    title: const Text('現在のペア設定を解除する',
+                        style: TextStyle(color: Colors.red)),
+                    onTap: () {
+                      onSelected(null);
+                      Navigator.pop(context);
+                    },
+                  ),
+
+                Expanded(
+                  child: ListView.builder(
+                    controller: scrollController,
+                    itemCount: candidates.length,
+                    itemBuilder: (context, index) {
+                      final candidate = candidates[index];
+                      final isCurrentPartner = currentPartnerId == candidate.id;
+
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: candidate.gender == Gender.male
+                              ? Colors.blue.withValues(alpha: 0.1)
+                              : Colors.pink.withValues(alpha: 0.1),
+                          child: Icon(
+                            candidate.gender == Gender.male
+                                ? Icons.male
+                                : Icons.female,
+                            size: 16,
+                            color: candidate.gender == Gender.male
+                                ? Colors.blue
+                                : Colors.pink,
+                          ),
+                        ),
+                        title: Text(candidate.name),
+                        subtitle: Text(candidate.yomigana,
+                            style: const TextStyle(fontSize: 11)),
+                        trailing: isCurrentPartner
+                            ? const Icon(Icons.check_circle, color: Colors.blue)
+                            : null,
+                        onTap: () {
+                          onSelected(candidate.id);
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
                 ),
               ],
             );
