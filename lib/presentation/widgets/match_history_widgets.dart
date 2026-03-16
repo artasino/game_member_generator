@@ -551,9 +551,10 @@ class MatchHistoryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (session == null)
+    if (session == null) {
       return const Text('試合履歴', style: TextStyle(fontWeight: FontWeight.w900));
-    if (isSwapping)
+    }
+    if (isSwapping) {
       return Row(children: [
         const Icon(Icons.swap_horizontal_circle, color: Colors.white, size: 28),
         const SizedBox(width: 12),
@@ -568,6 +569,7 @@ class MatchHistoryHeader extends StatelessWidget {
                 style: TextStyle(
                     color: Colors.white, fontWeight: FontWeight.bold))),
       ]);
+    }
     return Row(mainAxisSize: MainAxisSize.min, children: [
       IconButton(
           icon: const Icon(Icons.chevron_left, size: 32),
@@ -618,10 +620,11 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     final s = await widget.notifier.getCurrentSettings();
     if (!mounted) return;
     setState(() {
-      if (widget.isRecalc && widget.currentSession != null)
+      if (widget.isRecalc && widget.currentSession != null) {
         types = widget.currentSession!.games.map((g) => g.type).toList();
-      else
+      } else {
         types = List.from(s.matchTypes);
+      }
       loading = false;
     });
   }
