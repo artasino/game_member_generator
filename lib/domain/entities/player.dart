@@ -9,9 +9,10 @@ class Player extends Equatable {
   final String yomigana;
   final Gender gender;
   final bool isActive;
-
-  /// 次の試合で必ず休み（お休み固定）にするフラグ
   final bool isMustRest;
+
+  /// the flag for excluded partner(they can't be in session together, e.g. for childcare)
+  final String? excludedPartnerId;
 
   const Player({
     required this.id,
@@ -20,6 +21,7 @@ class Player extends Equatable {
     required this.gender,
     this.isActive = true,
     this.isMustRest = false,
+    this.excludedPartnerId,
   });
 
   Player copyWith({
@@ -29,6 +31,7 @@ class Player extends Equatable {
     Gender? gender,
     bool? isActive,
     bool? isMustRest,
+    String? excludedPartnerId,
   }) {
     return Player(
       id: id ?? this.id,
@@ -37,6 +40,7 @@ class Player extends Equatable {
       gender: gender ?? this.gender,
       isActive: isActive ?? this.isActive,
       isMustRest: isMustRest ?? this.isMustRest,
+      excludedPartnerId: excludedPartnerId ?? this.excludedPartnerId,
     );
   }
 
@@ -48,6 +52,7 @@ class Player extends Equatable {
       'gender': gender.index,
       'isActive': isActive ? 1 : 0,
       'isMustRest': isMustRest ? 1 : 0,
+      'excludedPartnerId': excludedPartnerId,
     };
   }
 
@@ -59,9 +64,11 @@ class Player extends Equatable {
       gender: Gender.values[json['gender']],
       isActive: json['isActive'] == 1,
       isMustRest: json['isMustRest'] == 1,
+      excludedPartnerId: json['excludedPartnerId'],
     );
   }
 
   @override
-  List<Object?> get props => [name, gender];
+  List<Object?> get props =>
+      [id, name, gender, isActive, isMustRest, excludedPartnerId];
 }
