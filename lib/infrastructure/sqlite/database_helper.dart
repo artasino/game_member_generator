@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -27,7 +28,7 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'game_member_generator.db');
     return await openDatabase(
       path,
-      version: 3, // バージョンを 3 に上げました
+      version: 4, // バージョンを 4 に上げました
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE players(
@@ -36,7 +37,8 @@ class DatabaseHelper {
             yomigana TEXT,
             gender INTEGER,
             isActive INTEGER,
-            isMustRest INTEGER DEFAULT 0
+            isMustRest INTEGER DEFAULT 0,
+            excludedPartnerId TEXT
           )
         ''');
         await db.execute('''
@@ -66,6 +68,11 @@ class DatabaseHelper {
           // playersテーブルに isMustRest カラムを追加
           await db.execute(
               'ALTER TABLE players ADD COLUMN isMustRest INTEGER DEFAULT 0');
+        }
+        if (oldVersion < 4) {
+          // playersテーブルに excludedPartnerId カラムを追加
+          await db
+              .execute('ALTER TABLE players ADD COLUMN excludedPartnerId TEXT');
         }
       },
     );

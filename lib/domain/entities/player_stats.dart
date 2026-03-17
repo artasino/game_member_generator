@@ -30,7 +30,7 @@ class PlayerStats {
     required this.partnerCounts,
     required this.opponentCounts,
     this.restedLastTime = false,
-    this.sessionsSinceLastRest = 0,
+    this.sessionsSinceLastRest = 99,
   });
 
   /// 指定した相手と同じコートにいた（味方または敵）合計回数を返す

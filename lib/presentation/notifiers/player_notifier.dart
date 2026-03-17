@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -35,6 +36,14 @@ class PlayerNotifier extends ChangeNotifier {
     return _players.contains(player);
   }
 
+  String? getPlayerNameById(String id) {
+    final player = _players.firstWhereOrNull((p) => p.id == id);
+    if (player == null) {
+      return null;
+    }
+    return player.name;
+  }
+
   Future<bool> addPlayer(Player player) async {
     await _refresh(); // 最新状態を確保
     if (_exists(player)) {
@@ -59,6 +68,62 @@ class PlayerNotifier extends ChangeNotifier {
   Future<void> removePlayer(String id) async {
     await repository.remove(id);
     await _refresh();
+  }
+
+  // --- 汎用的な一括更新メソッド（内部用） ---
+  Future<void> _updatePlayers(List<Player> updatedList) async {
+    // リポジトリ側に一括更新メソッド（Transaction利用）があるのが理想
+    // もしなければ、ここでループして update を呼ぶことになります
+    for (var p in updatedList) {
+      await repository.update(p);
+    }
+    await _refresh();
+  }
+
+  Future<void> linkPartner(String playerId, String partnerId) async {
+    final player = _players.firstWhereOrNull((p) => p.id == playerId);
+    final partner = _players.firstWhereOrNull((p) => p.id == partnerId);
+
+    if (player == null || partner == null) return;
+
+    final List<Player> targets = [];
+
+    // 1. 以前のペア相手がいたら、その人の紐付けを解除しておく（お掃除）
+    final oldPartnerA =
+        _players.firstWhereOrNull((p) => p.excludedPartnerId == player.id);
+    if (oldPartnerA != null && oldPartnerA.id != partnerId) {
+      targets.add(oldPartnerA.copyWith(excludedPartnerId: null));
+    }
+    final oldPartnerB =
+        _players.firstWhereOrNull((p) => p.excludedPartnerId == partner.id);
+    if (oldPartnerB != null && oldPartnerB.id != playerId) {
+      targets.add(oldPartnerB.copyWith(excludedPartnerId: null));
+    }
+
+    // 2. 新しいペアをセット
+    targets.add(player.copyWith(excludedPartnerId: partner.id));
+    targets.add(partner.copyWith(excludedPartnerId: player.id));
+
+    await _updatePlayers(targets);
+  }
+
+  Future<void> unlinkPartner(String playerId) async {
+    final player = _players.firstWhereOrNull((p) => p.id == playerId);
+    if (player == null) return;
+
+    final List<Player> targets = [];
+
+    // 本人の解除
+    targets.add(player.copyWith(excludedPartnerId: null));
+
+    // 相手側の解除
+    final partner =
+        _players.firstWhereOrNull((p) => p.id == player.excludedPartnerId);
+    if (partner != null) {
+      targets.add(partner.copyWith(excludedPartnerId: null));
+    }
+
+    await _updatePlayers(targets);
   }
 
   /// クリップボードにJSONをエクスポート
