@@ -17,7 +17,9 @@ class PlayerNotifier extends ChangeNotifier {
   List<Player> _players = [];
   SessionNotifier? _sessionNotifier;
 
-  PlayerNotifier(this.repository);
+  PlayerNotifier(this.repository) {
+    _refresh(); // 初期化時にデータを読み込む
+  }
 
   void setSessionNotifier(SessionNotifier notifier) {
     _sessionNotifier = notifier;
@@ -72,8 +74,6 @@ class PlayerNotifier extends ChangeNotifier {
 
   // --- 汎用的な一括更新メソッド（内部用） ---
   Future<void> _updatePlayers(List<Player> updatedList) async {
-    // リポジトリ側に一括更新メソッド（Transaction利用）があるのが理想
-    // もしなければ、ここでループして update を呼ぶことになります
     for (var p in updatedList) {
       await repository.update(p);
     }
@@ -128,6 +128,9 @@ class PlayerNotifier extends ChangeNotifier {
 
   /// クリップボードにJSONをエクスポート
   Future<void> exportPlayersToClipboard() async {
+    await _refresh(); // エクスポート前に必ず最新化
+    if (_players.isEmpty) return; // データがなければ何もしない
+
     final List<Map<String, dynamic>> jsonList =
         _players.map((p) => p.toJson()).toList();
     final String jsonString = jsonEncode(jsonList);
@@ -154,6 +157,9 @@ class PlayerNotifier extends ChangeNotifier {
 
   /// ファイル(JSON/CSV)をエクスポート
   Future<void> exportPlayersToFile(String format) async {
+    await _refresh(); // エクスポート前に必ず最新化
+    if (_players.isEmpty) return; // データがなければ何もしない
+
     String content = '';
     final String extension = format == 'json' ? 'json' : 'csv';
     final String fileName =
