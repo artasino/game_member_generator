@@ -373,6 +373,14 @@ class RestingContainer extends StatelessWidget {
     final theme = Theme.of(context);
     final rs = (scale * 0.75).clamp(0.8, 1.2);
 
+    // 休憩中メンバーを男女でソート
+    final sortedResting = List<Player>.from(session.restingPlayers)
+      ..sort((a, b) {
+        // Gender.male を先、Gender.female を後に
+        if (a.gender == b.gender) return a.name.compareTo(b.name);
+        return a.gender == Gender.male ? -1 : 1;
+      });
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: 8 * rs, horizontal: 16 * rs),
@@ -405,7 +413,7 @@ class RestingContainer extends StatelessWidget {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: session.restingPlayers
+              children: sortedResting
                   .map((p) => Padding(
                         padding: EdgeInsets.only(right: 8 * rs),
                         child: RestingChip(
