@@ -629,6 +629,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     ValueChanged<String?> onSelected,
   ) {
     final allPlayers = widget.notifier.players;
+    final TextEditingController selectorSearchController =
+        TextEditingController();
+    String selectorQuery = '';
 
     showModalBottomSheet(
       context: context,
@@ -638,10 +641,6 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       ),
       builder: (context) {
         return StatefulBuilder(builder: (context, setSheetState) {
-          final TextEditingController selectorSearchController =
-              TextEditingController();
-          String selectorQuery = '';
-
           return DraggableScrollableSheet(
             initialChildSize: 0.85,
             minChildSize: 0.5,
@@ -742,35 +741,35 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                   currentPartnerId == candidate.id;
 
                               return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor:
-                            candidate.gender == Gender.male
-                                ? Colors.blue.withAlpha(26)
-                                : Colors.pink.withAlpha(26),
-                            child: Icon(
-                              candidate.gender == Gender.male
-                                  ? Icons.male
-                                  : Icons.female,
-                              size: 16,
-                              color: candidate.gender == Gender.male
-                                  ? Colors.blue
-                                  : Colors.pink,
-                            ),
+                                leading: CircleAvatar(
+                                  backgroundColor:
+                                      candidate.gender == Gender.male
+                                          ? Colors.blue.withAlpha(26)
+                                          : Colors.pink.withAlpha(26),
+                                  child: Icon(
+                                    candidate.gender == Gender.male
+                                        ? Icons.male
+                                        : Icons.female,
+                                    size: 16,
+                                    color: candidate.gender == Gender.male
+                                        ? Colors.blue
+                                        : Colors.pink,
+                                  ),
+                                ),
+                                title: Text(candidate.name),
+                                subtitle: Text(candidate.yomigana,
+                                    style: const TextStyle(fontSize: 11)),
+                                trailing: isCurrentPartner
+                                    ? const Icon(Icons.check_circle,
+                                        color: Colors.blue)
+                                    : null,
+                                onTap: () {
+                                  onSelected(candidate.id);
+                                  Navigator.pop(context);
+                                },
+                              );
+                            },
                           ),
-                          title: Text(candidate.name),
-                          subtitle: Text(candidate.yomigana,
-                              style: const TextStyle(fontSize: 11)),
-                          trailing: isCurrentPartner
-                              ? const Icon(Icons.check_circle,
-                              color: Colors.blue)
-                              : null,
-                          onTap: () {
-                            onSelected(candidate.id);
-                            Navigator.pop(context);
-                          },
-                        );
-                      },
-                    ),
                   ),
                 ],
               );
