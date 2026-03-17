@@ -36,7 +36,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
 
   /// インデックスを安全に更新するためのメソッド
   void _updateIndexSafely({int? targetIndex}) {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     setState(() {
       final count = widget.notifier.sessions.length;
       if (count == 0) {
@@ -82,8 +84,25 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               total: sessions.length,
               currentIndex: _currentIndex,
               selectedPlayer: _selectedPlayer,
-              onIndexChange: (idx) => _updateIndexSafely(targetIndex: idx),
-              onCancelSwap: () => setState(() => _selectedPlayer = null),
+              onIndexChange: (idx) {
+                _updateIndexSafely(targetIndex: idx);
+              },
+              onCancelSwap: () {
+                setState(() => _selectedPlayer = null);
+              },
+              onMaximize: session != null
+                  ? () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FullscreenMatchView(
+                            session: session,
+                            pool: widget.notifier.playerStatsPool,
+                          ),
+                        ),
+                      );
+                    }
+                  : null,
             ),
             actions: isSwapping
                 ? null
@@ -92,7 +111,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                       icon: const Icon(Icons.delete_outline),
                       onPressed: session == null
                           ? null
-                          : () => _showClearConfirm(context),
+                          : () {
+                              _showClearConfirm(context);
+                            },
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -127,24 +148,31 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               child: Column(
                 children: [
                   GamesArea(
-                session: session,
-                pool: widget.notifier.playerStatsPool,
-                scale: scale,
-                screenWidth: constraints.maxWidth,
-                selectedPlayer: _selectedPlayer,
-                onPlayerTap: (p) => _handleTap(session, p),
-                onPlayerLongPress: (p) => setState(() => _selectedPlayer = p),
-              ),
-              if (session.restingPlayers.isNotEmpty) ...[
-                SizedBox(height: 32 * scale),
-                RestingContainer(
+                    session: session,
+                    pool: widget.notifier.playerStatsPool,
+                    scale: scale,
+                    screenWidth: constraints.maxWidth,
+                    selectedPlayer: _selectedPlayer,
+                    onPlayerTap: (p) {
+                      _handleTap(session, p);
+                    },
+                    onPlayerLongPress: (p) {
+                      setState(() => _selectedPlayer = p);
+                    },
+                  ),
+                  if (session.restingPlayers.isNotEmpty) ...[
+                    SizedBox(height: 32 * scale),
+                    RestingContainer(
                       session: session,
                       scale: scale,
                       maxWidth: constraints.maxWidth,
                       selectedPlayerId: _selectedPlayer?.id,
-                      onPlayerTap: (p) => _handleTap(session, p),
-                      onPlayerLongPress: (p) =>
-                          setState(() => _selectedPlayer = p),
+                      onPlayerTap: (p) {
+                        _handleTap(session, p);
+                      },
+                      onPlayerLongPress: (p) {
+                        setState(() => _selectedPlayer = p);
+                      },
                     ),
                   ]
                 ],
@@ -162,7 +190,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               heroTag: 'recalc',
               onPressed: widget.notifier.isGenerating
                   ? null
-                  : () => _showSettings(true),
+                  : () {
+                      _showSettings(true);
+                    },
               child: const Icon(Icons.refresh),
             ),
             const SizedBox(height: 12),
@@ -171,7 +201,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             heroTag: 'add',
             onPressed: widget.notifier.isGenerating
                 ? null
-                : () => _showSettings(false),
+                : () {
+                    _showSettings(false);
+                  },
             icon: Icon(session == null ? Icons.play_arrow : Icons.add),
             label: Text(session == null ? '試合を生成' : '次を生成'),
           ),
@@ -179,7 +211,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
       );
 
   void _handleTap(Session session, Player p) async {
-    if (_selectedPlayer == null) return;
+    if (_selectedPlayer == null) {
+      return;
+    }
     if (_selectedPlayer!.id != p.id) {
       await widget.notifier.swapPlayers(session, _selectedPlayer!, p);
     }
@@ -196,7 +230,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             isRecalc ? widget.notifier.sessions[_currentIndex!] : null,
       ),
     );
-    if (types == null) return;
+    if (types == null) {
+      return;
+    }
 
     try {
       if (isRecalc) {
@@ -221,7 +257,10 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           content: Text(m),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                },
+                child: const Text('OK')),
           ],
         ),
       );
@@ -233,7 +272,10 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           content: const Text('全ての試合履歴を削除しますか？'),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx), child: const Text('戻る')),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                },
+                child: const Text('戻る')),
             TextButton(
               onPressed: () async {
                 Navigator.pop(ctx);
