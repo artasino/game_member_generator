@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'gender.dart';
 import 'player_with_stats.dart';
 
@@ -60,6 +61,11 @@ class PlayerStatsPool {
     final remaining = sorted.skip(count).toList();
 
     return SelectionResult(picked, PlayerStatsPool(remaining));
+  }
+
+  PlayerStatsPool removeById(String id) {
+    final filtered = _players.where((p) => p.id != id).toList();
+    return PlayerStatsPool(filtered);
   }
 }
 

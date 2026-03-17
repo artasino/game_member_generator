@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:game_member_generator/domain/algorithm/session_score.dart';
 
 import '../entities/game.dart';
@@ -8,6 +9,50 @@ import '../entities/team.dart';
 
 /// evaluate which game member is better by given players
 class GameEvaluator {
+  double calculateSessionScore(List<PlayerWithStats> selectedMales,
+      List<PlayerWithStats> selectedFemales) {
+    var gameNumGain = 100000;
+    return gameNumGain *
+        _calculateGameNumPenalty(selectedMales, selectedFemales);
+  }
+
+  double _calculateGameNumPenalty(List<PlayerWithStats> selectedMales,
+      List<PlayerWithStats> selectedFemales) {
+    var totaGameNum = 0.0;
+    var all = [...selectedMales, ...selectedFemales];
+    for (var p in all) {
+      totaGameNum += p.stats.totalMatches;
+    }
+    return totaGameNum;
+  }
+
+  bool existExcludedPair(
+      List<PlayerWithStats> males, List<PlayerWithStats> females) {
+    final malePartnerMap = {
+      for (var p in males)
+        if (p.player.excludedPartnerId != null)
+          p.player.id: p.player.excludedPartnerId
+    };
+
+    bool pairFound = false;
+    // 2. 女性リストを1回だけ回して、相手が男性リストにいるか確認
+    for (var female in females) {
+      final targetMaleId = female.player.excludedPartnerId;
+      if (targetMaleId == null) continue;
+
+      // 「女性が指している男性」が、実際に男性リストに存在し、
+      // かつ「その男性もこの女性を指している」かチェック
+      if (malePartnerMap[targetMaleId] == female.id) {
+        pairFound = true;
+        if (kDebugMode) {
+          print(
+              'Found excluded pair: ${female.name} and ${malePartnerMap[targetMaleId]}');
+        }
+      }
+    }
+    return pairFound;
+  }
+
   double _calculateTypeImbalancePenalty(PlayerWithStats ps, MatchType type) {
     final counts = ps.stats.typeCounts;
     if (ps.player.gender == Gender.male) {
