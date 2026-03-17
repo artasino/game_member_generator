@@ -238,14 +238,24 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     final List<PlayerWithStats> unselected = [];
     final sortedKeys = buckets.keys.toList()..sort();
 
+    bool capacityReached = false;
     for (final count in sortedKeys) {
       final pool = buckets[count]!;
-      if (must.length >= requiredCount) {
+
+      if (capacityReached) {
         unselected.addAll(pool.all);
-      } else if (must.length + pool.length <= requiredCount) {
+        continue;
+      }
+
+      if (must.length + pool.length <= requiredCount) {
         must.addAll(pool.all);
+        if (must.length == requiredCount) {
+          capacityReached = true;
+        }
       } else {
+        // このバケットで定員を超えるため、このバケットの全員を候補（抽選枠）にする
         candidates.addAll(pool.all);
+        capacityReached = true;
       }
     }
 

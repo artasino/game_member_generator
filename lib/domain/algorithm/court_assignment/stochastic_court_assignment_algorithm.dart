@@ -58,10 +58,12 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
       if (nextScore.score < bestSession.score) {
         bestSession = nextScore;
         state = newState;
-        dev.log('Best score: ${bestSession.score} at $i');
+        dev.log('Best score: ${bestSession.score.toStringAsFixed(2)} at $i',
+            name: "stochastic_algo");
       }
     }
-    dev.log('Best score: ${bestSession.score}');
+    dev.log('Best score: ${bestSession.score.toStringAsFixed(2)}',
+        name: "stochastic_algo");
     return bestSession;
   }
 
