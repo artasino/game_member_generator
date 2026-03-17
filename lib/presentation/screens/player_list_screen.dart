@@ -532,6 +532,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           nameController.text.isEmpty
                               ? '新規メンバ'
                               : nameController.text,
+                          selectedGender,
                           currentExcludedPartnerId,
                           (newId) {
                             setState(() => currentExcludedPartnerId = newId);
@@ -619,11 +620,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     );
   }
 
-  void _showPartnerSelector(BuildContext context,
-      String? currentPlayerId,
-      String currentPlayerName,
-      String? currentPartnerId,
-      ValueChanged<String?> onSelected,) {
+  void _showPartnerSelector(
+    BuildContext context,
+    String? currentPlayerId,
+    String currentPlayerName,
+    Gender currentGender,
+    String? currentPartnerId,
+    ValueChanged<String?> onSelected,
+  ) {
     final allPlayers = widget.notifier.players;
 
     showModalBottomSheet(
@@ -633,106 +637,146 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          expand: false,
-          builder: (context, scrollController) {
-            final candidates = allPlayers.where((p) {
-              if (currentPlayerId != null && p.id == currentPlayerId)
-                return false;
-              if (p.excludedPartnerId == null) return true;
-              if (currentPlayerId != null &&
-                  p.excludedPartnerId == currentPlayerId) return true;
-              return false;
-            }).toList();
+        return StatefulBuilder(builder: (context, setSheetState) {
+          final TextEditingController selectorSearchController =
+              TextEditingController();
+          String selectorQuery = '';
 
-            return Column(
-              children: [
-                const SizedBox(height: 12),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
+          return DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            expand: false,
+            builder: (context, scrollController) {
+              final candidates = allPlayers.where((p) {
+                if (currentPlayerId != null && p.id == currentPlayerId) {
+                  return false;
+                }
+                // すでに誰かとペアを組んでいる人は（自分以外）除外
+                if (p.excludedPartnerId != null &&
+                    p.excludedPartnerId != currentPlayerId) {
+                  return false;
+                }
+
+                // 検索絞り込み
+                if (selectorQuery.isNotEmpty) {
+                  return p.name.contains(selectorQuery) ||
+                      p.yomigana.contains(selectorQuery);
+                }
+                return true;
+              }).toList()
+                ..sort((a, b) {
+                  // 1. 異性を優先して上に
+                  if (a.gender != b.gender) {
+                    return a.gender != currentGender ? -1 : 1;
+                  }
+                  // 2. 五十音順
+                  return a.yomigana.compareTo(b.yomigana);
+                });
+
+              return Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      Text(
-                        '同時出場制限ペアの設定',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '「$currentPlayerName」と同じ試合・回に出さない相手を選択してください',
-                        style:
-                            const TextStyle(fontSize: 12, color: Colors.grey),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Text(
+                          '同時出場制限ペアの設定',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: selectorSearchController,
+                          decoration: InputDecoration(
+                            hintText: 'ペア候補を検索...',
+                            prefixIcon: const Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding:
+                                const EdgeInsets.symmetric(horizontal: 16),
+                          ),
+                          onChanged: (v) {
+                            setSheetState(() => selectorQuery = v.trim());
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const Divider(height: 1),
-                if (currentPartnerId != null) ...[
-                  ListTile(
-                    leading: const Icon(Icons.link_off, color: Colors.red),
-                    title: const Text('現在のペア設定を解除する',
-                        style: TextStyle(color: Colors.red)),
-                    onTap: () {
-                      onSelected(null);
-                      Navigator.pop(context);
-                    },
+                  const Divider(height: 1),
+                  if (currentPartnerId != null && selectorQuery.isEmpty) ...[
+                    ListTile(
+                      leading: const Icon(Icons.link_off, color: Colors.red),
+                      title: const Text('現在のペア設定を解除する',
+                          style: TextStyle(color: Colors.red)),
+                      onTap: () {
+                        onSelected(null);
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(height: 1),
+                  ],
+                  Expanded(
+                    child: candidates.isEmpty
+                        ? const Center(
+                            child: Text('候補者が見つかりません',
+                                style: TextStyle(color: Colors.grey)))
+                        : ListView.builder(
+                            controller: scrollController,
+                            itemCount: candidates.length,
+                            itemBuilder: (context, index) {
+                              final candidate = candidates[index];
+                              final isCurrentPartner =
+                                  currentPartnerId == candidate.id;
+
+                              return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor:
+                            candidate.gender == Gender.male
+                                ? Colors.blue.withAlpha(26)
+                                : Colors.pink.withAlpha(26),
+                            child: Icon(
+                              candidate.gender == Gender.male
+                                  ? Icons.male
+                                  : Icons.female,
+                              size: 16,
+                              color: candidate.gender == Gender.male
+                                  ? Colors.blue
+                                  : Colors.pink,
+                            ),
+                          ),
+                          title: Text(candidate.name),
+                          subtitle: Text(candidate.yomigana,
+                              style: const TextStyle(fontSize: 11)),
+                          trailing: isCurrentPartner
+                              ? const Icon(Icons.check_circle,
+                              color: Colors.blue)
+                              : null,
+                          onTap: () {
+                            onSelected(candidate.id);
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ],
-                Expanded(
-                  child: ListView.builder(
-                    controller: scrollController,
-                    itemCount: candidates.length,
-                    itemBuilder: (context, index) {
-                      final candidate = candidates[index];
-                      final isCurrentPartner = currentPartnerId == candidate.id;
-
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: candidate.gender == Gender.male
-                              ? Colors.blue.withAlpha(26) // alpha 0.1
-                              : Colors.pink.withAlpha(26),
-                          child: Icon(
-                            candidate.gender == Gender.male
-                                ? Icons.male
-                                : Icons.female,
-                            size: 16,
-                            color: candidate.gender == Gender.male
-                                ? Colors.blue
-                                : Colors.pink,
-                          ),
-                        ),
-                        title: Text(candidate.name),
-                        subtitle: Text(candidate.yomigana,
-                            style: const TextStyle(fontSize: 11)),
-                        trailing: isCurrentPartner
-                            ? const Icon(Icons.check_circle, color: Colors.blue)
-                            : null,
-                        onTap: () {
-                          onSelected(candidate.id);
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        );
+              );
+            },
+          );
+        });
       },
     );
   }
