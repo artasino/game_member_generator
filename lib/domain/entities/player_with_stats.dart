@@ -1,9 +1,10 @@
-import 'gender.dart';
+import 'package:equatable/equatable.dart';
+
 import 'player.dart';
 import 'player_stats.dart';
 
-/// プレイヤーとその統計情報を組み合わせたドメインエンティティ
-class PlayerWithStats {
+/// プレイヤーとその統計情報をセットで保持するエンティティ
+class PlayerWithStats extends Equatable {
   final Player player;
   final PlayerStats stats;
 
@@ -12,18 +13,24 @@ class PlayerWithStats {
     required this.stats,
   });
 
-  /// 試合数の少なさをベースにしたスコア（ソート用）
-  int get totalMatches => stats.totalMatches;
-
   String get id => player.id;
-
   String get name => player.name;
 
-  Gender get gender => player.gender;
+  /// 他のプレイヤーと比較して、自分の方が「お休み（Rest）」すべき優先度が高いか判定する
+  /// アルゴリズムの制限ペア解消などで使用される
+  bool shouldRestOver(PlayerWithStats other) {
+    // 1. 連続出場数（sessionsSinceLastRest）が多い方を優先的に休ませる
+    if (stats.sessionsSinceLastRest != other.stats.sessionsSinceLastRest) {
+      return stats.sessionsSinceLastRest > other.stats.sessionsSinceLastRest;
+    }
+    // 2. 累計試合数が多い方を優先的に休ませる
+    if (stats.totalMatches != other.stats.totalMatches) {
+      return stats.totalMatches > other.stats.totalMatches;
+    }
+    // 3. 同条件なら決定論的なランダム（IDのハッシュ）で判定
+    return id.hashCode > other.id.hashCode;
+  }
 
-  bool get isActive => player.isActive;
-
-  bool get isMustRest => player.isMustRest;
-
-  String? get excludedPartnerId => player.excludedPartnerId;
+  @override
+  List<Object?> get props => [player, stats];
 }

@@ -1,4 +1,5 @@
 import 'package:game_member_generator/domain/entities/player_stats_pool.dart';
+
 import '../algorithm/match_algorithm.dart';
 import '../entities/game.dart';
 import '../entities/match_type.dart';
@@ -20,15 +21,13 @@ class MatchMakingService {
     final activePlayers = await playerRepository.getActive();
     final activeIds = activePlayers.map((p) => p.id).toSet();
 
-    // 2. アクティブなプレイヤーのみのプールを作成
-    final activePool = PlayerStatsPool(
-        playerStats.all.where((p) => activeIds.contains(p.player.id)).toList());
+    // 2. アクティブなプレイヤーのみを抽出（PlayerStatsPoolのフィルタ機能を利用）
+    final activePool = playerStats.filterByIds(activeIds);
 
-    // 3. 男女別にプールを分け、それぞれのバケットを取得してアルゴリズムに渡す
+    // 3. アルゴリズムに委譲
     return algorithm.generateMatches(
       matchTypes: matchTypes,
-      maleBuckets: activePool.males.buckets,
-      femaleBuckets: activePool.females.buckets,
+      playerPool: activePool,
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:game_member_generator/domain/algorithm/match_algorithm.dart';
 import 'package:game_member_generator/domain/entities/court_settings.dart';
 import 'package:game_member_generator/domain/entities/game.dart';
 import 'package:game_member_generator/domain/entities/gender.dart';
@@ -8,11 +9,10 @@ import 'package:game_member_generator/domain/entities/player_stats_pool.dart';
 import 'package:game_member_generator/domain/entities/session.dart';
 import 'package:game_member_generator/domain/entities/team.dart';
 import 'package:game_member_generator/domain/repository/court_settings_repository.dart';
+import 'package:game_member_generator/domain/repository/player_repository/player_repository.dart';
 import 'package:game_member_generator/domain/repository/session_repository/session_history_repository.dart';
 import 'package:game_member_generator/domain/services/match_making_service.dart';
 import 'package:game_member_generator/presentation/notifiers/session_notifier.dart';
-import 'package:game_member_generator/domain/algorithm/match_algorithm.dart';
-import 'package:game_member_generator/domain/repository/player_repository/player_repository.dart';
 
 // モッククラスの定義
 class MockSessionHistoryRepository implements SessionHistoryRepository {
@@ -72,18 +72,9 @@ class FixedMatchAlgorithm implements MatchAlgorithm {
   @override
   List<Game> generateMatches({
     required List<MatchType> matchTypes,
-    required Map<int, PlayerStatsPool> maleBuckets,
-    required Map<int, PlayerStatsPool> femaleBuckets,
+    required PlayerStatsPool playerPool,
   }) {
-    final males = maleBuckets.values
-        .expand((pool) => pool.all)
-        .map((ps) => ps.player)
-        .toList();
-    final females = femaleBuckets.values
-        .expand((pool) => pool.all)
-        .map((ps) => ps.player)
-        .toList();
-    final allPlayers = [...males, ...females];
+    final allPlayers = playerPool.all.map((ps) => ps.player).toList();
 
     if (allPlayers.length < 4) return [];
 

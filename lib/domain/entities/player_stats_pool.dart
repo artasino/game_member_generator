@@ -14,13 +14,7 @@ class PlayerStatsPool {
   List<PlayerWithStats> get all => List.unmodifiable(_players);
 
   /// 現在のプールの人数
-  int get length {
-    try {
-      return _players.length;
-    } catch (_) {
-      return 0;
-    }
-  }
+  int get length => _players.length;
 
   /// 男性のみのプールを返す
   PlayerStatsPool get males => PlayerStatsPool(
@@ -31,6 +25,20 @@ class PlayerStatsPool {
   PlayerStatsPool get females => PlayerStatsPool(
         _players.where((p) => p.player.gender == Gender.female).toList(),
       );
+
+  /// 特定のIDリストに含まれるプレイヤーのみのプールを返す
+  PlayerStatsPool filterByIds(Set<String> ids) {
+    return PlayerStatsPool(
+      _players.where((p) => ids.contains(p.player.id)).toList(),
+    );
+  }
+
+  /// 休み希望者(isMustRest)を除外したプールを返す
+  PlayerStatsPool filterAvailable() {
+    return PlayerStatsPool(
+      _players.where((p) => !p.player.isMustRest).toList(),
+    );
+  }
 
   /// 試合数ごとのグループ（バケット）に分割して返す
   /// Key: 出場回数, Value: その回数出場したプレイヤーのプール
@@ -60,10 +68,8 @@ class PlayerStatsPool {
     final List<PlayerWithStats> candidates = [];
     final List<PlayerWithStats> unselected = [];
 
-    final sortedBuckets = buckets;
     bool capacityReached = false;
-
-    for (final pool in sortedBuckets.values) {
+    for (final pool in buckets.values) {
       if (capacityReached) {
         unselected.addAll(pool.all);
         continue;
@@ -94,20 +100,13 @@ class PlayerStatsPool {
     final int lack = requiredCount - selection.selectedCount;
     if (lack <= 0) return selection;
 
-    final List<PlayerWithStats> unselectedList =
-        List.from(selection.unselectedPool.all);
-    if (unselectedList.isEmpty) return selection;
-
-    // 出場回数（totalMatches）が少ない人を優先するためのバケット化
-    final poolForRefill = PlayerStatsPool(unselectedList);
-    final sortedBuckets = poolForRefill.buckets;
-
+    final poolForRefill = selection.unselectedPool;
     final List<PlayerWithStats> newCandidates =
         List.from(selection.candidatePool.all);
     final List<PlayerWithStats> remainingUnselected = [];
 
     int needed = lack;
-    for (final pool in sortedBuckets.values) {
+    for (final pool in poolForRefill.buckets.values) {
       if (needed <= 0) {
         remainingUnselected.addAll(pool.all);
         continue;
@@ -131,26 +130,4 @@ class PlayerStatsPool {
       unselectedPool: PlayerStatsPool(remainingUnselected),
     );
   }
-
-  /// 指定した人数を「出場回数が少ない順」に選出し、残りのプールを返す
-  SelectionResult pickCandidates(int count, Random random) {
-    final sorted = getByLeastPlayed(random);
-    final picked = sorted.take(count).toList();
-    final remaining = sorted.skip(count).toList();
-
-    return SelectionResult(picked, PlayerStatsPool(remaining));
-  }
-
-  PlayerStatsPool removeById(String id) {
-    final filtered = _players.where((p) => p.id != id).toList();
-    return PlayerStatsPool(filtered);
-  }
-}
-
-/// 選出結果を保持するデータ構造
-class SelectionResult {
-  final List<PlayerWithStats> picked;
-  final PlayerStatsPool remainingPool;
-
-  SelectionResult(this.picked, this.remainingPool);
 }

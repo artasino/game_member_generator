@@ -47,12 +47,8 @@ void main() {
     );
   }
 
-  Map<int, PlayerStatsPool> toBuckets(List<PlayerWithStats> players) {
-    final Map<int, List<PlayerWithStats>> groups = {};
-    for (final p in players) {
-      groups.putIfAbsent(p.stats.totalMatches, () => []).add(p);
-    }
-    return groups.map((k, v) => MapEntry(k, PlayerStatsPool(v)));
+  PlayerStatsPool toPool(List<PlayerWithStats> players) {
+    return PlayerStatsPool(players);
   }
 
   group('BalancedMatchAlgorithm', () {
@@ -72,8 +68,7 @@ void main() {
 
       final result = algorithm.generateMatches(
         matchTypes: [MatchType.mixedDoubles, MatchType.mixedDoubles],
-        maleBuckets: toBuckets(males),
-        femaleBuckets: toBuckets(females),
+        playerPool: toPool([...males, ...females]),
       );
 
       expect(result.length, 2);
@@ -104,8 +99,7 @@ void main() {
 
       final result = algorithm.generateMatches(
         matchTypes: [MatchType.menDoubles, MatchType.womenDoubles],
-        maleBuckets: toBuckets(males),
-        femaleBuckets: toBuckets(females),
+        playerPool: toPool([...males, ...females]),
       );
 
       expect(result.length, 2);
@@ -149,8 +143,7 @@ void main() {
 
       final result = algorithm.generateMatches(
         matchTypes: [MatchType.mixedDoubles], // 男子2名必要
-        maleBuckets: toBuckets(males),
-        femaleBuckets: toBuckets(females),
+        playerPool: toPool([...males, ...females]),
       );
 
       final selectedMaleIds = result
@@ -187,8 +180,7 @@ void main() {
 
       final result = algorithm.generateMatches(
         matchTypes: [MatchType.menDoubles],
-        maleBuckets: toBuckets(males),
-        femaleBuckets: toBuckets(females),
+        playerPool: toPool([...males, ...females]),
       );
 
       final selectedIds = result
@@ -217,8 +209,7 @@ void main() {
 
       final result = algorithm.generateMatches(
         matchTypes: [MatchType.mixedDoubles], // 男女各2名必要
-        maleBuckets: toBuckets([m1, m2, m3]),
-        femaleBuckets: toBuckets([f1, f2]),
+        playerPool: toPool([m1, m2, m3, f1, f2]),
       );
 
       final selectedIds = result
@@ -254,8 +245,7 @@ void main() {
 
       final result = algorithm.generateMatches(
         matchTypes: [MatchType.mixedDoubles], // 男女各2名必要
-        maleBuckets: toBuckets([m1, m2, m3]),
-        femaleBuckets: toBuckets([f1, f2, f3]),
+        playerPool: toPool([m1, m2, m3, f1, f2, f3]),
       );
 
       final selectedIds = result
@@ -286,11 +276,7 @@ void main() {
 
       final result = algorithm.generateMatches(
         matchTypes: [MatchType.mixedDoubles],
-        maleBuckets: {
-          0: PlayerStatsPool([m1, m2]),
-          1: PlayerStatsPool([m3])
-        },
-        femaleBuckets: toBuckets([f1, f2]),
+        playerPool: toPool([m1, m2, m3, f1, f2]),
       );
 
       final selectedMaleIds = result
@@ -325,8 +311,7 @@ void main() {
       expect(
         () => algorithm.generateMatches(
           matchTypes: [MatchType.menDoubles],
-          maleBuckets: toBuckets(males),
-          femaleBuckets: toBuckets(females),
+          playerPool: toPool([...males, ...females]),
         ),
         throwsA(anyOf(isA<RangeError>(), isA<Exception>())),
       );
@@ -345,11 +330,7 @@ void main() {
 
       final result = algorithm.generateMatches(
         matchTypes: [MatchType.mixedDoubles],
-        maleBuckets: {
-          0: PlayerStatsPool([m1, m2]),
-          1: PlayerStatsPool([m3, m4])
-        },
-        femaleBuckets: toBuckets([f1, f2]),
+        playerPool: toPool([m1, m2, m3, m4, f1, f2]),
       );
 
       final selectedMales = result
