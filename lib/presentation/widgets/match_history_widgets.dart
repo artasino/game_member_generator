@@ -216,6 +216,7 @@ class GameCard extends StatelessWidget {
 
 class _VSDivider extends StatelessWidget {
   final double scale;
+
   const _VSDivider({required this.scale});
 
   @override
@@ -688,6 +689,16 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     final res = widget.notifier.checkRequirements(types);
     final theme = Theme.of(context);
 
+    // アクティブ人数のカウント
+    final activeMale = widget.notifier.playerStatsPool.all
+        .where((p) => p.player.isActive && p.player.gender == Gender.male);
+    final activeMaleLen = activeMale.length;
+    final mustRestMaleLen = activeMale.where((p) => p.mustRest).length;
+    final activeFemale = widget.notifier.playerStatsPool.all
+        .where((p) => p.player.isActive && p.player.gender == Gender.female);
+    final activeFemaleLen = activeFemale.length;
+    final mustRestFemaleLen = activeFemale.where((p) => p.mustRest).length;
+
     return AlertDialog(
       title: Text('MATCH SETTINGS',
           style: TextStyle(
@@ -698,6 +709,24 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // 現在の参加人数表示
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _CompactGenderBadge(
+                  label: '男性: $activeMaleLen 名(休$mustRestMaleLen）',
+                  color: Colors.blue.shade700,
+                ),
+                const SizedBox(width: 12),
+                _CompactGenderBadge(
+                  label: '女性: $activeFemaleLen 名(休$mustRestFemaleLen）',
+                  color: Colors.pink.shade600,
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 12),
             const Text('Select match types for each court'),
             const SizedBox(height: 24),
             Wrap(
@@ -773,6 +802,33 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
         ),
       ],
+    );
+  }
+}
+
+class _CompactGenderBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _CompactGenderBadge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 14,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }

@@ -16,6 +16,8 @@ class PlayerWithStats extends Equatable {
   String get id => player.id;
   String get name => player.name;
 
+  bool get mustRest => player.isMustRest;
+
   /// 他のプレイヤーと比較して、自分の方が「お休み（Rest）」すべき優先度が高いか判定する
   /// アルゴリズムの制限ペア解消などで使用される
   bool shouldRestOver(PlayerWithStats other) {
