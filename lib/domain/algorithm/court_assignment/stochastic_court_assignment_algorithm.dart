@@ -1,6 +1,6 @@
+import 'dart:developer' as dev;
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:game_member_generator/config/app_config.dart';
 import 'package:game_member_generator/domain/algorithm/court_assignment/court_assignment_algorithm.dart';
 import 'package:game_member_generator/domain/algorithm/game_evaluator.dart';
@@ -58,14 +58,10 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
       if (nextScore.score < bestSession.score) {
         bestSession = nextScore;
         state = newState;
-        if (kDebugMode) {
-          print('Best score: ${bestSession.score} at $i');
-        }
+        dev.log('Best score: ${bestSession.score} at $i');
       }
     }
-    if (kDebugMode) {
-      print('Best score: ${bestSession.score}');
-    }
+    dev.log('Best score: ${bestSession.score}');
     return bestSession;
   }
 
