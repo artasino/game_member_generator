@@ -308,7 +308,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.primary.withValues(alpha: 0.6),
+                  color: theme.colorScheme.primary.withAlpha(153), // alpha 0.6
                 ),
               ),
             ),
@@ -341,9 +341,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   }
 
   String _getIndexLabel(String yomigana) {
-    if (yomigana.isEmpty) {
-      return '#';
-    }
+    if (yomigana.isEmpty) return '#';
     final firstChar = yomigana.substring(0, 1);
     const mapping = {
       'あ': 'あ',
@@ -411,6 +409,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       'び': 'は',
       'ぶ': 'は',
       'べ': 'は',
+      'ぼ': 'は',
       'ぱ': 'は',
       'ぴ': 'は',
       'ぷ': 'は',
@@ -426,12 +425,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   int _labelOrder(String label) {
     const order = 'あかさたなはまやらわ';
     final index = order.indexOf(label);
-    if (index != -1) {
-      return index;
-    }
-    if (RegExp(r'^[A-Z]$').hasMatch(label)) {
-      return 100 + label.codeUnitAt(0);
-    }
+    if (index != -1) return index;
+    if (RegExp(r'^[A-Z]$').hasMatch(label)) return 100 + label.codeUnitAt(0);
     return 1000;
   }
 
@@ -480,37 +475,30 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       child: Text('性別',
                           style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: RadioListTile<Gender>(
-                            title: const Text('男性'),
+                    const SizedBox(height: 8),
+                    // SegmentedButtonを使用してRadioGroupの警告を完全に回避
+                    SizedBox(
+                      width: double.infinity,
+                      child: SegmentedButton<Gender>(
+                        segments: const <ButtonSegment<Gender>>[
+                          ButtonSegment<Gender>(
                             value: Gender.male,
-                            groupValue: selectedGender,
-                            onChanged: (v) {
-                              if (v != null) {
-                                setState(() {
-                                  selectedGender = v;
-                                });
-                              }
-                            },
+                            label: Text('男性'),
+                            icon: Icon(Icons.male),
                           ),
-                        ),
-                        Expanded(
-                          child: RadioListTile<Gender>(
-                            title: const Text('女性'),
+                          ButtonSegment<Gender>(
                             value: Gender.female,
-                            groupValue: selectedGender,
-                            onChanged: (v) {
-                              if (v != null) {
-                                setState(() {
-                                  selectedGender = v;
-                                });
-                              }
-                            },
+                            label: Text('女性'),
+                            icon: Icon(Icons.female),
                           ),
-                        ),
-                      ],
+                        ],
+                        selected: <Gender>{selectedGender},
+                        onSelectionChanged: (Set<Gender> newSelection) {
+                          setState(() {
+                            selectedGender = newSelection.first;
+                          });
+                        },
+                      ),
                     ),
                     const Divider(height: 32),
                     const Align(
@@ -569,9 +557,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
+                  onPressed: () => Navigator.pop(context),
                   child: const Text('キャンセル'),
                 ),
                 if (isEdit) ...[
@@ -588,9 +574,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   onPressed: () async {
                     final name = nameController.text.trim();
                     final yomigana = yomiganaController.text.trim();
-                    if (name.isEmpty || yomigana.isEmpty) {
-                      return;
-                    }
+                    if (name.isEmpty || yomigana.isEmpty) return;
 
                     String finalPlayerId;
                     if (isEdit) {
@@ -623,9 +607,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       }
                     }
 
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                    }
+                    if (context.mounted) Navigator.pop(context);
                   },
                   child: Text(isEdit ? '更新' : '登録'),
                 ),
@@ -637,13 +619,11 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     );
   }
 
-  void _showPartnerSelector(
-    BuildContext context,
-    String? currentPlayerId,
-    String currentPlayerName,
-    String? currentPartnerId,
-    ValueChanged<String?> onSelected,
-  ) {
+  void _showPartnerSelector(BuildContext context,
+      String? currentPlayerId,
+      String currentPlayerName,
+      String? currentPartnerId,
+      ValueChanged<String?> onSelected,) {
     final allPlayers = widget.notifier.players;
 
     showModalBottomSheet(
@@ -660,16 +640,11 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           expand: false,
           builder: (context, scrollController) {
             final candidates = allPlayers.where((p) {
-              if (currentPlayerId != null && p.id == currentPlayerId) {
+              if (currentPlayerId != null && p.id == currentPlayerId)
                 return false;
-              }
-              if (p.excludedPartnerId == null) {
-                return true;
-              }
+              if (p.excludedPartnerId == null) return true;
               if (currentPlayerId != null &&
-                  p.excludedPartnerId == currentPlayerId) {
-                return true;
-              }
+                  p.excludedPartnerId == currentPlayerId) return true;
               return false;
             }).toList();
 
@@ -728,8 +703,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundColor: candidate.gender == Gender.male
-                              ? Colors.blue.withValues(alpha: 0.1)
-                              : Colors.pink.withValues(alpha: 0.1),
+                              ? Colors.blue.withAlpha(26) // alpha 0.1
+                              : Colors.pink.withAlpha(26),
                           child: Icon(
                             candidate.gender == Gender.male
                                 ? Icons.male
