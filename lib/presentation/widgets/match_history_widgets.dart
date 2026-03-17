@@ -9,6 +9,7 @@ import '../../domain/entities/session.dart';
 import '../../domain/entities/team.dart';
 import '../notifiers/session_notifier.dart';
 
+/// 試合形式に応じたテーマカラーを取得
 Color _getMatchTypeColor(BuildContext context, MatchType type) {
   return switch (type) {
     MatchType.menDoubles => Colors.blue.shade800,
@@ -47,6 +48,8 @@ class GamesArea extends StatelessWidget {
     int cross;
     if (count == 4) {
       cross = 2; // 4試合のときは2x2
+    } else if (count == 3) {
+      cross = 3; // 3試合のときは横に3つ
     } else {
       final double minCardWidth = 360 * scale;
       cross = (screenWidth / minCardWidth).floor().clamp(1, 3);
@@ -54,7 +57,7 @@ class GamesArea extends StatelessWidget {
     }
 
     final double spacing = 16.0 * scale;
-    final double cardWidth = (screenWidth - (spacing * (cross - 1))) / cross;
+    final double cardWidth = (screenWidth - (spacing * (cross + 1))) / cross;
 
     return Wrap(
       spacing: spacing,
@@ -368,15 +371,17 @@ class RestingContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final rs = (scale * 0.8).clamp(1.0, 1.5);
+    final rs = (scale * 0.75).clamp(0.8, 1.2);
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: 8 * rs, horizontal: 16 * rs),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border:
-            Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
+        color: Colors.transparent,
+        border: Border(
+            top: BorderSide(
+                color:
+                    theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,17 +390,18 @@ class RestingContainer extends StatelessWidget {
           Row(
             children: [
               Icon(Icons.bedtime_outlined,
-                  size: 16 * rs, color: theme.colorScheme.secondary),
-              SizedBox(width: 8 * rs),
+                  size: 14 * rs, color: theme.colorScheme.secondary),
+              SizedBox(width: 6 * rs),
               Text('休憩中',
                   style: theme.textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w900,
-                      color: theme.colorScheme.secondary)),
+                      color: theme.colorScheme.secondary,
+                      fontSize: 12 * rs)),
               const Spacer(),
               _Badge(text: '${session.restingPlayers.length} 名', scale: rs),
             ],
           ),
-          SizedBox(height: 8 * rs),
+          SizedBox(height: 6 * rs),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -448,7 +454,7 @@ class RestingChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding:
-            EdgeInsets.symmetric(horizontal: 12 * scale, vertical: 6 * scale),
+            EdgeInsets.symmetric(horizontal: 10 * scale, vertical: 4 * scale),
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
@@ -458,12 +464,12 @@ class RestingChip extends StatelessWidget {
               color: isSelected
                   ? theme.colorScheme.primary
                   : c.withValues(alpha: 0.3),
-              width: 1.5),
+              width: 1.2),
         ),
         child: Text(
           player.name,
           style: TextStyle(
-              fontSize: 16 * scale,
+              fontSize: 14 * scale,
               color: isSelected
                   ? theme.colorScheme.onPrimaryContainer
                   : Colors.black87,
@@ -485,18 +491,17 @@ class PairInfoLabel extends StatelessWidget {
     final theme = Theme.of(context);
     final isFrequent = count > 1;
     return Container(
-      padding:
-          EdgeInsets.symmetric(horizontal: 10 * scale, vertical: 2 * scale),
+      padding: EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 1 * scale),
       decoration: BoxDecoration(
         color: isFrequent
             ? Colors.orange.shade900
             : theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8 * scale),
+        borderRadius: BorderRadius.circular(6 * scale),
       ),
       child: Text(
-        'ペア $count回目',
+        'P: $count',
         style: TextStyle(
-            fontSize: 10 * scale,
+            fontSize: 9 * scale,
             color: isFrequent ? Colors.white : theme.colorScheme.outline,
             fontWeight: FontWeight.w900),
       ),
@@ -514,14 +519,14 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
       decoration: BoxDecoration(
           color: colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(10)),
+          borderRadius: BorderRadius.circular(8)),
       child: Text(
         text,
         style: TextStyle(
-            fontSize: 12 * scale,
+            fontSize: 10 * scale,
             color: colorScheme.onSecondaryContainer,
             fontWeight: FontWeight.w900),
       ),
@@ -537,7 +542,6 @@ class MatchHistoryHeader extends StatelessWidget {
   final Player? selectedPlayer;
   final Function(int) onIndexChange;
   final VoidCallback onCancelSwap;
-  final VoidCallback? onMaximize;
 
   const MatchHistoryHeader({
     super.key,
@@ -548,7 +552,6 @@ class MatchHistoryHeader extends StatelessWidget {
     this.selectedPlayer,
     required this.onIndexChange,
     required this.onCancelSwap,
-    this.onMaximize,
   });
 
   @override
@@ -598,11 +601,6 @@ class MatchHistoryHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (onMaximize != null)
-          IconButton(
-            icon: const Icon(Icons.fullscreen_rounded, size: 36),
-            onPressed: onMaximize,
-          ),
         IconButton(
           icon: const Icon(Icons.chevron_left_rounded, size: 56),
           onPressed:
@@ -633,69 +631,6 @@ class MatchHistoryHeader extends StatelessWidget {
               : null,
         ),
       ],
-    );
-  }
-}
-
-class FullscreenMatchView extends StatelessWidget {
-  final Session session;
-  final PlayerStatsPool pool;
-
-  const FullscreenMatchView({
-    super.key,
-    required this.session,
-    required this.pool,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 80,
-        title: Text('MATCH ${session.index} PREVIEW',
-            style: const TextStyle(
-                fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close_rounded, size: 40),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const SizedBox(width: 12),
-        ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final double scale = (constraints.maxWidth / 900.0).clamp(1.5, 2.5);
-
-          return Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: GamesArea(
-                    session: session,
-                    pool: pool,
-                    scale: scale,
-                    screenWidth: constraints.maxWidth,
-                    selectedPlayer: null,
-                    onPlayerTap: (_) {},
-                    onPlayerLongPress: (_) {},
-                    showPairInfo: false,
-                  ),
-                ),
-              ),
-              if (session.restingPlayers.isNotEmpty)
-                RestingContainer(
-                  session: session,
-                  scale: scale,
-                  maxWidth: constraints.maxWidth,
-                  onPlayerTap: (_) {},
-                  onPlayerLongPress: (_) {},
-                ),
-            ],
-          );
-        },
-      ),
     );
   }
 }
@@ -758,8 +693,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
             const Text('Select match types for each court'),
             const SizedBox(height: 24),
             Wrap(
-              spacing: 12,
-              runSpacing: 12,
+              spacing: 16,
+              runSpacing: 16,
               children: MatchType.values.map((type) {
                 final color = _getMatchTypeColor(context, type);
                 return ActionChip(
@@ -767,7 +702,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                       style: const TextStyle(
                           fontWeight: FontWeight.w900, fontSize: 16)),
                   onPressed: () => setState(() => types.add(type)),
-                  avatar: Icon(Icons.add, size: 18, color: color),
+                  avatar: Icon(Icons.add, size: 20, color: color),
                   side: BorderSide(color: color, width: 2.5),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

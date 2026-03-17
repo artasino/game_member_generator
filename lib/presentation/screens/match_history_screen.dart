@@ -8,14 +8,14 @@ import '../notifiers/session_notifier.dart';
 import '../widgets/match_history_widgets.dart';
 
 extension LayoutScale on BoxConstraints {
-  /// 画面サイズに基づいた動的なスケール値を計算（視認性と安定性のバランス）
+  /// 画面サイズに基づいた動的なスケール値を計算
   double calculateMatchScale(int gameCount) {
-    // 基準幅を上げ、スケール範囲を 1.2〜2.0 に設定
-    double scale = (maxWidth / 1000.0).clamp(1.2, 2.0);
+    // 基準幅 900.0 をベースに、1.0〜1.8 の範囲でスケーリング
+    double scale = (maxWidth / 900.0).clamp(1.0, 1.8);
 
-    // 試合数が多い場合は少し縮小して全体を見やすくする
+    // 試合数が多い（4試合など）場合は要素を 15% 縮小して全体のバランスを取る
     if (gameCount >= 4) {
-      scale *= 0.8;
+      scale *= 0.85;
     }
     return scale;
   }
@@ -70,10 +70,10 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           backgroundColor: colorScheme.surface,
           appBar: AppBar(
             elevation: 0,
-            scrolledUnderElevation: 4,
+            scrolledUnderElevation: 2,
             automaticallyImplyLeading: false,
             centerTitle: true,
-            toolbarHeight: 64,
+            toolbarHeight: 56,
             backgroundColor:
                 isSwapping ? colorScheme.primary : colorScheme.surface,
             foregroundColor:
@@ -86,19 +86,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               selectedPlayer: _selectedPlayer,
               onIndexChange: (idx) => _updateIndexSafely(targetIndex: idx),
               onCancelSwap: () => setState(() => _selectedPlayer = null),
-              onMaximize: session != null
-                  ? () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => FullscreenMatchView(
-                            session: session,
-                            pool: widget.notifier.playerStatsPool,
-                          ),
-                        ),
-                      );
-                    }
-                  : null,
             ),
             actions: isSwapping
                 ? null
@@ -107,10 +94,10 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                       IconButton(
                         tooltip: '履歴をクリア',
                         icon:
-                            const Icon(Icons.delete_outline_rounded, size: 24),
+                            const Icon(Icons.delete_outline_rounded, size: 22),
                         onPressed: () => _showClearConfirm(context),
                       ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 4),
                   ],
           ),
           body: session == null
@@ -127,13 +114,13 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.history_rounded,
-                size: 80, color: colorScheme.outlineVariant),
-            const SizedBox(height: 20),
+                size: 64, color: colorScheme.outlineVariant),
+            const SizedBox(height: 16),
             Text(
               '試合履歴がありません',
               style: TextStyle(
                   color: colorScheme.outline,
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold),
             ),
           ],
@@ -144,73 +131,75 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         builder: (context, constraints) {
           final scale = constraints.calculateMatchScale(session.games.length);
 
-          return SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding:
-                EdgeInsets.fromLTRB(12 * scale, 12 * scale, 12 * scale, 180),
-            child: Column(
-              children: [
-                // 試合エリア (3試合なら横に並ぶように内部で計算)
-                GamesArea(
-                  session: session,
-                  pool: widget.notifier.playerStatsPool,
-                  scale: scale,
-                  screenWidth: constraints.maxWidth,
-                  selectedPlayer: _selectedPlayer,
-                  onPlayerTap: (p) => _handleTap(session, p),
-                  onPlayerLongPress: (p) => setState(() => _selectedPlayer = p),
-                ),
-                // 休憩エリア (常に下側)
-                if (session.restingPlayers.isNotEmpty) ...[
-                  SizedBox(height: 32 * scale),
-                  RestingContainer(
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  child: GamesArea(
                     session: session,
+                    pool: widget.notifier.playerStatsPool,
                     scale: scale,
-                    maxWidth: constraints.maxWidth,
-                    selectedPlayerId: _selectedPlayer?.id,
+                    screenWidth: constraints.maxWidth,
+                    selectedPlayer: _selectedPlayer,
                     onPlayerTap: (p) => _handleTap(session, p),
                     onPlayerLongPress: (p) =>
                         setState(() => _selectedPlayer = p),
                   ),
-                ]
-              ],
-            ),
+                ),
+              ),
+              // 休憩エリア：常に下部、画面の約2割程度を想定した高さに収まるように設計（スクロール可能）
+              if (session.restingPlayers.isNotEmpty)
+                RestingContainer(
+                  session: session,
+                  scale: scale,
+                  maxWidth: constraints.maxWidth,
+                  selectedPlayerId: _selectedPlayer?.id,
+                  onPlayerTap: (p) => _handleTap(session, p),
+                  onPlayerLongPress: (p) => setState(() => _selectedPlayer = p),
+                ),
+            ],
           );
         },
       );
 
-  Widget _buildFABs(Session? session, ColorScheme colorScheme) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (session != null) ...[
-            FloatingActionButton.small(
-              heroTag: 'recalc',
+  Widget _buildFABs(Session? session, ColorScheme colorScheme) => Padding(
+        padding: const EdgeInsets.only(bottom: 80), // 休憩エリアと重ならないように調整
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (session != null) ...[
+              FloatingActionButton.small(
+                heroTag: 'recalc',
+                elevation: 2,
+                backgroundColor: colorScheme.secondaryContainer,
+                foregroundColor: colorScheme.onSecondaryContainer,
+                onPressed: widget.notifier.isGenerating
+                    ? null
+                    : () => _showSettings(true),
+                child: const Icon(Icons.refresh_rounded),
+              ),
+              const SizedBox(height: 12),
+            ],
+            FloatingActionButton.extended(
+              heroTag: 'add',
               elevation: 4,
-              backgroundColor: colorScheme.secondaryContainer,
-              foregroundColor: colorScheme.onSecondaryContainer,
               onPressed: widget.notifier.isGenerating
                   ? null
-                  : () => _showSettings(true),
-              child: const Icon(Icons.refresh_rounded),
+                  : () => _showSettings(false),
+              icon: Icon(session == null
+                  ? Icons.play_arrow_rounded
+                  : Icons.add_rounded),
+              label: Text(
+                session == null ? '試合を開始' : '次の試合へ',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w900, letterSpacing: 0.8),
+              ),
             ),
-            const SizedBox(height: 16),
           ],
-          FloatingActionButton.extended(
-            heroTag: 'add',
-            elevation: 6,
-            onPressed: widget.notifier.isGenerating
-                ? null
-                : () => _showSettings(false),
-            icon: Icon(
-                session == null ? Icons.play_arrow_rounded : Icons.add_rounded),
-            label: Text(
-              session == null ? '試合を開始' : '次の試合へ',
-              style: const TextStyle(
-                  fontWeight: FontWeight.w900, letterSpacing: 1.1),
-            ),
-          ),
-        ],
+        ),
       );
 
   void _handleTap(Session session, Player p) async {
