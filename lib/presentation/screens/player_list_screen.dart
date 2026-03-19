@@ -224,7 +224,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           color: Colors.blue,
                         ),
                         const SizedBox(height: 8),
-                        _buildWrap(activeMales),
+                        _buildWrap(activeMales, showStats: true),
                       ],
                     ],
                   ),
@@ -240,7 +240,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           color: Colors.pink,
                         ),
                         const SizedBox(height: 8),
-                        _buildWrap(activeFemales),
+                        _buildWrap(activeFemales, showStats: true),
                       ],
                     ],
                   ),
@@ -321,7 +321,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   }
 
   Widget _buildWrap(List<PlayerWithStats> players,
-      {bool showCheckbox = false}) {
+      {bool showCheckbox = false, bool showStats = false}) {
     return Wrap(
       spacing: 10,
       runSpacing: 10,
@@ -329,12 +329,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         return PlayerChip(
           playerWithStats: p,
           onTap: () {
-            widget.notifier.toggleActive(p.player);
+            _showActivateDeactivateDialog(context, p.player);
           },
           onLongPress: () {
             _showAddEditDialog(context, player: p.player);
           },
           showCheckbox: showCheckbox,
+          showStats: showStats,
         );
       }).toList(),
     );
@@ -428,6 +429,33 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     if (index != -1) return index;
     if (RegExp(r'^[A-Z]$').hasMatch(label)) return 100 + label.codeUnitAt(0);
     return 1000;
+  }
+
+  void _showActivateDeactivateDialog(BuildContext context, Player player) {
+    final isToActivate = !player.isActive;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("参加メンバ設定"),
+          content:
+              Text(isToActivate ? '今日の参加メンバーに登録しますか？' : '今日の参加メンバから削除しますか？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('キャンセル'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await widget.notifier.toggleActive(player);
+                if (context.mounted) Navigator.pop(context); // 安全なPop
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showAddEditDialog(BuildContext context, {Player? player}) {

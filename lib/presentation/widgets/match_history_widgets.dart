@@ -316,6 +316,7 @@ class PlayerTag extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       onLongPress: onLongPress,
+      onDoubleTap: onLongPress,
       borderRadius: BorderRadius.circular(12 * scale),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -372,7 +373,7 @@ class RestingContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final rs = (scale * 0.75).clamp(0.8, 1.2);
+    final rs = scale.clamp(0.8, 1.2);
 
     // 休憩中メンバーを男女でソート
     final sortedResting = List<Player>.from(session.restingPlayers)
@@ -422,6 +423,7 @@ class RestingContainer extends StatelessWidget {
                           isSelected: selectedPlayerId == p.id,
                           onTap: () => onPlayerTap(p),
                           onLongPress: () => onPlayerLongPress(p),
+                          onDoubleTap: () => onPlayerLongPress(p),
                           scale: rs,
                         ),
                       ))
@@ -439,6 +441,7 @@ class RestingChip extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback onDoubleTap;
   final double scale;
 
   const RestingChip({
@@ -447,6 +450,7 @@ class RestingChip extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     required this.onLongPress,
+    required this.onDoubleTap,
     required this.scale,
   });
 
@@ -460,6 +464,7 @@ class RestingChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
+      onDoubleTap: onDoubleTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding:
@@ -478,7 +483,7 @@ class RestingChip extends StatelessWidget {
         child: Text(
           player.name,
           style: TextStyle(
-              fontSize: 14 * scale,
+              fontSize: 18 * scale,
               color: isSelected
                   ? theme.colorScheme.onPrimaryContainer
                   : Colors.black87,
@@ -500,21 +505,28 @@ class PairInfoLabel extends StatelessWidget {
     final theme = Theme.of(context);
     final isFrequent = count > 1;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 1 * scale),
-      decoration: BoxDecoration(
-        color: isFrequent
-            ? Colors.orange.shade900
-            : theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(6 * scale),
-      ),
-      child: Text(
-        'P: $count',
-        style: TextStyle(
-            fontSize: 9 * scale,
-            color: isFrequent ? Colors.white : theme.colorScheme.outline,
-            fontWeight: FontWeight.w900),
-      ),
-    );
+        padding:
+            EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 1 * scale),
+        decoration: BoxDecoration(
+          color: isFrequent
+              ? Colors.orange.shade200
+              : theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(6 * scale),
+        ),
+        child: Row(children: [
+          Icon(
+            Icons.people_alt_outlined,
+            size: 14 * scale,
+          ),
+          SizedBox(width: 4 * scale),
+          Text(
+            '$count',
+            style: TextStyle(
+                fontSize: 9 * scale,
+                color: isFrequent ? Colors.black87 : theme.colorScheme.outline,
+                fontWeight: FontWeight.w900),
+          ),
+        ]));
   }
 }
 
@@ -597,7 +609,7 @@ class MatchHistoryHeader extends StatelessWidget {
               foregroundColor: colorScheme.primary,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
-            child: Text('CANCEL',
+            child: Text('キャンセル',
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
@@ -792,13 +804,13 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL',
+            child: const Text('キャンセル',
                 style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18))),
         FilledButton(
           onPressed: !res.canGenerate || types.isEmpty
               ? null
               : () => Navigator.pop(context, types),
-          child: const Text('START',
+          child: const Text('スタート',
               style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
         ),
       ],

@@ -78,6 +78,7 @@ class PlayerChip extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final bool showCheckbox;
+  final bool showStats;
 
   const PlayerChip({
     super.key,
@@ -85,6 +86,7 @@ class PlayerChip extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     this.showCheckbox = false,
+    this.showStats = false,
   });
 
   @override
@@ -161,36 +163,38 @@ class PlayerChip extends StatelessWidget {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _CountBadge(
-                          label: '出${stats.totalMatches}',
-                          color: Colors.indigo,
-                          isActive: player.isActive,
-                        ),
-                        const SizedBox(width: 4),
-                        _CountBadge(
-                          label: '休${stats.totalRests}',
-                          color: Colors.deepOrange,
-                          isActive: player.isActive,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${player.gender == Gender.male ? "男" : "女"}$sameGenderCount 混$mxCount',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: player.isActive
-                                ? Colors.black54
-                                : Colors.grey.shade600,
-                            fontWeight: player.isActive
-                                ? FontWeight.w500
-                                : FontWeight.normal,
+                    if (showStats) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _CountBadge(
+                            label: '出${stats.totalMatches}',
+                            color: Colors.indigo,
+                            isActive: player.isActive,
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(width: 4),
+                          _CountBadge(
+                            label: '休${stats.totalRests}',
+                            color: Colors.deepOrange,
+                            isActive: player.isActive,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${player.gender == Gender.male ? "男" : "女"}$sameGenderCount 混$mxCount',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: player.isActive
+                                  ? Colors.black54
+                                  : Colors.grey.shade600,
+                              fontWeight: player.isActive
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ]
                   ],
                 ),
               ],

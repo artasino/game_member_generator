@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/config/app_config.dart';
 import 'package:game_member_generator/domain/algorithm/court_assignment/court_assignment_algorithm.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'domain/algorithm/balanced_match_algorithm.dart';
 import 'domain/algorithm/court_assignment/stochastic_court_assignment_algorithm.dart';
@@ -83,6 +84,18 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
+        textTheme: GoogleFonts.notoSansJpTextTheme(
+          Theme.of(context).textTheme,
+        ).copyWith(
+          displayMedium: GoogleFonts.notoSansJp(
+            fontWeight: FontWeight.w900,
+            letterSpacing: 2.0,
+            color: const Color(0xFF2C3E50),
+          ),
+          labelLarge: GoogleFonts.kanit(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       home: MainNavigationScreen(
         playerNotifier: playerNotifier,
