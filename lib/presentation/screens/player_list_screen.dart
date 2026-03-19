@@ -205,7 +205,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (activeMales.isNotEmpty || activeFemales.isNotEmpty) ...[
-            SectionHeader(
+            AppSectionHeader(
               title: '本日の参加メンバ',
               subtitle:
                   '計${activeMales.length + activeFemales.length}名 (男${activeMales.length} 女${activeFemales.length})',
@@ -252,7 +252,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               child: Divider(),
             ),
           ],
-          const SectionHeader(title: '全メンバ', subtitle: '五十音順'),
+          const AppSectionHeader(title: '全メンバ', subtitle: '五十音順'),
           const SizedBox(height: 16),
           if (maleLabels.isEmpty && femaleLabels.isEmpty) ...[
             const Padding(
@@ -437,20 +437,23 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text("参加メンバ設定"),
+          title: const Text("参加メンバ設定",
+              style: TextStyle(fontWeight: FontWeight.w900)),
           content:
               Text(isToActivate ? '今日の参加メンバーに登録しますか？' : '今日の参加メンバから削除しますか？'),
           actions: [
-            TextButton(
+            AppActionButton(
+              label: 'キャンセル',
               onPressed: () => Navigator.pop(context),
-              child: const Text('キャンセル'),
+              isPrimary: false,
             ),
-            ElevatedButton(
+            AppActionButton(
+              label: 'OK',
               onPressed: () async {
                 await widget.notifier.toggleActive(player);
-                if (context.mounted) Navigator.pop(context); // 安全なPop
+                if (context.mounted) Navigator.pop(context);
               },
-              child: const Text('OK'),
+              isPrimary: true,
             ),
           ],
         );
@@ -474,7 +477,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text(isEdit ? 'メンバ編集' : 'メンバ登録'),
+              title: Text(isEdit ? 'メンバ編集' : 'メンバ登録',
+                  style: const TextStyle(fontWeight: FontWeight.w900)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -504,7 +508,6 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(height: 8),
-                    // SegmentedButtonを使用してRadioGroupの警告を完全に回避
                     SizedBox(
                       width: double.infinity,
                       child: SegmentedButton<Gender>(
@@ -585,21 +588,24 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 ),
               ),
               actions: [
-                TextButton(
+                AppActionButton(
+                  label: 'キャンセル',
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('キャンセル'),
+                  isPrimary: false,
                 ),
                 if (isEdit) ...[
-                  TextButton(
+                  AppActionButton(
+                    label: '削除',
                     onPressed: () {
                       widget.notifier.removePlayer(player.id);
                       Navigator.pop(context);
                     },
-                    child:
-                        const Text('削除', style: TextStyle(color: Colors.red)),
+                    isPrimary: false,
+                    color: Colors.red,
                   ),
                 ],
-                ElevatedButton(
+                AppActionButton(
+                  label: isEdit ? '更新' : '登録',
                   onPressed: () async {
                     final name = nameController.text.trim();
                     final yomigana = yomiganaController.text.trim();
@@ -638,7 +644,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
 
                     if (context.mounted) Navigator.pop(context);
                   },
-                  child: Text(isEdit ? '更新' : '登録'),
+                  isPrimary: true,
                 ),
               ],
             );
@@ -679,13 +685,11 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 if (currentPlayerId != null && p.id == currentPlayerId) {
                   return false;
                 }
-                // すでに誰かとペアを組んでいる人は（自分以外）除外
                 if (p.excludedPartnerId != null &&
                     p.excludedPartnerId != currentPlayerId) {
                   return false;
                 }
 
-                // 検索絞り込み
                 if (selectorQuery.isNotEmpty) {
                   return p.name.contains(selectorQuery) ||
                       p.yomigana.contains(selectorQuery);
@@ -693,11 +697,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 return true;
               }).toList()
                 ..sort((a, b) {
-                  // 1. 異性を優先して上に
                   if (a.gender != b.gender) {
                     return a.gender != currentGender ? -1 : 1;
                   }
-                  // 2. 五十音順
                   return a.yomigana.compareTo(b.yomigana);
                 });
 

@@ -8,6 +8,7 @@ import '../../domain/entities/player_stats_pool.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/entities/team.dart';
 import '../notifiers/session_notifier.dart';
+import 'common_widgets.dart';
 
 /// 試合形式に応じたテーマカラーを取得
 Color _getMatchTypeColor(BuildContext context, MatchType type) {
@@ -160,17 +161,11 @@ class GameCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 10 * scale, vertical: 2 * scale),
-                  decoration: BoxDecoration(
-                      color: typeColor,
-                      borderRadius: BorderRadius.circular(100)),
-                  child: Text(game.type.displayName,
-                      style: TextStyle(
-                          fontSize: 12 * scale,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white)),
+                AppBadge(
+                  label: game.type.displayName,
+                  color: typeColor,
+                  isFilled: true,
+                  scale: scale,
                 ),
               ],
             ),
@@ -306,9 +301,7 @@ class PlayerTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final genderColor = player.gender == Gender.male
-        ? Colors.blue.shade700
-        : Colors.pink.shade600;
+    final genderColor = GenderTheme.getColor(player.gender);
 
     return InkWell(
       onTap: onTap,
@@ -404,8 +397,13 @@ class RestingContainer extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                       color: theme.colorScheme.secondary,
                       fontSize: 12 * rs)),
-              const Spacer(),
-              _Badge(text: '${session.restingPlayers.length} 名', scale: rs),
+              const SizedBox(width: 6),
+              AppBadge(
+                label: '${session.restingPlayers.length} 名',
+                color: theme.colorScheme.secondary,
+                isFilled: true,
+                scale: rs,
+              ),
             ],
           ),
           SizedBox(height: 6 * rs),
@@ -454,9 +452,7 @@ class RestingChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final c = player.gender == Gender.male
-        ? Colors.blue.shade700
-        : Colors.pink.shade600;
+    final genderColor = GenderTheme.getColor(player.gender);
 
     return GestureDetector(
       onTap: onTap,
@@ -469,12 +465,12 @@ class RestingChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
-              : c.withValues(alpha: 0.08),
+              : genderColor.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12 * scale),
           border: Border.all(
               color: isSelected
                   ? theme.colorScheme.primary
-                  : c.withValues(alpha: 0.3),
+                  : genderColor.withValues(alpha: 0.3),
               width: 1.5),
         ),
         child: Text(
@@ -501,53 +497,11 @@ class PairInfoLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isFrequent = count > 1;
-    return Container(
-        padding:
-            EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 1 * scale),
-        decoration: BoxDecoration(
-          color: isFrequent
-              ? Colors.orange.shade200
-              : theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8 * scale),
-        ),
-        child: Row(children: [
-          Icon(
-            Icons.people_alt_outlined,
-            size: 14 * scale,
-          ),
-          SizedBox(width: 10 * scale),
-          Text(
-            '$count',
-            style: TextStyle(
-                fontSize: 9 * scale,
-                color: isFrequent ? Colors.black87 : theme.colorScheme.outline,
-                fontWeight: FontWeight.w900),
-          ),
-        ]));
-  }
-}
-
-class _Badge extends StatelessWidget {
-  final String text;
-  final double scale;
-
-  const _Badge({required this.text, required this.scale});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-      decoration: BoxDecoration(
-          color: colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(8)),
-      child: Text(
-        text,
-        style: TextStyle(
-            fontSize: 10 * scale,
-            color: colorScheme.onSecondaryContainer,
-            fontWeight: FontWeight.w900),
-      ),
+    return AppBadge(
+      label: '$count',
+      color: isFrequent ? Colors.orange.shade700 : theme.colorScheme.outline,
+      icon: Icons.people_alt_outlined,
+      scale: scale,
     );
   }
 }
@@ -599,18 +553,11 @@ class MatchHistoryHeader extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          FilledButton.tonal(
+          AppActionButton(
+            label: 'キャンセル',
             onPressed: onCancelSwap,
-            style: FilledButton.styleFrom(
-              backgroundColor: colorScheme.onPrimary,
-              foregroundColor: colorScheme.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: Text('キャンセル',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: colorScheme.primary)),
+            isPrimary: false,
+            color: colorScheme.onPrimary,
           ),
         ],
       );
@@ -744,7 +691,9 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               children: MatchType.values.map((type) {
                 final color = _getMatchTypeColor(context, type);
                 return ActionChip(
-                  label: Text(type.displayName),
+                  label: Text(type.displayName,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w900, fontSize: 16)),
                   onPressed: () => setState(() => types.add(type)),
                   avatar: Icon(Icons.add, size: 20, color: color),
                   side: BorderSide(color: color, width: 2.5),
@@ -769,7 +718,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                   final color = _getMatchTypeColor(context, e.value);
                   return InputChip(
                     label: Text(e.value.displayName,
-                        style: const TextStyle(color: Colors.white)),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16)),
                     onDeleted: () => setState(() => types.removeAt(e.key)),
                     deleteIconColor: Colors.white,
                     backgroundColor: color,
@@ -794,14 +746,17 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         ),
       ),
       actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('キャンセル')),
-        ElevatedButton(
+        AppActionButton(
+          label: 'キャンセル',
+          onPressed: () => Navigator.pop(context),
+          isPrimary: false,
+        ),
+        AppActionButton(
+          label: 'スタート',
           onPressed: !res.canGenerate || types.isEmpty
               ? null
               : () => Navigator.pop(context, types),
-          child: const Text('スタート'),
+          isPrimary: true,
         ),
       ],
     );
