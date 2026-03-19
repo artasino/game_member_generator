@@ -150,7 +150,7 @@ class PlayerChip extends StatelessWidget {
                           player.name,
                           style: TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w900, // 統一
                             color: player.isActive
                                 ? Colors.black87
                                 : Colors.black54,
@@ -188,7 +188,7 @@ class PlayerChip extends StatelessWidget {
                                   ? Colors.black54
                                   : Colors.grey.shade600,
                               fontWeight: player.isActive
-                                  ? FontWeight.w500
+                                  ? FontWeight.w900
                                   : FontWeight.normal,
                             ),
                           ),

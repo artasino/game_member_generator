@@ -122,10 +122,10 @@ class GameCard extends StatelessWidget {
     final typeColor = _getMatchTypeColor(context, game.type);
 
     return Card(
-      elevation: 6,
+      elevation: 4,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20 * scale),
+        borderRadius: BorderRadius.circular(16 * scale),
         side: BorderSide(color: colorScheme.outlineVariant, width: 2),
       ),
       color: colorScheme.surface,
@@ -146,6 +146,7 @@ class GameCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
+                    SizedBox(width: 8 * scale),
                     CircleAvatar(
                       radius: 16 * scale,
                       backgroundColor: colorScheme.primary,
@@ -157,10 +158,6 @@ class GameCard extends StatelessWidget {
                             fontWeight: FontWeight.w900),
                       ),
                     ),
-                    SizedBox(width: 8 * scale),
-                    Text('COURT',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                            fontSize: 18 * scale, fontWeight: FontWeight.w900)),
                   ],
                 ),
                 Container(
@@ -333,7 +330,7 @@ class PlayerTag extends StatelessWidget {
             color: isSelected
                 ? colorScheme.primary
                 : genderColor.withValues(alpha: 0.4),
-            width: isSelected ? 4.0 : 2.0,
+            width: isSelected ? 3.0 : 1.5,
           ),
         ),
         child: FittedBox(
@@ -473,12 +470,12 @@ class RestingChip extends StatelessWidget {
           color: isSelected
               ? theme.colorScheme.primaryContainer
               : c.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8 * scale),
+          borderRadius: BorderRadius.circular(12 * scale),
           border: Border.all(
               color: isSelected
                   ? theme.colorScheme.primary
                   : c.withValues(alpha: 0.3),
-              width: 1.2),
+              width: 1.5),
         ),
         child: Text(
           player.name,
@@ -511,14 +508,14 @@ class PairInfoLabel extends StatelessWidget {
           color: isFrequent
               ? Colors.orange.shade200
               : theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(6 * scale),
+          borderRadius: BorderRadius.circular(8 * scale),
         ),
         child: Row(children: [
           Icon(
             Icons.people_alt_outlined,
             size: 14 * scale,
           ),
-          SizedBox(width: 4 * scale),
+          SizedBox(width: 10 * scale),
           Text(
             '$count',
             style: TextStyle(
@@ -640,7 +637,7 @@ class MatchHistoryHeader extends StatelessWidget {
               Text(
                 'HISTORY: $total',
                 style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold, color: colorScheme.outline),
+                    fontWeight: FontWeight.w900, color: colorScheme.outline),
               ),
             ],
           ),
@@ -747,9 +744,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               children: MatchType.values.map((type) {
                 final color = _getMatchTypeColor(context, type);
                 return ActionChip(
-                  label: Text(type.displayName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w900, fontSize: 16)),
+                  label: Text(type.displayName),
                   onPressed: () => setState(() => types.add(type)),
                   avatar: Icon(Icons.add, size: 20, color: color),
                   side: BorderSide(color: color, width: 2.5),
@@ -774,10 +769,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                   final color = _getMatchTypeColor(context, e.value);
                   return InputChip(
                     label: Text(e.value.displayName,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16)),
+                        style: const TextStyle(color: Colors.white)),
                     onDeleted: () => setState(() => types.removeAt(e.key)),
                     deleteIconColor: Colors.white,
                     backgroundColor: color,
@@ -804,14 +796,12 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('キャンセル',
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18))),
-        FilledButton(
+            child: const Text('キャンセル')),
+        ElevatedButton(
           onPressed: !res.canGenerate || types.isEmpty
               ? null
               : () => Navigator.pop(context, types),
-          child: const Text('スタート',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+          child: const Text('スタート'),
         ),
       ],
     );
