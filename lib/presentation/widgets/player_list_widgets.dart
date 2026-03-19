@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player_with_stats.dart';
+import 'common_widgets.dart';
+
+export 'common_widgets.dart';
 
 class SectionHeader extends StatelessWidget {
   final String title;
@@ -16,24 +19,7 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        Text(
-          subtitle,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: Colors.grey.shade600,
-          ),
-        ),
-      ],
-    );
+    return AppSectionHeader(title: title, subtitle: subtitle);
   }
 }
 
@@ -78,6 +64,7 @@ class PlayerChip extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final bool showCheckbox;
+  final bool showStats;
 
   const PlayerChip({
     super.key,
@@ -85,14 +72,14 @@ class PlayerChip extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     this.showCheckbox = false,
+    this.showStats = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final player = playerWithStats.player;
     final stats = playerWithStats.stats;
-    final genderColor =
-        player.gender == Gender.male ? Colors.blue : Colors.pink;
+    final genderColor = GenderTheme.getColor(player.gender);
 
     final sameGenderCount = player.gender == Gender.male
         ? (stats.typeCounts[MatchType.menDoubles] ?? 0)
@@ -148,7 +135,7 @@ class PlayerChip extends StatelessWidget {
                           player.name,
                           style: TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w900,
                             color: player.isActive
                                 ? Colors.black87
                                 : Colors.black54,
@@ -161,80 +148,43 @@ class PlayerChip extends StatelessWidget {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _CountBadge(
-                          label: '出${stats.totalMatches}',
-                          color: Colors.indigo,
-                          isActive: player.isActive,
-                        ),
-                        const SizedBox(width: 4),
-                        _CountBadge(
-                          label: '休${stats.totalRests}',
-                          color: Colors.deepOrange,
-                          isActive: player.isActive,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${player.gender == Gender.male ? "男" : "女"}$sameGenderCount 混$mxCount',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: player.isActive
-                                ? Colors.black54
-                                : Colors.grey.shade600,
-                            fontWeight: player.isActive
-                                ? FontWeight.w500
-                                : FontWeight.normal,
+                    if (showStats) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AppBadge(
+                            label: '出${stats.totalMatches}',
+                            color: Colors.indigo,
+                            scale: 1.0,
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(width: 4),
+                          AppBadge(
+                            label: '休${stats.totalRests}',
+                            color: Colors.deepOrange,
+                            scale: 1.0,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${player.gender == Gender.male ? "男" : "女"}$sameGenderCount 混$mxCount',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: player.isActive
+                                  ? Colors.black54
+                                  : Colors.grey.shade600,
+                              fontWeight: player.isActive
+                                  ? FontWeight.w900
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ]
                   ],
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CountBadge extends StatelessWidget {
-  final String label;
-  final Color color;
-  final bool isActive;
-
-  const _CountBadge({
-    required this.label,
-    required this.color,
-    required this.isActive,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-      decoration: BoxDecoration(
-        color: isActive
-            ? color.withValues(alpha: 0.15)
-            : color.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: isActive
-              ? color.withValues(alpha: 0.4)
-              : color.withValues(alpha: 0.2),
-          width: 0.5,
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w900,
-          color: isActive ? color : color.withValues(alpha: 0.6),
         ),
       ),
     );

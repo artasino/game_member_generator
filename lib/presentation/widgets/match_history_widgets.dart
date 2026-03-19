@@ -8,6 +8,7 @@ import '../../domain/entities/player_stats_pool.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/entities/team.dart';
 import '../notifiers/session_notifier.dart';
+import 'common_widgets.dart';
 
 /// 試合形式に応じたテーマカラーを取得
 Color _getMatchTypeColor(BuildContext context, MatchType type) {
@@ -122,10 +123,10 @@ class GameCard extends StatelessWidget {
     final typeColor = _getMatchTypeColor(context, game.type);
 
     return Card(
-      elevation: 6,
+      elevation: 4,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20 * scale),
+        borderRadius: BorderRadius.circular(16 * scale),
         side: BorderSide(color: colorScheme.outlineVariant, width: 2),
       ),
       color: colorScheme.surface,
@@ -146,6 +147,7 @@ class GameCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
+                    SizedBox(width: 8 * scale),
                     CircleAvatar(
                       radius: 16 * scale,
                       backgroundColor: colorScheme.primary,
@@ -157,23 +159,13 @@ class GameCard extends StatelessWidget {
                             fontWeight: FontWeight.w900),
                       ),
                     ),
-                    SizedBox(width: 8 * scale),
-                    Text('COURT',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                            fontSize: 18 * scale, fontWeight: FontWeight.w900)),
                   ],
                 ),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 10 * scale, vertical: 2 * scale),
-                  decoration: BoxDecoration(
-                      color: typeColor,
-                      borderRadius: BorderRadius.circular(100)),
-                  child: Text(game.type.displayName,
-                      style: TextStyle(
-                          fontSize: 12 * scale,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white)),
+                AppBadge(
+                  label: game.type.displayName,
+                  color: typeColor,
+                  isFilled: true,
+                  scale: scale,
                 ),
               ],
             ),
@@ -309,13 +301,12 @@ class PlayerTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final genderColor = player.gender == Gender.male
-        ? Colors.blue.shade700
-        : Colors.pink.shade600;
+    final genderColor = GenderTheme.getColor(player.gender);
 
     return InkWell(
       onTap: onTap,
       onLongPress: onLongPress,
+      onDoubleTap: onLongPress,
       borderRadius: BorderRadius.circular(12 * scale),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -332,7 +323,7 @@ class PlayerTag extends StatelessWidget {
             color: isSelected
                 ? colorScheme.primary
                 : genderColor.withValues(alpha: 0.4),
-            width: isSelected ? 4.0 : 2.0,
+            width: isSelected ? 3.0 : 1.5,
           ),
         ),
         child: FittedBox(
@@ -372,7 +363,7 @@ class RestingContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final rs = (scale * 0.75).clamp(0.8, 1.2);
+    final rs = scale.clamp(0.8, 1.2);
 
     // 休憩中メンバーを男女でソート
     final sortedResting = List<Player>.from(session.restingPlayers)
@@ -407,7 +398,12 @@ class RestingContainer extends StatelessWidget {
                       color: theme.colorScheme.secondary,
                       fontSize: 12 * rs)),
               const Spacer(),
-              _Badge(text: '${session.restingPlayers.length} 名', scale: rs),
+              AppBadge(
+                label: '${session.restingPlayers.length} 名',
+                color: theme.colorScheme.secondary,
+                isFilled: true,
+                scale: rs,
+              ),
             ],
           ),
           SizedBox(height: 6 * rs),
@@ -422,6 +418,7 @@ class RestingContainer extends StatelessWidget {
                           isSelected: selectedPlayerId == p.id,
                           onTap: () => onPlayerTap(p),
                           onLongPress: () => onPlayerLongPress(p),
+                          onDoubleTap: () => onPlayerLongPress(p),
                           scale: rs,
                         ),
                       ))
@@ -439,6 +436,7 @@ class RestingChip extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback onDoubleTap;
   final double scale;
 
   const RestingChip({
@@ -447,19 +445,19 @@ class RestingChip extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     required this.onLongPress,
+    required this.onDoubleTap,
     required this.scale,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final c = player.gender == Gender.male
-        ? Colors.blue.shade700
-        : Colors.pink.shade600;
+    final genderColor = GenderTheme.getColor(player.gender);
 
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
+      onDoubleTap: onDoubleTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding:
@@ -467,18 +465,18 @@ class RestingChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
-              : c.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8 * scale),
+              : genderColor.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12 * scale),
           border: Border.all(
               color: isSelected
                   ? theme.colorScheme.primary
-                  : c.withValues(alpha: 0.3),
-              width: 1.2),
+                  : genderColor.withValues(alpha: 0.3),
+              width: 1.5),
         ),
         child: Text(
           player.name,
           style: TextStyle(
-              fontSize: 14 * scale,
+              fontSize: 18 * scale,
               color: isSelected
                   ? theme.colorScheme.onPrimaryContainer
                   : Colors.black87,
@@ -499,46 +497,11 @@ class PairInfoLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isFrequent = count > 1;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 1 * scale),
-      decoration: BoxDecoration(
-        color: isFrequent
-            ? Colors.orange.shade900
-            : theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(6 * scale),
-      ),
-      child: Text(
-        'P: $count',
-        style: TextStyle(
-            fontSize: 9 * scale,
-            color: isFrequent ? Colors.white : theme.colorScheme.outline,
-            fontWeight: FontWeight.w900),
-      ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  final String text;
-  final double scale;
-
-  const _Badge({required this.text, required this.scale});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-      decoration: BoxDecoration(
-          color: colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(8)),
-      child: Text(
-        text,
-        style: TextStyle(
-            fontSize: 10 * scale,
-            color: colorScheme.onSecondaryContainer,
-            fontWeight: FontWeight.w900),
-      ),
+    return AppBadge(
+      label: '$count',
+      color: isFrequent ? Colors.orange.shade700 : theme.colorScheme.outline,
+      icon: Icons.people_alt_outlined,
+      scale: scale,
     );
   }
 }
@@ -573,7 +536,7 @@ class MatchHistoryHeader extends StatelessWidget {
           style: TextStyle(
               fontWeight: FontWeight.w900,
               letterSpacing: 2.0,
-              color: colorScheme.onSurface));
+              color: colorScheme.onPrimary));
     }
 
     if (isSwapping) {
@@ -590,30 +553,31 @@ class MatchHistoryHeader extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          FilledButton.tonal(
+          AppActionButton(
+            label: 'キャンセル',
             onPressed: onCancelSwap,
-            style: FilledButton.styleFrom(
-              backgroundColor: colorScheme.onPrimary,
-              foregroundColor: colorScheme.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: Text('CANCEL',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: colorScheme.primary)),
+            isPrimary: false,
+            color: colorScheme.onPrimary,
           ),
         ],
       );
     }
 
+    final bool canGoBack = currentIndex! > 0;
+    final bool canGoForward = currentIndex! < total - 1;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
-          icon: const Icon(Icons.chevron_left_rounded, size: 56),
-          onPressed:
-              currentIndex! > 0 ? () => onIndexChange(currentIndex! - 1) : null,
+          icon: Icon(
+            Icons.chevron_left_rounded,
+            size: 56,
+            color: canGoBack
+                ? colorScheme.onPrimary
+                : colorScheme.onPrimary.withValues(alpha: 0.3),
+          ),
+          onPressed: canGoBack ? () => onIndexChange(currentIndex! - 1) : null,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -622,22 +586,32 @@ class MatchHistoryHeader extends StatelessWidget {
             children: [
               Text(
                 'MATCH ${session!.index}',
-                style: theme.textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                  color: colorScheme.onPrimary,
+                ),
               ),
               Text(
                 'HISTORY: $total',
                 style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold, color: colorScheme.outline),
+                  fontWeight: FontWeight.w900,
+                  color: colorScheme.onPrimary.withValues(alpha: 0.8),
+                ),
               ),
             ],
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.chevron_right_rounded, size: 56),
-          onPressed: currentIndex! < total - 1
-              ? () => onIndexChange(currentIndex! + 1)
-              : null,
+          icon: Icon(
+            Icons.chevron_right_rounded,
+            size: 56,
+            color: canGoForward
+                ? colorScheme.onPrimary
+                : colorScheme.onPrimary.withValues(alpha: 0.3),
+          ),
+          onPressed:
+              canGoForward ? () => onIndexChange(currentIndex! + 1) : null,
         ),
       ],
     );
@@ -790,16 +764,17 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         ),
       ),
       actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL',
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18))),
-        FilledButton(
+        AppActionButton(
+          label: 'キャンセル',
+          onPressed: () => Navigator.pop(context),
+          isPrimary: false,
+        ),
+        AppActionButton(
+          label: 'スタート',
           onPressed: !res.canGenerate || types.isEmpty
               ? null
               : () => Navigator.pop(context, types),
-          child: const Text('START',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+          isPrimary: true,
         ),
       ],
     );

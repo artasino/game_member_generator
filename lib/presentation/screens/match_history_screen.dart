@@ -75,9 +75,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             centerTitle: true,
             toolbarHeight: 56,
             backgroundColor:
-                isSwapping ? colorScheme.primary : colorScheme.surface,
+                isSwapping ? Colors.orange.shade700 : colorScheme.primary,
             foregroundColor:
-                isSwapping ? colorScheme.onPrimary : colorScheme.onSurface,
+                isSwapping ? colorScheme.onPrimary : colorScheme.onPrimary,
             title: MatchHistoryHeader(
               isSwapping: isSwapping,
               session: session,
@@ -121,7 +121,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               style: TextStyle(
                   color: colorScheme.outline,
                   fontSize: 18,
-                  fontWeight: FontWeight.bold),
+                  fontWeight: FontWeight.w900), // 統一
             ),
           ],
         ),
@@ -149,7 +149,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                   ),
                 ),
               ),
-              // 休憩エリア：常に下部、画面の約2割程度を想定した高さに収まるように設計（スクロール可能）
               if (session.restingPlayers.isNotEmpty)
                 RestingContainer(
                   session: session,
@@ -165,7 +164,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
       );
 
   Widget _buildFABs(Session? session, ColorScheme colorScheme) => Padding(
-        padding: const EdgeInsets.only(bottom: 80), // 休憩エリアと重ならないように調整
+        padding: const EdgeInsets.only(bottom: 80),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -245,13 +244,16 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             children: [
               Icon(Icons.error_outline, color: Colors.red),
               SizedBox(width: 12),
-              Text('エラー')
+              Text('エラー', style: TextStyle(fontWeight: FontWeight.w900))
             ],
           ),
           content: Text(m),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx), child: const Text('OK'))
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w900, fontSize: 18)))
           ],
         ),
       );
@@ -259,12 +261,15 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   void _showClearConfirm(BuildContext context) => showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('履歴をクリア'),
+          title: const Text('履歴をクリア',
+              style: TextStyle(fontWeight: FontWeight.w900)),
           content: const Text('これまでの全ての試合履歴が削除されます。よろしいですか？'),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('キャンセル')),
+                child: const Text('キャンセル',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w900, fontSize: 18))),
             TextButton(
               onPressed: () async {
                 Navigator.pop(ctx);
@@ -275,7 +280,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                 'クリアする',
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.error,
-                    fontWeight: FontWeight.bold),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18),
               ),
             ),
           ],
