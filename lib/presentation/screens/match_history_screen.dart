@@ -75,9 +75,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             centerTitle: true,
             toolbarHeight: 56,
             backgroundColor:
-                isSwapping ? colorScheme.primary : colorScheme.surface,
+                isSwapping ? Colors.orange.shade700 : colorScheme.primary,
             foregroundColor:
-                isSwapping ? colorScheme.onPrimary : colorScheme.onSurface,
+                isSwapping ? colorScheme.onPrimary : colorScheme.onPrimary,
             title: MatchHistoryHeader(
               isSwapping: isSwapping,
               session: session,

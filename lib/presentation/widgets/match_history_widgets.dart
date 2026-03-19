@@ -397,7 +397,7 @@ class RestingContainer extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                       color: theme.colorScheme.secondary,
                       fontSize: 12 * rs)),
-              const SizedBox(width: 6),
+              const Spacer(),
               AppBadge(
                 label: '${session.restingPlayers.length} 名',
                 color: theme.colorScheme.secondary,
@@ -536,7 +536,7 @@ class MatchHistoryHeader extends StatelessWidget {
           style: TextStyle(
               fontWeight: FontWeight.w900,
               letterSpacing: 2.0,
-              color: colorScheme.onSurface));
+              color: colorScheme.onPrimary));
     }
 
     if (isSwapping) {
@@ -563,13 +563,21 @@ class MatchHistoryHeader extends StatelessWidget {
       );
     }
 
+    final bool canGoBack = currentIndex! > 0;
+    final bool canGoForward = currentIndex! < total - 1;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
-          icon: const Icon(Icons.chevron_left_rounded, size: 56),
-          onPressed:
-              currentIndex! > 0 ? () => onIndexChange(currentIndex! - 1) : null,
+          icon: Icon(
+            Icons.chevron_left_rounded,
+            size: 56,
+            color: canGoBack
+                ? colorScheme.onPrimary
+                : colorScheme.onPrimary.withValues(alpha: 0.3),
+          ),
+          onPressed: canGoBack ? () => onIndexChange(currentIndex! - 1) : null,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -578,22 +586,32 @@ class MatchHistoryHeader extends StatelessWidget {
             children: [
               Text(
                 'MATCH ${session!.index}',
-                style: theme.textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                  color: colorScheme.onPrimary,
+                ),
               ),
               Text(
                 'HISTORY: $total',
                 style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w900, color: colorScheme.outline),
+                  fontWeight: FontWeight.w900,
+                  color: colorScheme.onPrimary.withValues(alpha: 0.8),
+                ),
               ),
             ],
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.chevron_right_rounded, size: 56),
-          onPressed: currentIndex! < total - 1
-              ? () => onIndexChange(currentIndex! + 1)
-              : null,
+          icon: Icon(
+            Icons.chevron_right_rounded,
+            size: 56,
+            color: canGoForward
+                ? colorScheme.onPrimary
+                : colorScheme.onPrimary.withValues(alpha: 0.3),
+          ),
+          onPressed:
+              canGoForward ? () => onIndexChange(currentIndex! + 1) : null,
         ),
       ],
     );
