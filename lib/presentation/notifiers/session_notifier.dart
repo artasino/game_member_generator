@@ -96,6 +96,7 @@ class SessionNotifier extends ChangeNotifier {
     final Map<String, Map<MatchType, int>> typeBreakdowns = {};
     final Map<String, Map<String, int>> partnerBreakdowns = {};
     final Map<String, Map<String, int>> opponentBreakdowns = {};
+    final Map<String, MatchType?> lastMatchTypes = {};
 
     final allPlayers = await matchMakingService.playerRepository.getAll();
     for (final player in allPlayers) {
@@ -105,6 +106,27 @@ class SessionNotifier extends ChangeNotifier {
       typeBreakdowns[id] = {};
       partnerBreakdowns[id] = {};
       opponentBreakdowns[id] = {};
+      lastMatchTypes[id] = null;
+    }
+
+    // 最後に出場した試合のタイプを特定するための計算
+    for (final player in allPlayers) {
+      MatchType? foundType;
+      // 履歴を新しい順に見ていき、そのプレイヤーが最初に出場していた試合を探す
+      for (final session in _sessions.reversed) {
+        for (final game in session.games) {
+          final isPlaying = game.teamA.player1.id == player.id ||
+              game.teamA.player2.id == player.id ||
+              game.teamB.player1.id == player.id ||
+              game.teamB.player2.id == player.id;
+          if (isPlaying) {
+            foundType = game.type;
+            break;
+          }
+        }
+        if (foundType != null) break;
+      }
+      lastMatchTypes[player.id] = foundType;
     }
 
     for (final session in _sessions) {
@@ -114,7 +136,6 @@ class SessionNotifier extends ChangeNotifier {
 
         void record(Player p, Player partner, List<Player> opponents) {
           final id = p.id;
-          // 削除済みプレイヤーの場合はスキップ
           if (!typeBreakdowns.containsKey(id)) return;
 
           totals[id] = (totals[id] ?? 0) + 1;
@@ -163,6 +184,7 @@ class SessionNotifier extends ChangeNotifier {
           restedLastTime: _sessions.isNotEmpty &&
               _sessions.last.restingPlayers.any((rp) => rp.id == p.id),
           sessionsSinceLastRest: sessionsSinceLastRest[p.id] ?? 0,
+          lastMatchType: lastMatchTypes[p.id],
         ),
       );
     }).toList();

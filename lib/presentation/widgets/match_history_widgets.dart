@@ -397,7 +397,7 @@ class RestingContainer extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                       color: theme.colorScheme.secondary,
                       fontSize: 12 * rs)),
-              const Spacer(),
+              SizedBox(width: 10 * rs),
               AppBadge(
                 label: '${session.restingPlayers.length} 名',
                 color: theme.colorScheme.secondary,
