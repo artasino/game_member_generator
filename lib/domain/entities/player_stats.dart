@@ -23,6 +23,9 @@ class PlayerStats {
   /// 最後にお休みしてから何試合経過したか (0なら直前がお休み)
   final int sessionsSinceLastRest;
 
+  /// 最後に出場した試合のタイプ（一度も出場していない場合はnull）
+  final MatchType? lastMatchType;
+
   PlayerStats({
     required this.totalMatches,
     required this.totalRests,
@@ -31,6 +34,7 @@ class PlayerStats {
     required this.opponentCounts,
     this.restedLastTime = false,
     this.sessionsSinceLastRest = 99,
+    this.lastMatchType,
   });
 
   /// 指定した相手と同じコートにいた（味方または敵）合計回数を返す
