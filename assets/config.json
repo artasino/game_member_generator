@@ -1,3 +1,4 @@
 {
-  "loopCount": 2000
+  "loopCount": 2000,
+  "autoRecommendEnabled": false
 }
