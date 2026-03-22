@@ -90,14 +90,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             actions: isSwapping
                 ? null
                 : [
-                    if (session != null)
-                      IconButton(
-                        tooltip: '履歴をクリア',
-                        icon:
-                            const Icon(Icons.delete_outline_rounded, size: 22),
-                        onPressed: () => _showClearConfirm(context),
-                      ),
-                    const SizedBox(width: 4),
+                    _buildPopupMenu(),
                   ],
           ),
           body: session == null
@@ -107,6 +100,24 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         );
       },
     );
+  }
+
+  Widget _buildPopupMenu() {
+    return PopupMenuButton<String>(
+        onSelected: (value) async {
+          if (value == 'clear_history') {
+            await _showClearConfirm(context);
+          }
+        },
+        itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'clear_history',
+                child: ListTile(
+                  leading: Icon(Icons.delete_outline_rounded),
+                  title: Text('履歴をクリア'),
+                ),
+              ),
+            ]);
   }
 
   Widget _buildEmpty(ColorScheme colorScheme) => Center(
@@ -193,8 +204,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                   : Icons.add_rounded),
               label: Text(
                 session == null ? '試合を開始' : '次の試合へ',
-                style: const TextStyle(
-                    fontWeight: FontWeight.w900, letterSpacing: 0.8),
+                style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
           ],
@@ -258,7 +268,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         ),
       );
 
-  void _showClearConfirm(BuildContext context) => showDialog(
+  Future<void> _showClearConfirm(BuildContext context) => showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('履歴をクリア',
@@ -273,8 +283,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             TextButton(
               onPressed: () async {
                 Navigator.pop(ctx);
-                await widget.notifier.clearHistory();
-                _updateIndexSafely();
+                await _showFinalClearConfirm(context);
               },
               child: Text(
                 'クリアする',
@@ -282,6 +291,50 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                     color: Theme.of(context).colorScheme.error,
                     fontWeight: FontWeight.w900,
                     fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Future<void> _showFinalClearConfirm(BuildContext context) => showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded,
+                  color: Theme.of(context).colorScheme.error),
+              const SizedBox(width: 12),
+              const Text('最終確認', style: TextStyle(fontWeight: FontWeight.w900)),
+            ],
+          ),
+          content: const Text(
+            '本当に全ての履歴を削除してよろしいですか？',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('やめる',
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
+              ),
+              onPressed: () async {
+                Navigator.pop(ctx); // ダイアログを閉じる
+                await widget.notifier.clearHistory();
+                _updateIndexSafely();
+              },
+              child: const Text(
+                '完全に削除する',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
               ),
             ),
           ],

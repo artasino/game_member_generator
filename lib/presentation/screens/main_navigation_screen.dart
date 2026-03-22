@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../notifiers/player_notifier.dart';
 import '../notifiers/session_notifier.dart';
-import 'player_list_screen.dart';
 import 'match_history_screen.dart';
+import 'player_list_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final PlayerNotifier playerNotifier;
@@ -29,7 +30,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     _screens = [
       PlayerListScreen(
         notifier: widget.playerNotifier,
-        sessionNotifier: widget.sessionNotifier, // ここで渡す
+        sessionNotifier: widget.sessionNotifier,
       ),
       MatchHistoryScreen(notifier: widget.sessionNotifier),
     ];
