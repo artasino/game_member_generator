@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:game_member_generator/config/app_config.dart';
 
 import '../../domain/entities/game.dart';
 import '../../domain/entities/gender.dart';
@@ -637,6 +638,7 @@ class MatchSettingsDialog extends StatefulWidget {
 class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
   List<MatchType> types = [];
   bool loading = true;
+  bool isAutoRecommendEnabled = false; // デフォルトは自動選択
 
   @override
   void initState() {
@@ -650,6 +652,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     setState(() {
       if (widget.isRecalc && widget.currentSession != null) {
         types = widget.currentSession!.games.map((g) => g.type).toList();
+        isAutoRecommendEnabled = false;
       } else {
         types = List.from(s.matchTypes);
       }
@@ -701,54 +704,92 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
             const SizedBox(height: 20),
             const Divider(),
             const SizedBox(height: 12),
-            const Text('Select match types for each court'),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: MatchType.values.map((type) {
-                final color = _getMatchTypeColor(context, type);
-                return ActionChip(
-                  label: Text(type.displayName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w900, fontSize: 16)),
-                  onPressed: () => setState(() => types.add(type)),
-                  avatar: Icon(Icons.add, size: 20, color: color),
-                  side: BorderSide(color: color, width: 2.5),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                );
-              }).toList(),
-            ),
-            const Divider(height: 48, thickness: 2.5),
-            if (types.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Text('EMPTY',
-                    style: TextStyle(
-                        color: Colors.grey, fontWeight: FontWeight.w900)),
-              )
-            else
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: types.asMap().entries.map((e) {
-                  final color = _getMatchTypeColor(context, e.value);
-                  return InputChip(
-                    label: Text(e.value.displayName,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16)),
-                    onDeleted: () => setState(() => types.removeAt(e.key)),
-                    deleteIconColor: Colors.white,
-                    backgroundColor: color,
-                    side: BorderSide.none,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  );
-                }).toList(),
+            if (AppConfig.autoRecommendEnabled) ...[
+              // 自動・手動切り替え
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(
+                      value: true,
+                      label: Text('自動選択'),
+                      icon: Icon(Icons.auto_awesome)),
+                  ButtonSegment(
+                      value: false,
+                      label: Text('手動選択'),
+                      icon: Icon(Icons.touch_app)),
+                ],
+                selected: {isAutoRecommendEnabled},
+                onSelectionChanged: (Set<bool> newSelection) {
+                  setState(() {
+                    isAutoRecommendEnabled = newSelection.first;
+                  });
+                },
               ),
+              const SizedBox(height: 24),
+            ],
+
+            AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: isAutoRecommendEnabled ? 0.5 : 1.0,
+              child: IgnorePointer(
+                ignoring: isAutoRecommendEnabled,
+                child: Column(
+                  children: [
+                    const Text('Select match types for each court',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: MatchType.values.map((type) {
+                        final color = _getMatchTypeColor(context, type);
+                        return ActionChip(
+                          label: Text(type.displayName,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w900, fontSize: 16)),
+                          onPressed: () => setState(() => types.add(type)),
+                          avatar: Icon(Icons.add, size: 20, color: color),
+                          side: BorderSide(color: color, width: 2.5),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                        );
+                      }).toList(),
+                    ),
+                    const Divider(height: 48, thickness: 2.5),
+                    if (types.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Text('EMPTY',
+                            style: TextStyle(
+                                color: Colors.grey,
+                                fontWeight: FontWeight.w900)),
+                      )
+                    else
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: types.asMap().entries.map((e) {
+                          final color = _getMatchTypeColor(context, e.value);
+                          return InputChip(
+                            label: Text(e.value.displayName,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16)),
+                            onDeleted: () =>
+                                setState(() => types.removeAt(e.key)),
+                            deleteIconColor: Colors.white,
+                            backgroundColor: color,
+                            side: BorderSide.none,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                          );
+                        }).toList(),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
             if (!res.canGenerate && types.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 24),
