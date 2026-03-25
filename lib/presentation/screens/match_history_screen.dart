@@ -141,6 +141,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   Widget _buildContent(Session session) => LayoutBuilder(
         builder: (context, constraints) {
           final scale = constraints.calculateMatchScale(session.games.length);
+          final scopedPool =
+              widget.notifier.getPlayerStatsPoolUpToSession(session.index);
 
           return Column(
             children: [
@@ -150,7 +152,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                   child: GamesArea(
                     session: session,
-                    pool: widget.notifier.playerStatsPool,
+                    pool: scopedPool,
                     scale: scale,
                     screenWidth: constraints.maxWidth,
                     selectedPlayer: _selectedPlayer,

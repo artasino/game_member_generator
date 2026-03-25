@@ -134,6 +134,57 @@ void main() {
       expect(stats1.opponentCounts['3'], 1);
       expect(stats1.opponentCounts['4'], 1);
     });
+
+    test('指定セッション時点までの統計を取得できること', () async {
+      const p1 =
+          Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);
+      const p2 =
+          Player(id: '2', name: 'P2', yomigana: 'p2', gender: Gender.male);
+      const p3 =
+          Player(id: '3', name: 'P3', yomigana: 'p3', gender: Gender.male);
+      const p4 =
+          Player(id: '4', name: 'P4', yomigana: 'p4', gender: Gender.male);
+      const p5 =
+          Player(id: '5', name: 'P5', yomigana: 'p5', gender: Gender.male);
+
+      playerRepo.players = [p1, p2, p3, p4, p5];
+      sessionRepo.sessions = [
+        Session(
+          1,
+          [Game(MatchType.menDoubles, Team(p1, p3), Team(p2, p4))],
+          restingPlayers: [p5],
+        ),
+        Session(
+          2,
+          [Game(MatchType.menDoubles, Team(p1, p2), Team(p3, p4))],
+          restingPlayers: [p5],
+        ),
+      ];
+
+      final service = MatchMakingService(FixedMatchAlgorithm(), playerRepo);
+      final scopedNotifier = SessionNotifier(
+        sessionRepository: sessionRepo,
+        courtSettingsRepository: courtRepo,
+        matchMakingService: service,
+      );
+      await Future<void>.delayed(Duration.zero);
+      await scopedNotifier.onPlayersUpdated();
+
+      final upTo1 = scopedNotifier.getPlayerStatsPoolUpToSession(1);
+      final upTo2 = scopedNotifier.getPlayerStatsPoolUpToSession(2);
+
+      final p1StatsUpTo1 =
+          upTo1.all.firstWhere((p) => p.player.id == '1').stats;
+      final p1StatsUpTo2 =
+          upTo2.all.firstWhere((p) => p.player.id == '1').stats;
+      final p5StatsUpTo1 =
+          upTo1.all.firstWhere((p) => p.player.id == '5').stats;
+
+      expect(p1StatsUpTo1.partnerCounts['2'], isNull);
+      expect(p1StatsUpTo2.partnerCounts['2'], 1);
+      expect(p5StatsUpTo1.restedLastTime, isTrue);
+      expect(p5StatsUpTo1.sessionsSinceLastRest, 0);
+    });
   });
 
   group('SessionNotifier - メンバー入れ替え', () {
