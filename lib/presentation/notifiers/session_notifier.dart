@@ -33,6 +33,7 @@ class SessionNotifier extends ChangeNotifier {
   List<Session> get sessions => _sessions;
 
   PlayerStatsPool _cachedPool = PlayerStatsPool([]);
+  List<Player> _allPlayersCache = [];
 
   /// 全プレイヤーの出場統計プールを返す
   PlayerStatsPool get playerStatsPool => _cachedPool;
@@ -91,6 +92,24 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   Future<void> _updateStats() async {
+    final allPlayers = await matchMakingService.playerRepository.getAll();
+    _allPlayersCache = allPlayers;
+    _cachedPool = _buildPoolForSessions(allPlayers, _sessions);
+  }
+
+  /// 指定セッション(含む)までの履歴のみを使って統計プールを作る
+  ///
+  /// MatchHistory で過去セッションを閲覧したときに、
+  /// その時点までのペア回数/休み連続を表示するために使用する。
+  PlayerStatsPool getPlayerStatsPoolUpToSession(int sessionIndex) {
+    final scopedSessions = _sessions
+        .where((session) => session.index <= sessionIndex)
+        .toList(growable: false);
+    return _buildPoolForSessions(_allPlayersCache, scopedSessions);
+  }
+
+  PlayerStatsPool _buildPoolForSessions(
+      List<Player> allPlayers, List<Session> sessionsForStats) {
     final Map<String, int> totals = {};
     final Map<String, int> rests = {};
     final Map<String, Map<MatchType, int>> typeBreakdowns = {};
@@ -98,7 +117,6 @@ class SessionNotifier extends ChangeNotifier {
     final Map<String, Map<String, int>> opponentBreakdowns = {};
     final Map<String, MatchType?> lastMatchTypes = {};
 
-    final allPlayers = await matchMakingService.playerRepository.getAll();
     for (final player in allPlayers) {
       final id = player.id;
       totals[id] = 0;
@@ -113,7 +131,7 @@ class SessionNotifier extends ChangeNotifier {
     for (final player in allPlayers) {
       MatchType? foundType;
       // 履歴を新しい順に見ていき、そのプレイヤーが最初に出場していた試合を探す
-      for (final session in _sessions.reversed) {
+      for (final session in sessionsForStats.reversed) {
         for (final game in session.games) {
           final isPlaying = game.teamA.player1.id == player.id ||
               game.teamA.player2.id == player.id ||
@@ -129,7 +147,7 @@ class SessionNotifier extends ChangeNotifier {
       lastMatchTypes[player.id] = foundType;
     }
 
-    for (final session in _sessions) {
+    for (final session in sessionsForStats) {
       for (final game in session.games) {
         final teamA = [game.teamA.player1, game.teamA.player2];
         final teamB = [game.teamB.player1, game.teamB.player2];
@@ -162,14 +180,23 @@ class SessionNotifier extends ChangeNotifier {
     }
 
     final Map<String, int> sessionsSinceLastRest = {};
+    final Map<String, int> consecutiveRests = {};
     for (final player in allPlayers) {
-      int count = 0;
-      for (final session in _sessions.reversed) {
+      int sessionsSinceLastRestCount = 0;
+      for (final session in sessionsForStats.reversed) {
         final rested = session.restingPlayers.any((p) => p.id == player.id);
         if (rested) break;
-        count++;
+        sessionsSinceLastRestCount++;
       }
-      sessionsSinceLastRest[player.id] = count;
+      sessionsSinceLastRest[player.id] = sessionsSinceLastRestCount;
+
+      int consecutiveRestsCount = 0;
+      for (final session in sessionsForStats.reversed) {
+        final rested = session.restingPlayers.any((p) => p.id == player.id);
+        if (!rested) break;
+        consecutiveRestsCount++;
+      }
+      consecutiveRests[player.id] = consecutiveRestsCount;
     }
 
     final playerWithStatsList = allPlayers.map((p) {
@@ -181,15 +208,16 @@ class SessionNotifier extends ChangeNotifier {
           typeCounts: typeBreakdowns[p.id] ?? {},
           partnerCounts: partnerBreakdowns[p.id] ?? {},
           opponentCounts: opponentBreakdowns[p.id] ?? {},
-          restedLastTime: _sessions.isNotEmpty &&
-              _sessions.last.restingPlayers.any((rp) => rp.id == p.id),
+          restedLastTime: sessionsForStats.isNotEmpty &&
+              sessionsForStats.last.restingPlayers.any((rp) => rp.id == p.id),
           sessionsSinceLastRest: sessionsSinceLastRest[p.id] ?? 0,
+          consecutiveRests: consecutiveRests[p.id] ?? 0,
           lastMatchType: lastMatchTypes[p.id],
         ),
       );
     }).toList();
 
-    _cachedPool = PlayerStatsPool(playerWithStatsList);
+    return PlayerStatsPool(playerWithStatsList);
   }
 
   Future<void> _refresh() async {

@@ -23,6 +23,9 @@ class PlayerStats {
   /// 最後にお休みしてから何試合経過したか (0なら直前がお休み)
   final int sessionsSinceLastRest;
 
+  /// 連続でお休みしている回数 (0なら直前は出場)
+  final int consecutiveRests;
+
   /// 最後に出場した試合のタイプ（一度も出場していない場合はnull）
   final MatchType? lastMatchType;
 
@@ -34,6 +37,7 @@ class PlayerStats {
     required this.opponentCounts,
     this.restedLastTime = false,
     this.sessionsSinceLastRest = 99,
+    this.consecutiveRests = 0,
     this.lastMatchType,
   });
 

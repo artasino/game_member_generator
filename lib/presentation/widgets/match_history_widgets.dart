@@ -350,6 +350,7 @@ class RestingContainer extends StatelessWidget {
   final String? selectedPlayerId;
   final Function(Player) onPlayerTap;
   final Function(Player) onPlayerLongPress;
+  final PlayerStatsPool pool;
 
   const RestingContainer({
     super.key,
@@ -359,6 +360,7 @@ class RestingContainer extends StatelessWidget {
     this.selectedPlayerId,
     required this.onPlayerTap,
     required this.onPlayerLongPress,
+    required this.pool,
   });
 
   @override
@@ -417,6 +419,8 @@ class RestingContainer extends StatelessWidget {
                         child: RestingChip(
                           player: p,
                           isSelected: selectedPlayerId == p.id,
+                          isConsecutiveRest:
+                              pool.getPlayer(p.id).stats.consecutiveRests >= 2,
                           onTap: () => onPlayerTap(p),
                           onLongPress: () => onPlayerLongPress(p),
                           onDoubleTap: () => onPlayerLongPress(p),
@@ -439,6 +443,7 @@ class RestingChip extends StatelessWidget {
   final VoidCallback onLongPress;
   final VoidCallback onDoubleTap;
   final double scale;
+  final bool isConsecutiveRest;
 
   const RestingChip({
     super.key,
@@ -448,6 +453,7 @@ class RestingChip extends StatelessWidget {
     required this.onLongPress,
     required this.onDoubleTap,
     required this.scale,
+    required this.isConsecutiveRest,
   });
 
   @override
@@ -474,14 +480,24 @@ class RestingChip extends StatelessWidget {
                   : genderColor.withValues(alpha: 0.3),
               width: 1.5),
         ),
-        child: Text(
-          player.name,
-          style: TextStyle(
-              fontSize: 18 * scale,
-              color: isSelected
-                  ? theme.colorScheme.onPrimaryContainer
-                  : Colors.black87,
-              fontWeight: FontWeight.w900),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isConsecutiveRest) ...[
+              Icon(Icons.timer_outlined,
+                  size: 16 * scale, color: Colors.orange),
+              SizedBox(width: 4 * scale),
+            ],
+            Text(
+              player.name,
+              style: TextStyle(
+                  fontSize: 18 * scale,
+                  color: isSelected
+                      ? theme.colorScheme.onPrimaryContainer
+                      : Colors.black87,
+                  fontWeight: FontWeight.w900),
+            ),
+          ],
         ),
       ),
     );
@@ -670,11 +686,12 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     final activeMale = widget.notifier.playerStatsPool.all
         .where((p) => p.player.isActive && p.player.gender == Gender.male);
     final activeMaleLen = activeMale.length;
-    final mustRestMaleLen = activeMale.where((p) => p.mustRest).length;
+    final mustRestMaleLen = activeMale.where((p) => p.player.isMustRest).length;
     final activeFemale = widget.notifier.playerStatsPool.all
         .where((p) => p.player.isActive && p.player.gender == Gender.female);
     final activeFemaleLen = activeFemale.length;
-    final mustRestFemaleLen = activeFemale.where((p) => p.mustRest).length;
+    final mustRestFemaleLen =
+        activeFemale.where((p) => p.player.isMustRest).length;
 
     return AlertDialog(
       title: Text('MATCH SETTINGS',

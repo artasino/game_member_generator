@@ -33,6 +33,11 @@ class PlayerStatsPool {
     );
   }
 
+  /// 特定のIDを持つプレイヤーを返す
+  PlayerWithStats getPlayer(String id) {
+    return _players.firstWhere((p) => p.player.id == id);
+  }
+
   /// 休み希望者(isMustRest)を除外したプールを返す
   PlayerStatsPool filterAvailable() {
     return PlayerStatsPool(
