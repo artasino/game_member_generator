@@ -56,6 +56,26 @@ class PlayerNotifier extends ChangeNotifier {
     return true;
   }
 
+  Future<(int added, int skipped)> addPlayersBulk(List<Player> players) async {
+    await _refresh();
+    int added = 0;
+    int skipped = 0;
+
+    for (final player in players) {
+      final existingById = _players.any((p) => p.id == player.id);
+      if (existingById || _exists(player)) {
+        skipped++;
+        continue;
+      }
+      await repository.add(player);
+      _players.add(player);
+      added++;
+    }
+
+    await _refresh();
+    return (added, skipped);
+  }
+
   Future<void> updatePlayer(Player player) async {
     await repository.update(player);
     await _refresh();
@@ -70,6 +90,16 @@ class PlayerNotifier extends ChangeNotifier {
   Future<void> removePlayer(String id) async {
     await repository.remove(id);
     await _refresh();
+  }
+
+  Future<int> removePlayersBulk(List<String> ids) async {
+    int removed = 0;
+    for (final id in ids.toSet()) {
+      await repository.remove(id);
+      removed++;
+    }
+    await _refresh();
+    return removed;
   }
 
   // --- 汎用的な一括更新メソッド（内部用） ---

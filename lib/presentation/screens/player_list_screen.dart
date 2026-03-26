@@ -94,7 +94,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _showAddEditDialog(context);
+          _showAddMemberTypeSelector(context);
         },
         tooltip: 'メンバを追加',
         child: const Icon(Icons.add),
@@ -117,6 +117,10 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           await widget.notifier.exportPlayersToFile('csv');
         } else if (value == 'import_file') {
           message = await widget.notifier.importPlayersFromFile();
+        } else if (value == 'bulk_add') {
+          _showBulkAddDialog(context);
+        } else if (value == 'bulk_delete') {
+          _showBulkDeleteDialog(context);
         }
 
         if (message != null && mounted) {
@@ -159,6 +163,20 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           child: ListTile(
             leading: Icon(Icons.file_open),
             title: Text('ファイルからインポート'),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'bulk_add',
+          child: ListTile(
+            leading: Icon(Icons.playlist_add),
+            title: Text('複数メンバを登録'),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'bulk_delete',
+          child: ListTile(
+            leading: Icon(Icons.playlist_remove),
+            title: Text('複数メンバを削除'),
           ),
         ),
       ],
@@ -808,5 +826,335 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         });
       },
     );
+  }
+
+  void _showBulkAddDialog(BuildContext context) {
+    final rows = List<_BulkAddRowInput>.generate(3, (_) => _BulkAddRowInput());
+    bool isMustRest = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('複数メンバを登録',
+                  style: TextStyle(fontWeight: FontWeight.w900)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('登録したいメンバを入力してください'),
+                    const SizedBox(height: 12),
+                    ...rows.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final row = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Text('メンバ ${index + 1}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  const Spacer(),
+                                  if (rows.length > 1)
+                                    IconButton(
+                                      icon: const Icon(Icons.close,
+                                          color: Colors.red),
+                                      onPressed: () {
+                                        setState(() {
+                                          rows.removeAt(index).dispose();
+                                        });
+                                      },
+                                      tooltip: 'この行を削除',
+                                    ),
+                                ],
+                              ),
+                              TextField(
+                                controller: row.nameController,
+                                decoration: const InputDecoration(
+                                  labelText: '名前',
+                                  hintText: '例: 山田 太郎',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: row.yomiganaController,
+                                decoration: const InputDecoration(
+                                  labelText: 'よみがな',
+                                  hintText: '例: やまだ たろう',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: SegmentedButton<Gender>(
+                                  segments: const <ButtonSegment<Gender>>[
+                                    ButtonSegment<Gender>(
+                                      value: Gender.male,
+                                      label: Text('男性'),
+                                      icon: Icon(Icons.male),
+                                    ),
+                                    ButtonSegment<Gender>(
+                                      value: Gender.female,
+                                      label: Text('女性'),
+                                      icon: Icon(Icons.female),
+                                    ),
+                                  ],
+                                  selected: <Gender>{row.selectedGender},
+                                  onSelectionChanged:
+                                      (Set<Gender> newSelection) {
+                                    setState(() {
+                                      row.selectedGender = newSelection.first;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () {
+                          setState(() => rows.add(_BulkAddRowInput()));
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('入力行を追加'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('次の試合は必ず休み',
+                          style: TextStyle(fontSize: 14)),
+                      value: isMustRest,
+                      onChanged: (v) => setState(() => isMustRest = v),
+                      activeThumbColor: Colors.orange,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                AppActionButton(
+                  label: 'キャンセル',
+                  onPressed: () => Navigator.pop(context),
+                  isPrimary: false,
+                ),
+                AppActionButton(
+                  label: '登録',
+                  onPressed: () async {
+                    final players = <Player>[];
+                    for (final row in rows) {
+                      final name = row.nameController.text.trim();
+                      final yomigana = row.yomiganaController.text.trim();
+                      if (name.isEmpty || yomigana.isEmpty) continue;
+                      players.add(Player(
+                        id:
+                            '${DateTime.now().microsecondsSinceEpoch}_${players.length}',
+                        name: name,
+                        yomigana: yomigana,
+                        gender: row.selectedGender,
+                        isMustRest: isMustRest,
+                      ));
+                    }
+
+                    if (players.isEmpty) return;
+                    final result = await widget.notifier.addPlayersBulk(players);
+                    if (!context.mounted) return;
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            '${result.$1}名を登録しました（重複スキップ: ${result.$2}名）'),
+                      ),
+                    );
+                  },
+                  isPrimary: true,
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).whenComplete(() {
+      for (final row in rows) {
+        row.dispose();
+      }
+    });
+  }
+
+  void _showAddMemberTypeSelector(BuildContext parentContext) {
+    showDialog(
+      context: parentContext,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('登録方法を選択',
+              style: TextStyle(fontWeight: FontWeight.w900)),
+          contentPadding: const EdgeInsets.only(top: 8),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.person_add),
+                title: const Text('1人ずつ登録'),
+                subtitle: const Text('従来どおり個別に登録します'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddEditDialog(parentContext);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.playlist_add),
+                title: const Text('複数人をまとめて登録'),
+                subtitle: const Text('入力フォームで一括登録します'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showBulkAddDialog(parentContext);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            AppActionButton(
+              label: '閉じる',
+              isPrimary: false,
+              onPressed: () => Navigator.pop(context),
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  void _showBulkDeleteDialog(BuildContext context) {
+    final queryController = TextEditingController();
+    final selectedIds = <String>{};
+    String query = '';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final candidates = widget.notifier.players.where((p) {
+              if (query.isEmpty) return true;
+              return p.name.contains(query) || p.yomigana.contains(query);
+            }).toList()
+              ..sort((a, b) => a.yomigana.compareTo(b.yomigana));
+
+            return AlertDialog(
+              title: const Text('複数メンバを削除',
+                  style: TextStyle(fontWeight: FontWeight.w900)),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: queryController,
+                      decoration: const InputDecoration(
+                        hintText: '名前・よみがなで検索',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (v) => setState(() => query = v.trim()),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '削除対象: ${selectedIds.length}名',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Flexible(
+                      child: candidates.isEmpty
+                          ? const Center(
+                              child: Text('対象メンバが見つかりません',
+                                  style: TextStyle(color: Colors.grey)),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: candidates.length,
+                              itemBuilder: (context, index) {
+                                final p = candidates[index];
+                                final checked = selectedIds.contains(p.id);
+                                return CheckboxListTile(
+                                  dense: true,
+                                  value: checked,
+                                  title: Text(p.name),
+                                  subtitle: Text(p.yomigana),
+                                  onChanged: (v) {
+                                    setState(() {
+                                      if (v == true) {
+                                        selectedIds.add(p.id);
+                                      } else {
+                                        selectedIds.remove(p.id);
+                                      }
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                AppActionButton(
+                  label: 'キャンセル',
+                  onPressed: () => Navigator.pop(context),
+                  isPrimary: false,
+                ),
+                AppActionButton(
+                  label: '削除',
+                  color: Colors.red,
+                  isPrimary: false,
+                  onPressed: selectedIds.isEmpty
+                      ? null
+                      : () async {
+                          final removed = await widget.notifier
+                              .removePlayersBulk(selectedIds.toList());
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('$removed名を削除しました')),
+                          );
+                        },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _BulkAddRowInput {
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController yomiganaController = TextEditingController();
+  Gender selectedGender = Gender.male;
+
+  void dispose() {
+    nameController.dispose();
+    yomiganaController.dispose();
   }
 }
