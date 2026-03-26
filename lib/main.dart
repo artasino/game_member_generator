@@ -9,10 +9,7 @@ import 'domain/algorithm/game_evaluator.dart';
 import 'domain/entities/gender.dart';
 import 'domain/entities/player.dart';
 import 'domain/services/match_making_service.dart';
-import 'infrastructure/sqlite/database_helper.dart';
-import 'infrastructure/sqlite/sqlite_court_settings_repository.dart';
-import 'infrastructure/sqlite/sqlite_player_repository.dart';
-import 'infrastructure/sqlite/sqlite_session_history_repository.dart';
+import 'infrastructure/persistence/repository_provider.dart';
 import 'presentation/notifiers/player_notifier.dart';
 import 'presentation/notifiers/session_notifier.dart';
 import 'presentation/screens/main_navigation_screen.dart';
@@ -20,15 +17,14 @@ import 'presentation/screens/main_navigation_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Linux/デスクトップ環境用のSQLite初期化 (FFI)
-  DatabaseHelper.initFfi();
   // 設定ファイルの読み込み
   await AppConfig.load();
 
-  // 2. リポジトリの準備
-  final playerRepo = SqlitePlayerRepository();
-  final sessionRepo = SqliteSessionHistoryRepository();
-  final courtSettingsRepo = SqliteCourtSettingsRepository();
+  // プラットフォームごとの永続化リポジトリを準備
+  final repositories = await createRepositories();
+  final playerRepo = repositories.playerRepository;
+  final sessionRepo = repositories.sessionRepository;
+  final courtSettingsRepo = repositories.courtSettingsRepository;
 
   // 3. サービスとNotifierの準備
   final GameEvaluator gameEvaluator = GameEvaluator();
