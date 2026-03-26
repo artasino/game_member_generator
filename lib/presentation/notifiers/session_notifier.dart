@@ -180,14 +180,23 @@ class SessionNotifier extends ChangeNotifier {
     }
 
     final Map<String, int> sessionsSinceLastRest = {};
+    final Map<String, int> consecutiveRests = {};
     for (final player in allPlayers) {
-      int count = 0;
+      int sessionsSinceLastRestCount = 0;
       for (final session in sessionsForStats.reversed) {
         final rested = session.restingPlayers.any((p) => p.id == player.id);
         if (rested) break;
-        count++;
+        sessionsSinceLastRestCount++;
       }
-      sessionsSinceLastRest[player.id] = count;
+      sessionsSinceLastRest[player.id] = sessionsSinceLastRestCount;
+
+      int consecutiveRestsCount = 0;
+      for (final session in sessionsForStats.reversed) {
+        final rested = session.restingPlayers.any((p) => p.id == player.id);
+        if (!rested) break;
+        consecutiveRestsCount++;
+      }
+      consecutiveRests[player.id] = consecutiveRestsCount;
     }
 
     final playerWithStatsList = allPlayers.map((p) {
@@ -202,6 +211,7 @@ class SessionNotifier extends ChangeNotifier {
           restedLastTime: sessionsForStats.isNotEmpty &&
               sessionsForStats.last.restingPlayers.any((rp) => rp.id == p.id),
           sessionsSinceLastRest: sessionsSinceLastRest[p.id] ?? 0,
+          consecutiveRests: consecutiveRests[p.id] ?? 0,
           lastMatchType: lastMatchTypes[p.id],
         ),
       );

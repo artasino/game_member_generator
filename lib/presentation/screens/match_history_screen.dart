@@ -170,6 +170,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                   selectedPlayerId: _selectedPlayer?.id,
                   onPlayerTap: (p) => _handleTap(session, p),
                   onPlayerLongPress: (p) => setState(() => _selectedPlayer = p),
+                  pool: scopedPool,
                 ),
             ],
           );

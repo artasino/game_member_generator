@@ -72,6 +72,10 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
       List<PlayerWithStats> availableMales,
       List<PlayerWithStats> availableFemales) {
     double score = 0;
+    final availablePlayers = [...availableMales, ...availableFemales];
+    score +=
+        gameEvaluator.calculateSessionsFromLastRestPenalty(availablePlayers);
+
     final bestGames = <Game>[];
     int menOffset = 0;
     int womenOffset = 0;

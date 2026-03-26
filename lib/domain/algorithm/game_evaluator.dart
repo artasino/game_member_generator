@@ -67,6 +67,21 @@ class GameEvaluator {
     return GameScore(minScore, bestGame);
   }
 
+  // score is minus
+  double calculateSessionsFromLastRestPenalty(
+      List<PlayerWithStats> availablePlayers) {
+    final gain = 200.0;
+    var score = 0.0;
+    for (var ps in availablePlayers) {
+      if (ps.stats.restedLastTime) {
+        score -= gain * 2;
+      } else if (ps.stats.sessionsSinceLastRest == 1) {
+        score -= gain;
+      }
+    }
+    return score;
+  }
+
   double _calculateTypeImbalancePenalty(PlayerWithStats ps, MatchType type) {
     final counts = ps.stats.typeCounts;
     if (ps.player.gender == Gender.male) {
