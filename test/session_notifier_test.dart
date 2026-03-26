@@ -219,4 +219,69 @@ void main() {
           pool.all.firstWhere((p) => p.player.id == '5').stats.totalMatches, 1);
     });
   });
+
+  group('SessionNotifier - 生成前チェック', () {
+    test('育児休憩ペアに対して休憩枠がない構成は事前に弾かれること', () async {
+      const m1 = Player(
+        id: 'm1',
+        name: 'M1',
+        yomigana: 'm1',
+        gender: Gender.male,
+        excludedPartnerId: 'f1',
+      );
+      const m2 = Player(id: 'm2', name: 'M2', yomigana: 'm2', gender: Gender.male);
+      const m3 = Player(id: 'm3', name: 'M3', yomigana: 'm3', gender: Gender.male);
+      const m4 = Player(id: 'm4', name: 'M4', yomigana: 'm4', gender: Gender.male);
+      const f1 = Player(
+        id: 'f1',
+        name: 'F1',
+        yomigana: 'f1',
+        gender: Gender.female,
+        excludedPartnerId: 'm1',
+      );
+      const f2 = Player(id: 'f2', name: 'F2', yomigana: 'f2', gender: Gender.female);
+      const f3 = Player(id: 'f3', name: 'F3', yomigana: 'f3', gender: Gender.female);
+      const f4 = Player(id: 'f4', name: 'F4', yomigana: 'f4', gender: Gender.female);
+      playerRepo.players = [m1, m2, m3, m4, f1, f2, f3, f4];
+
+      await notifier.onPlayersUpdated();
+
+      final result = notifier.checkRequirements([MatchType.mixedDoubles, MatchType.mixedDoubles]);
+
+      expect(result.canGenerate, isFalse);
+      expect(result.errorMessage, contains('育児休憩ペア'));
+    });
+
+    test('育児休憩ペアでも休憩枠があれば生成可能と判定されること', () async {
+      const m1 = Player(
+        id: 'm1',
+        name: 'M1',
+        yomigana: 'm1',
+        gender: Gender.male,
+        excludedPartnerId: 'f1',
+      );
+      const m2 = Player(id: 'm2', name: 'M2', yomigana: 'm2', gender: Gender.male);
+      const m3 = Player(id: 'm3', name: 'M3', yomigana: 'm3', gender: Gender.male);
+      const m4 = Player(id: 'm4', name: 'M4', yomigana: 'm4', gender: Gender.male);
+      const f1 = Player(
+        id: 'f1',
+        name: 'F1',
+        yomigana: 'f1',
+        gender: Gender.female,
+        excludedPartnerId: 'm1',
+      );
+      const f2 = Player(id: 'f2', name: 'F2', yomigana: 'f2', gender: Gender.female);
+      const f3 = Player(id: 'f3', name: 'F3', yomigana: 'f3', gender: Gender.female);
+      const f4 = Player(id: 'f4', name: 'F4', yomigana: 'f4', gender: Gender.female);
+      const f5 = Player(id: 'f5', name: 'F5', yomigana: 'f5', gender: Gender.female);
+      playerRepo.players = [m1, m2, m3, m4, f1, f2, f3, f4, f5];
+
+      await notifier.onPlayersUpdated();
+
+      final result = notifier.checkRequirements([MatchType.mixedDoubles, MatchType.mixedDoubles]);
+
+      expect(result.canGenerate, isTrue);
+      expect(result.errorMessage, isNull);
+    });
+  });
 }

@@ -4,6 +4,7 @@ import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
+import '../../domain/entities/player_with_stats.dart';
 import '../../domain/entities/player_stats_pool.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/entities/team.dart';
@@ -56,11 +57,15 @@ class SessionNotifier extends ChangeNotifier {
   RequirementResult checkRequirements(List<MatchType> types) {
     final requiredCounts = _calculateRequiredCounts(types);
 
-    final activeMales = _cachedPool.all
-        .where((p) => p.player.isActive && p.player.gender == Gender.male)
+    final playablePlayers = _cachedPool.all
+        .where((p) => p.player.isActive && !p.player.isMustRest)
+        .toList(growable: false);
+
+    final activeMales = playablePlayers
+        .where((p) => p.player.gender == Gender.male)
         .length;
-    final activeFemales = _cachedPool.all
-        .where((p) => p.player.isActive && p.player.gender == Gender.female)
+    final activeFemales = playablePlayers
+        .where((p) => p.player.gender == Gender.female)
         .length;
 
     if (activeMales < requiredCounts.male && activeFemales < requiredCounts.female) {
@@ -76,7 +81,49 @@ class SessionNotifier extends ChangeNotifier {
       return RequirementResult(false, '女性が足りません (${requiredCounts.female - activeFemales}人不足)');
     }
 
+    final extraMaleSlots = activeMales - requiredCounts.male;
+    final extraFemaleSlots = activeFemales - requiredCounts.female;
+
+    final childcareConflictPairCount = _countChildcareConflictPairs(playablePlayers);
+    final availableRestSlots = extraMaleSlots + extraFemaleSlots;
+
+    if (childcareConflictPairCount > availableRestSlots) {
+      return RequirementResult(
+        false,
+        '育児休憩ペアが同時に入ってしまうため、このコート構成では生成できません。'
+        '（同時に休憩させられる人数が不足しています）',
+      );
+    }
+
     return RequirementResult(true, null);
+  }
+
+  int _countChildcareConflictPairs(List<PlayerWithStats> playablePlayers) {
+    final idMap = {
+      for (final p in playablePlayers) p.player.id: p.player,
+    };
+
+    final handledIds = <String>{};
+    var pairCount = 0;
+
+    for (final player in idMap.values) {
+      if (handledIds.contains(player.id)) continue;
+
+      final partnerId = player.excludedPartnerId;
+      if (partnerId == null) continue;
+
+      final partner = idMap[partnerId];
+      if (partner == null) continue;
+
+      if (partner.excludedPartnerId == player.id) {
+        pairCount++;
+        handledIds
+          ..add(player.id)
+          ..add(partner.id);
+      }
+    }
+
+    return pairCount;
   }
 
   Future<void> onPlayersUpdated() async {
