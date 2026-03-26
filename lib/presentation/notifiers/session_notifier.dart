@@ -4,14 +4,13 @@ import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
-import '../../domain/entities/player_stats.dart';
 import '../../domain/entities/player_stats_pool.dart';
-import '../../domain/entities/player_with_stats.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/entities/team.dart';
 import '../../domain/repository/court_settings_repository.dart';
 import '../../domain/repository/session_repository/session_history_repository.dart';
 import '../../domain/services/match_making_service.dart';
+import '../../domain/services/player_stats_calculator.dart';
 
 /// 人数不足などの判定結果を保持するクラス
 class RequirementResult {
@@ -26,6 +25,7 @@ class SessionNotifier extends ChangeNotifier {
   final SessionHistoryRepository sessionRepository;
   final CourtSettingsRepository courtSettingsRepository;
   final MatchMakingService matchMakingService;
+  final PlayerStatsCalculator playerStatsCalculator;
 
   List<Session> _sessions = [];
 
@@ -47,24 +47,14 @@ class SessionNotifier extends ChangeNotifier {
     required this.sessionRepository,
     required this.courtSettingsRepository,
     required this.matchMakingService,
-  }) {
+    PlayerStatsCalculator? playerStatsCalculator,
+  }) : playerStatsCalculator = playerStatsCalculator ?? PlayerStatsCalculator() {
     _refresh();
   }
 
   /// 現在のアクティブプレイヤーで、指定された試合形式が組めるかチェックする
   RequirementResult checkRequirements(List<MatchType> types) {
-    int reqMale = 0;
-    int reqFemale = 0;
-    for (final type in types) {
-      if (type == MatchType.menDoubles) {
-        reqMale += 4;
-      } else if (type == MatchType.womenDoubles) {
-        reqFemale += 4;
-      } else if (type == MatchType.mixedDoubles) {
-        reqMale += 2;
-        reqFemale += 2;
-      }
-    }
+    final requiredCounts = _calculateRequiredCounts(types);
 
     final activeMales = _cachedPool.all
         .where((p) => p.player.isActive && p.player.gender == Gender.male)
@@ -73,14 +63,17 @@ class SessionNotifier extends ChangeNotifier {
         .where((p) => p.player.isActive && p.player.gender == Gender.female)
         .length;
 
-    if (activeMales < reqMale && activeFemales < reqFemale) {
-      return RequirementResult(false,
-          '男女ともに人数が足りません (男:${reqMale - activeMales}人, 女:${reqFemale - activeFemales}人不足)');
-    } else if (activeMales < reqMale) {
-      return RequirementResult(false, '男性が足りません (${reqMale - activeMales}人不足)');
-    } else if (activeFemales < reqFemale) {
+    if (activeMales < requiredCounts.male && activeFemales < requiredCounts.female) {
       return RequirementResult(
-          false, '女性が足りません (${reqFemale - activeFemales}人不足)');
+        false,
+        '男女ともに人数が足りません (男:${requiredCounts.male - activeMales}人, 女:${requiredCounts.female - activeFemales}人不足)',
+      );
+    }
+    if (activeMales < requiredCounts.male) {
+      return RequirementResult(false, '男性が足りません (${requiredCounts.male - activeMales}人不足)');
+    }
+    if (activeFemales < requiredCounts.female) {
+      return RequirementResult(false, '女性が足りません (${requiredCounts.female - activeFemales}人不足)');
     }
 
     return RequirementResult(true, null);
@@ -109,115 +102,13 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   PlayerStatsPool _buildPoolForSessions(
-      List<Player> allPlayers, List<Session> sessionsForStats) {
-    final Map<String, int> totals = {};
-    final Map<String, int> rests = {};
-    final Map<String, Map<MatchType, int>> typeBreakdowns = {};
-    final Map<String, Map<String, int>> partnerBreakdowns = {};
-    final Map<String, Map<String, int>> opponentBreakdowns = {};
-    final Map<String, MatchType?> lastMatchTypes = {};
-
-    for (final player in allPlayers) {
-      final id = player.id;
-      totals[id] = 0;
-      rests[id] = 0;
-      typeBreakdowns[id] = {};
-      partnerBreakdowns[id] = {};
-      opponentBreakdowns[id] = {};
-      lastMatchTypes[id] = null;
-    }
-
-    // 最後に出場した試合のタイプを特定するための計算
-    for (final player in allPlayers) {
-      MatchType? foundType;
-      // 履歴を新しい順に見ていき、そのプレイヤーが最初に出場していた試合を探す
-      for (final session in sessionsForStats.reversed) {
-        for (final game in session.games) {
-          final isPlaying = game.teamA.player1.id == player.id ||
-              game.teamA.player2.id == player.id ||
-              game.teamB.player1.id == player.id ||
-              game.teamB.player2.id == player.id;
-          if (isPlaying) {
-            foundType = game.type;
-            break;
-          }
-        }
-        if (foundType != null) break;
-      }
-      lastMatchTypes[player.id] = foundType;
-    }
-
-    for (final session in sessionsForStats) {
-      for (final game in session.games) {
-        final teamA = [game.teamA.player1, game.teamA.player2];
-        final teamB = [game.teamB.player1, game.teamB.player2];
-
-        void record(Player p, Player partner, List<Player> opponents) {
-          final id = p.id;
-          if (!typeBreakdowns.containsKey(id)) return;
-
-          totals[id] = (totals[id] ?? 0) + 1;
-          typeBreakdowns[id]![game.type] =
-              (typeBreakdowns[id]![game.type] ?? 0) + 1;
-          partnerBreakdowns[id]![partner.id] =
-              (partnerBreakdowns[id]![partner.id] ?? 0) + 1;
-          for (final opp in opponents) {
-            opponentBreakdowns[id]![opp.id] =
-                (opponentBreakdowns[id]![opp.id] ?? 0) + 1;
-          }
-        }
-
-        record(teamA[0], teamA[1], teamB);
-        record(teamA[1], teamA[0], teamB);
-        record(teamB[0], teamB[1], teamA);
-        record(teamB[1], teamB[0], teamA);
-      }
-      for (final rp in session.restingPlayers) {
-        if (rests.containsKey(rp.id)) {
-          rests[rp.id] = (rests[rp.id] ?? 0) + 1;
-        }
-      }
-    }
-
-    final Map<String, int> sessionsSinceLastRest = {};
-    final Map<String, int> consecutiveRests = {};
-    for (final player in allPlayers) {
-      int sessionsSinceLastRestCount = 0;
-      for (final session in sessionsForStats.reversed) {
-        final rested = session.restingPlayers.any((p) => p.id == player.id);
-        if (rested) break;
-        sessionsSinceLastRestCount++;
-      }
-      sessionsSinceLastRest[player.id] = sessionsSinceLastRestCount;
-
-      int consecutiveRestsCount = 0;
-      for (final session in sessionsForStats.reversed) {
-        final rested = session.restingPlayers.any((p) => p.id == player.id);
-        if (!rested) break;
-        consecutiveRestsCount++;
-      }
-      consecutiveRests[player.id] = consecutiveRestsCount;
-    }
-
-    final playerWithStatsList = allPlayers.map((p) {
-      return PlayerWithStats(
-        player: p,
-        stats: PlayerStats(
-          totalMatches: totals[p.id] ?? 0,
-          totalRests: rests[p.id] ?? 0,
-          typeCounts: typeBreakdowns[p.id] ?? {},
-          partnerCounts: partnerBreakdowns[p.id] ?? {},
-          opponentCounts: opponentBreakdowns[p.id] ?? {},
-          restedLastTime: sessionsForStats.isNotEmpty &&
-              sessionsForStats.last.restingPlayers.any((rp) => rp.id == p.id),
-          sessionsSinceLastRest: sessionsSinceLastRest[p.id] ?? 0,
-          consecutiveRests: consecutiveRests[p.id] ?? 0,
-          lastMatchType: lastMatchTypes[p.id],
-        ),
-      );
-    }).toList();
-
-    return PlayerStatsPool(playerWithStatsList);
+    List<Player> allPlayers,
+    List<Session> sessionsForStats,
+  ) {
+    return playerStatsCalculator.buildPool(
+      allPlayers: allPlayers,
+      sessions: sessionsForStats,
+    );
   }
 
   Future<void> _refresh() async {
@@ -227,42 +118,28 @@ class SessionNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> recalculateSession(
-      int sessionIndex, CourtSettings settings) async {
+  Future<void> recalculateSession(int sessionIndex, CourtSettings settings) async {
     _isGenerating = true;
     notifyListeners();
 
     final originalSessions = List<Session>.from(_sessions);
-    _sessions.removeWhere((s) => s.index == sessionIndex);
+    _sessions.removeWhere((session) => session.index == sessionIndex);
     await _updateStats();
 
     try {
-      final games = await matchMakingService.generateMatches(
-        matchTypes: settings.matchTypes,
-        playerStats: _cachedPool,
+      final generated = await _generateSessionData(settings);
+      final updatedSession = Session(
+        sessionIndex,
+        generated.games,
+        restingPlayers: generated.restingPlayers,
       );
-
-      final playingPlayerIds = games
-          .expand((g) => [
-                g.teamA.player1.id,
-                g.teamA.player2.id,
-                g.teamB.player1.id,
-                g.teamB.player2.id
-              ])
-          .toSet();
-      final allActivePlayers =
-          await matchMakingService.playerRepository.getActive();
-      final restingPlayers = allActivePlayers
-          .where((p) => !playingPlayerIds.contains(p.id))
-          .toList();
-
-      final updatedSession =
-          Session(sessionIndex, games, restingPlayers: restingPlayers);
       await sessionRepository.update(updatedSession);
 
       _sessions = originalSessions;
-      final idx = _sessions.indexWhere((s) => s.index == sessionIndex);
-      if (idx != -1) _sessions[idx] = updatedSession;
+      final index = _sessions.indexWhere((session) => session.index == sessionIndex);
+      if (index != -1) {
+        _sessions[index] = updatedSession;
+      }
     } finally {
       await _updateStats();
       _isGenerating = false;
@@ -277,28 +154,13 @@ class SessionNotifier extends ChangeNotifier {
     await courtSettingsRepository.update(settings);
 
     try {
-      final games = await matchMakingService.generateMatches(
-        matchTypes: settings.matchTypes,
-        playerStats: _cachedPool,
-      );
-
-      final playingPlayerIds = games
-          .expand((g) => [
-                g.teamA.player1.id,
-                g.teamA.player2.id,
-                g.teamB.player1.id,
-                g.teamB.player2.id
-              ])
-          .toSet();
-      final allActivePlayers =
-          await matchMakingService.playerRepository.getActive();
-      final restingPlayers = allActivePlayers
-          .where((p) => !playingPlayerIds.contains(p.id))
-          .toList();
-
+      final generated = await _generateSessionData(settings);
       final nextIndex = _sessions.length + 1;
-      final newSession =
-          Session(nextIndex, games, restingPlayers: restingPlayers);
+      final newSession = Session(
+        nextIndex,
+        generated.games,
+        restingPlayers: generated.restingPlayers,
+      );
 
       await sessionRepository.add(newSession);
       await _refresh();
@@ -308,12 +170,21 @@ class SessionNotifier extends ChangeNotifier {
     }
   }
 
+  Future<MatchGenerationResult> _generateSessionData(CourtSettings settings) {
+    return matchMakingService.generateMatchSession(
+      matchTypes: settings.matchTypes,
+      playerStats: _cachedPool,
+    );
+  }
+
   int getPairCount(Team team, {int? upToIndex}) {
-    int count = 0;
+    var count = 0;
     final id1 = team.player1.id;
     final id2 = team.player2.id;
     for (final session in _sessions) {
-      if (upToIndex != null && session.index > upToIndex) break;
+      if (upToIndex != null && session.index > upToIndex) {
+        break;
+      }
       for (final game in session.games) {
         if (_isMatch(game.teamA, id1, id2) || _isMatch(game.teamB, id1, id2)) {
           count++;
@@ -324,9 +195,10 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   bool _isMatch(Team team, String id1, String id2) {
-    final tId1 = team.player1.id;
-    final tId2 = team.player2.id;
-    return (tId1 == id1 && tId2 == id2) || (tId1 == id2 && tId2 == id1);
+    final teamId1 = team.player1.id;
+    final teamId2 = team.player2.id;
+    return (teamId1 == id1 && teamId2 == id2) ||
+        (teamId1 == id2 && teamId2 == id1);
   }
 
   Future<void> swapPlayers(Session session, Player p1, Player p2) async {
@@ -334,13 +206,17 @@ class SessionNotifier extends ChangeNotifier {
       final newTeamA = _swapInTeam(game.teamA, p1, p2);
       final newTeamB = _swapInTeam(game.teamB, p1, p2);
       return game.copyWith(teamA: newTeamA, teamB: newTeamB);
-    }).toList();
+    }).toList(growable: false);
 
-    final newResting = session.restingPlayers.map((p) {
-      if (p.id == p1.id) return p2;
-      if (p.id == p2.id) return p1;
-      return p;
-    }).toList();
+    final newResting = session.restingPlayers.map((player) {
+      if (player.id == p1.id) {
+        return p2;
+      }
+      if (player.id == p2.id) {
+        return p1;
+      }
+      return player;
+    }).toList(growable: false);
 
     await updateSession(
       session.copyWith(games: newGames, restingPlayers: newResting),
@@ -348,8 +224,8 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   Team _swapInTeam(Team team, Player p1, Player p2) {
-    Player newP1 = team.player1;
-    Player newP2 = team.player2;
+    var newP1 = team.player1;
+    var newP2 = team.player2;
     if (team.player1.id == p1.id) {
       newP1 = p2;
     } else if (team.player1.id == p2.id) {
@@ -381,4 +257,36 @@ class SessionNotifier extends ChangeNotifier {
   Future<CourtSettings> getCurrentSettings() async {
     return await courtSettingsRepository.get();
   }
+
+  _RequiredPlayerCounts _calculateRequiredCounts(List<MatchType> types) {
+    var requiredMale = 0;
+    var requiredFemale = 0;
+
+    for (final type in types) {
+      switch (type) {
+        case MatchType.menDoubles:
+          requiredMale += 4;
+          break;
+        case MatchType.womenDoubles:
+          requiredFemale += 4;
+          break;
+        case MatchType.mixedDoubles:
+          requiredMale += 2;
+          requiredFemale += 2;
+          break;
+      }
+    }
+
+    return _RequiredPlayerCounts(male: requiredMale, female: requiredFemale);
+  }
+}
+
+class _RequiredPlayerCounts {
+  final int male;
+  final int female;
+
+  const _RequiredPlayerCounts({
+    required this.male,
+    required this.female,
+  });
 }
