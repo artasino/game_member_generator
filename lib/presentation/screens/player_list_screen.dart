@@ -94,7 +94,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _showAddEditDialog(context);
+          _showAddMemberTypeSelector(context);
         },
         tooltip: 'メンバを追加',
         child: const Icon(Icons.add),
@@ -117,8 +117,6 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           await widget.notifier.exportPlayersToFile('csv');
         } else if (value == 'import_file') {
           message = await widget.notifier.importPlayersFromFile();
-        } else if (value == 'bulk_add') {
-          _showBulkAddDialog(context);
         } else if (value == 'bulk_delete') {
           _showBulkDeleteDialog(context);
         }
@@ -163,14 +161,6 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           child: ListTile(
             leading: Icon(Icons.file_open),
             title: Text('ファイルからインポート'),
-          ),
-        ),
-        const PopupMenuDivider(),
-        const PopupMenuItem(
-          value: 'bulk_add',
-          child: ListTile(
-            leading: Icon(Icons.playlist_add),
-            title: Text('複数メンバを登録'),
           ),
         ),
         const PopupMenuItem(
@@ -830,7 +820,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   }
 
   void _showBulkAddDialog(BuildContext context) {
-    final inputController = TextEditingController();
+    final rows = List<_BulkAddRowInput>.generate(3, (_) => _BulkAddRowInput());
     Gender selectedGender = Gender.male;
     bool isMustRest = false;
 
@@ -848,17 +838,70 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('1行に1名、カンマ区切りで入力してください'),
-                    const SizedBox(height: 6),
-                    const Text('例: 山田 太郎,やまだ たろう',
-                        style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const Text('登録したいメンバを入力してください'),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: inputController,
-                      maxLines: 10,
-                      decoration: const InputDecoration(
-                        hintText: '山田 太郎,やまだ たろう\n佐藤 花子,さとう はなこ',
-                        border: OutlineInputBorder(),
+                    ...rows.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final row = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Text('メンバ ${index + 1}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  const Spacer(),
+                                  if (rows.length > 1)
+                                    IconButton(
+                                      icon: const Icon(Icons.close,
+                                          color: Colors.red),
+                                      onPressed: () {
+                                        setState(() {
+                                          rows.removeAt(index).dispose();
+                                        });
+                                      },
+                                      tooltip: 'この行を削除',
+                                    ),
+                                ],
+                              ),
+                              TextField(
+                                controller: row.nameController,
+                                decoration: const InputDecoration(
+                                  labelText: '名前',
+                                  hintText: '例: 山田 太郎',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: row.yomiganaController,
+                                decoration: const InputDecoration(
+                                  labelText: 'よみがな',
+                                  hintText: '例: やまだ たろう',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () {
+                          setState(() => rows.add(_BulkAddRowInput()));
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('入力行を追加'),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -909,22 +952,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 AppActionButton(
                   label: '登録',
                   onPressed: () async {
-                    final lines = inputController.text
-                        .split('\n')
-                        .map((e) => e.trim())
-                        .where((e) => e.isNotEmpty)
-                        .toList();
-                    if (lines.isEmpty) return;
-
                     final players = <Player>[];
-                    for (final line in lines) {
-                      final parts = line.split(',');
-                      final name = parts.first.trim();
-                      final yomigana =
-                          parts.length > 1 ? parts[1].trim() : name;
+                    for (final row in rows) {
+                      final name = row.nameController.text.trim();
+                      final yomigana = row.yomiganaController.text.trim();
                       if (name.isEmpty || yomigana.isEmpty) continue;
                       players.add(Player(
-                        id: '${DateTime.now().microsecondsSinceEpoch}_${players.length}',
+                        id:
+                            '${DateTime.now().microsecondsSinceEpoch}_${players.length}',
                         name: name,
                         yomigana: yomigana,
                         gender: selectedGender,
@@ -948,6 +983,46 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               ],
             );
           },
+        );
+      },
+    ).whenComplete(() {
+      for (final row in rows) {
+        row.dispose();
+      }
+    });
+  }
+
+  void _showAddMemberTypeSelector(BuildContext parentContext) {
+    showModalBottomSheet(
+      context: parentContext,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.person_add),
+                title: const Text('1人ずつ登録'),
+                subtitle: const Text('従来どおり個別に登録します'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddEditDialog(parentContext);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.playlist_add),
+                title: const Text('複数人をまとめて登録'),
+                subtitle: const Text('フォームを複数行入力して一括登録します'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showBulkAddDialog(parentContext);
+                },
+              ),
+            ],
+          ),
         );
       },
     );
@@ -1057,5 +1132,15 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         );
       },
     );
+  }
+}
+
+class _BulkAddRowInput {
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController yomiganaController = TextEditingController();
+
+  void dispose() {
+    nameController.dispose();
+    yomiganaController.dispose();
   }
 }
