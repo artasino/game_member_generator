@@ -376,6 +376,16 @@ class RestingContainer extends StatelessWidget {
         return a.gender == Gender.male ? -1 : 1;
       });
 
+    // 試合に出ているプレイヤーのIDセット
+    final activePlayerIds = session.games
+        .expand((g) => [
+              g.teamA.player1.id,
+              g.teamA.player2.id,
+              g.teamB.player1.id,
+              g.teamB.player2.id
+            ])
+        .toSet();
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: 8 * rs, horizontal: 16 * rs),
@@ -413,21 +423,27 @@ class RestingContainer extends StatelessWidget {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: sortedResting
-                  .map((p) => Padding(
-                        padding: EdgeInsets.only(right: 8 * rs),
-                        child: RestingChip(
-                          player: p,
-                          isSelected: selectedPlayerId == p.id,
-                          isConsecutiveRest:
-                              pool.getPlayer(p.id).stats.consecutiveRests >= 2,
-                          onTap: () => onPlayerTap(p),
-                          onLongPress: () => onPlayerLongPress(p),
-                          onDoubleTap: () => onPlayerLongPress(p),
-                          scale: rs,
-                        ),
-                      ))
-                  .toList(),
+              children: sortedResting.map((p) {
+                // ペアが試合に出ているために自分が休んでいるか判定
+                final partnerId = p.excludedPartnerId;
+                final isConflictRest =
+                    partnerId != null && activePlayerIds.contains(partnerId);
+
+                return Padding(
+                  padding: EdgeInsets.only(right: 8 * rs),
+                  child: RestingChip(
+                    player: p,
+                    isSelected: selectedPlayerId == p.id,
+                    consecutiveRests:
+                        pool.getPlayer(p.id).stats.consecutiveRests,
+                    isConflictRest: isConflictRest,
+                    onTap: () => onPlayerTap(p),
+                    onLongPress: () => onPlayerLongPress(p),
+                    onDoubleTap: () => onPlayerLongPress(p),
+                    scale: rs,
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ],
@@ -443,7 +459,8 @@ class RestingChip extends StatelessWidget {
   final VoidCallback onLongPress;
   final VoidCallback onDoubleTap;
   final double scale;
-  final bool isConsecutiveRest;
+  final int consecutiveRests;
+  final bool isConflictRest;
 
   const RestingChip({
     super.key,
@@ -453,13 +470,15 @@ class RestingChip extends StatelessWidget {
     required this.onLongPress,
     required this.onDoubleTap,
     required this.scale,
-    required this.isConsecutiveRest,
+    required this.consecutiveRests,
+    this.isConflictRest = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final genderColor = GenderTheme.getColor(player.gender);
+    final isConsecutive = consecutiveRests >= 2;
 
     return GestureDetector(
       onTap: onTap,
@@ -472,21 +491,38 @@ class RestingChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
-              : genderColor.withValues(alpha: 0.08),
+              : (isConsecutive
+                  ? genderColor.withValues(alpha: 0.15)
+                  : genderColor.withValues(alpha: 0.08)),
           borderRadius: BorderRadius.circular(12 * scale),
           border: Border.all(
               color: isSelected
                   ? theme.colorScheme.primary
-                  : genderColor.withValues(alpha: 0.3),
-              width: 1.5),
+                  : (isConsecutive
+                      ? genderColor.withValues(alpha: 0.6)
+                      : genderColor.withValues(alpha: 0.3)),
+              width: isConsecutive ? 2.5 : 1.5),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isConsecutiveRest) ...[
-              Icon(Icons.timer_outlined,
-                  size: 16 * scale, color: Colors.orange),
-              SizedBox(width: 4 * scale),
+            if (isConflictRest) ...[
+              Icon(Icons.child_care,
+                  size: 16 * scale, color: Colors.orange.shade800),
+              SizedBox(width: 6 * scale),
+            ],
+            if (isConsecutive) ...[
+              Icon(Icons.bedtime, size: 16 * scale, color: genderColor),
+              const SizedBox(width: 2),
+              Text(
+                '$consecutiveRests',
+                style: TextStyle(
+                  fontSize: 14 * scale,
+                  fontWeight: FontWeight.w900,
+                  color: genderColor,
+                ),
+              ),
+              SizedBox(width: 6 * scale),
             ],
             Text(
               player.name,
