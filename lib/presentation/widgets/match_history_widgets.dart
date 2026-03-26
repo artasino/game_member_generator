@@ -48,7 +48,10 @@ class GamesArea extends StatelessWidget {
 
     // 列数の決定
     int cross;
-    if (count == 4) {
+    // 縦画面（スマホ等）を想定し、幅が狭い場合は1列に固定
+    if (screenWidth < 500 * scale) {
+      cross = 1;
+    } else if (count == 4) {
       cross = 2; // 4試合のときは2x2
     } else if (count == 3) {
       cross = 3; // 3試合のときは横に3つ
