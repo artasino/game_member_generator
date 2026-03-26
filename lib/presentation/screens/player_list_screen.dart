@@ -117,6 +117,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           await widget.notifier.exportPlayersToFile('csv');
         } else if (value == 'import_file') {
           message = await widget.notifier.importPlayersFromFile();
+        } else if (value == 'bulk_add') {
+          _showBulkAddDialog(context);
         } else if (value == 'bulk_delete') {
           _showBulkDeleteDialog(context);
         }
@@ -161,6 +163,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           child: ListTile(
             leading: Icon(Icons.file_open),
             title: Text('ファイルからインポート'),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'bulk_add',
+          child: ListTile(
+            leading: Icon(Icons.playlist_add),
+            title: Text('複数メンバを登録'),
           ),
         ),
         const PopupMenuItem(
@@ -821,7 +830,6 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
 
   void _showBulkAddDialog(BuildContext context) {
     final rows = List<_BulkAddRowInput>.generate(3, (_) => _BulkAddRowInput());
-    Gender selectedGender = Gender.male;
     bool isMustRest = false;
 
     showDialog(
@@ -889,6 +897,31 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                   border: OutlineInputBorder(),
                                 ),
                               ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: SegmentedButton<Gender>(
+                                  segments: const <ButtonSegment<Gender>>[
+                                    ButtonSegment<Gender>(
+                                      value: Gender.male,
+                                      label: Text('男性'),
+                                      icon: Icon(Icons.male),
+                                    ),
+                                    ButtonSegment<Gender>(
+                                      value: Gender.female,
+                                      label: Text('女性'),
+                                      icon: Icon(Icons.female),
+                                    ),
+                                  ],
+                                  selected: <Gender>{row.selectedGender},
+                                  onSelectionChanged:
+                                      (Set<Gender> newSelection) {
+                                    setState(() {
+                                      row.selectedGender = newSelection.first;
+                                    });
+                                  },
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -902,33 +935,6 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                         },
                         icon: const Icon(Icons.add),
                         label: const Text('入力行を追加'),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('性別',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: SegmentedButton<Gender>(
-                        segments: const <ButtonSegment<Gender>>[
-                          ButtonSegment<Gender>(
-                            value: Gender.male,
-                            label: Text('男性'),
-                            icon: Icon(Icons.male),
-                          ),
-                          ButtonSegment<Gender>(
-                            value: Gender.female,
-                            label: Text('女性'),
-                            icon: Icon(Icons.female),
-                          ),
-                        ],
-                        selected: <Gender>{selectedGender},
-                        onSelectionChanged: (Set<Gender> newSelection) {
-                          setState(() {
-                            selectedGender = newSelection.first;
-                          });
-                        },
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -962,7 +968,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                             '${DateTime.now().microsecondsSinceEpoch}_${players.length}',
                         name: name,
                         yomigana: yomigana,
-                        gender: selectedGender,
+                        gender: row.selectedGender,
                         isMustRest: isMustRest,
                       ));
                     }
@@ -993,14 +999,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   }
 
   void _showAddMemberTypeSelector(BuildContext parentContext) {
-    showModalBottomSheet(
+    showDialog(
       context: parentContext,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
       builder: (context) {
-        return SafeArea(
-          child: Column(
+        return AlertDialog(
+          title: const Text('登録方法を選択',
+              style: TextStyle(fontWeight: FontWeight.w900)),
+          contentPadding: const EdgeInsets.only(top: 8),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
@@ -1015,7 +1021,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               ListTile(
                 leading: const Icon(Icons.playlist_add),
                 title: const Text('複数人をまとめて登録'),
-                subtitle: const Text('フォームを複数行入力して一括登録します'),
+                subtitle: const Text('入力フォームで一括登録します'),
                 onTap: () {
                   Navigator.pop(context);
                   _showBulkAddDialog(parentContext);
@@ -1023,6 +1029,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               ),
             ],
           ),
+          actions: [
+            AppActionButton(
+              label: '閉じる',
+              isPrimary: false,
+              onPressed: () => Navigator.pop(context),
+            )
+          ],
         );
       },
     );
@@ -1138,6 +1151,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
 class _BulkAddRowInput {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController yomiganaController = TextEditingController();
+  Gender selectedGender = Gender.male;
 
   void dispose() {
     nameController.dispose();
