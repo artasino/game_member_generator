@@ -22,19 +22,40 @@ class SqliteCourtSettingsRepository implements CourtSettingsRepository {
       return CourtSettings([MatchType.menDoubles]);
     }
 
-    final List<dynamic> types = jsonDecode(maps.first['value']);
-    return CourtSettings(types.map((t) => MatchType.values[t as int]).toList());
+    final dynamic decoded = jsonDecode(maps.first['value']);
+    if (decoded is List<dynamic>) {
+      return CourtSettings(
+        decoded.map((t) => MatchType.values[t as int]).toList(),
+      );
+    }
+
+    final Map<String, dynamic> map = decoded as Map<String, dynamic>;
+    final types = (map['matchTypes'] as List<dynamic>? ?? [])
+        .map((t) => MatchType.values[t as int])
+        .toList();
+    final autoCourtCount = (map['autoCourtCount'] as int?) ?? 2;
+    final autoCourtPolicyIndex = (map['autoCourtPolicy'] as int?) ?? 1;
+
+    return CourtSettings(
+      types.isEmpty ? [MatchType.menDoubles] : types,
+      autoCourtCount: autoCourtCount,
+      autoCourtPolicy: AutoCourtPolicy.values[autoCourtPolicyIndex],
+    );
   }
 
   @override
   Future<void> update(CourtSettings settings) async {
     final db = await _dbHelper.database;
-    final types = settings.matchTypes.map((t) => t.index).toList();
+    final payload = {
+      'matchTypes': settings.matchTypes.map((t) => t.index).toList(),
+      'autoCourtCount': settings.autoCourtCount,
+      'autoCourtPolicy': settings.autoCourtPolicy.index,
+    };
     await db.insert(
       'settings',
       {
         'key': _settingsKey,
-        'value': jsonEncode(types),
+        'value': jsonEncode(payload),
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
