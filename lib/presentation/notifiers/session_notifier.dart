@@ -80,20 +80,14 @@ class SessionNotifier extends ChangeNotifier {
       return RequirementResult(false, '女性が足りません (${requiredCounts.female - activeFemales}人不足)');
     }
 
-    final resolvedResult = _buildResolvedSelection(
+    final conflictImpact = _evaluateConflictImpact(
       requiredMale: requiredCounts.male,
       requiredFemale: requiredCounts.female,
       availablePool: activeAvailable,
     );
-    final resolvedSelection = resolvedResult.session;
-    final predictedRestPlayerNames = resolvedResult.predictedRestPlayerNames;
-    final removedPlayers = resolvedResult.removedPlayersByConflict.values;
-    final removedMales =
-        removedPlayers.where((player) => player.gender == Gender.male).length;
-    final removedFemales =
-        removedPlayers.where((player) => player.gender == Gender.female).length;
-    final effectiveMales = activeMales - removedMales;
-    final effectiveFemales = activeFemales - removedFemales;
+    final predictedRestPlayerNames = conflictImpact.predictedRestPlayerNames;
+    final effectiveMales = activeMales - conflictImpact.removedMaleCount;
+    final effectiveFemales = activeFemales - conflictImpact.removedFemaleCount;
 
     if (effectiveMales < requiredCounts.male &&
         effectiveFemales < requiredCounts.female) {
@@ -117,7 +111,7 @@ class SessionNotifier extends ChangeNotifier {
         predictedRestPlayerNames: predictedRestPlayerNames,
       );
     }
-    if (resolvedSelection.hasCrossGenderConflict) {
+    if (conflictImpact.hasUnresolvedConflict) {
       return RequirementResult(
         false,
         '同時出場制限を解消できない組み合わせです。コートタイプを変更してください。',
@@ -140,39 +134,46 @@ class SessionNotifier extends ChangeNotifier {
     );
   }
 
-  _ResolvedSelectionResult _buildResolvedSelection({
+  _ConflictImpact _evaluateConflictImpact({
     required int requiredMale,
     required int requiredFemale,
     required PlayerStatsPool availablePool,
   }) {
-    final available = availablePool;
-
     var session = MatchSessionSelection(
-      male: available.males.splitSelection(requiredMale),
-      female: available.females.splitSelection(requiredFemale),
+      male: availablePool.males.splitSelection(requiredMale),
+      female: availablePool.females.splitSelection(requiredFemale),
     );
 
     int retryCount = 0;
     const int maxRetries = 5;
-    final removedByConflict = <String, _ConflictRemovedPlayer>{};
+    final removedMaleIds = <String>{};
+    final removedFemaleIds = <String>{};
+    final predictedRestNames = <String>{};
 
     while (session.hasCrossGenderConflict && retryCount < maxRetries) {
-      final predicted = _predictRestPlayers(session);
-      for (final player in predicted) {
-        removedByConflict[player.id] = player;
+      for (final player in _predictRestPlayers(session)) {
+        predictedRestNames.add(player.name);
+        if (player.gender == Gender.male) {
+          removedMaleIds.add(player.id);
+        } else {
+          removedFemaleIds.add(player.id);
+        }
       }
 
       session = session.resolveConflicts();
       session = MatchSessionSelection(
-        male: available.males.refillSelection(session.male, requiredMale),
-        female: available.females.refillSelection(session.female, requiredFemale),
+        male: availablePool.males.refillSelection(session.male, requiredMale),
+        female:
+            availablePool.females.refillSelection(session.female, requiredFemale),
       );
       retryCount++;
     }
 
-    return _ResolvedSelectionResult(
-      session: session,
-      removedPlayersByConflict: removedByConflict,
+    return _ConflictImpact(
+      removedMaleCount: removedMaleIds.length,
+      removedFemaleCount: removedFemaleIds.length,
+      hasUnresolvedConflict: session.hasCrossGenderConflict,
+      predictedRestPlayerNames: predictedRestNames.toList(growable: false),
     );
   }
 
@@ -199,8 +200,8 @@ class SessionNotifier extends ChangeNotifier {
     }
   }
 
-  List<_ConflictRemovedPlayer> _predictRestPlayers(MatchSessionSelection session) {
-    final predictedPlayers = <_ConflictRemovedPlayer>[];
+  List<_PredictedRemoval> _predictRestPlayers(MatchSessionSelection session) {
+    final predictedPlayers = <_PredictedRemoval>[];
     final maleMap = {for (final male in session.male.allCandidates) male.id: male};
 
     for (final female in session.female.allCandidates) {
@@ -213,7 +214,7 @@ class SessionNotifier extends ChangeNotifier {
       final shouldRestFemale = female.shouldRestOver(male);
       final removed = shouldRestFemale ? female : male;
       predictedPlayers.add(
-        _ConflictRemovedPlayer(
+        _PredictedRemoval(
           id: removed.id,
           name: removed.name,
           gender: removed.player.gender,
@@ -436,25 +437,26 @@ class _RequiredPlayerCounts {
   });
 }
 
-class _ResolvedSelectionResult {
-  final MatchSessionSelection session;
-  final Map<String, _ConflictRemovedPlayer> removedPlayersByConflict;
+class _ConflictImpact {
+  final int removedMaleCount;
+  final int removedFemaleCount;
+  final bool hasUnresolvedConflict;
+  final List<String> predictedRestPlayerNames;
 
-  List<String> get predictedRestPlayerNames =>
-      removedPlayersByConflict.values.map((player) => player.name).toList();
-
-  const _ResolvedSelectionResult({
-    required this.session,
-    required this.removedPlayersByConflict,
+  const _ConflictImpact({
+    required this.removedMaleCount,
+    required this.removedFemaleCount,
+    required this.hasUnresolvedConflict,
+    required this.predictedRestPlayerNames,
   });
 }
 
-class _ConflictRemovedPlayer {
+class _PredictedRemoval {
   final String id;
   final String name;
   final Gender gender;
 
-  const _ConflictRemovedPlayer({
+  const _PredictedRemoval({
     required this.id,
     required this.name,
     required this.gender,
