@@ -253,6 +253,7 @@ void main() {
 
       expect(mixedOnly.canGenerate, isFalse);
       expect(mixedOnly.errorMessage, contains('同時出場制限'));
+      expect(mixedOnly.predictedRestPlayerNames, isNotEmpty);
       expect(womenOnly.canGenerate, isTrue);
     });
   });

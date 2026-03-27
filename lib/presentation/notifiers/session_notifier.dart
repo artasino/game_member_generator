@@ -17,8 +17,13 @@ import '../../domain/services/player_stats_calculator.dart';
 class RequirementResult {
   final bool canGenerate;
   final String? errorMessage;
+  final List<String> predictedRestPlayerNames;
 
-  RequirementResult(this.canGenerate, this.errorMessage);
+  RequirementResult(
+    this.canGenerate,
+    this.errorMessage, {
+    this.predictedRestPlayerNames = const [],
+  });
 }
 
 /// 試合履歴（セッション）の状態管理と統計計算を行うNotifier
@@ -75,10 +80,12 @@ class SessionNotifier extends ChangeNotifier {
       return RequirementResult(false, '女性が足りません (${requiredCounts.female - activeFemales}人不足)');
     }
 
-    final resolvedSelection = _buildResolvedSelection(
+    final resolvedResult = _buildResolvedSelection(
       requiredMale: requiredCounts.male,
       requiredFemale: requiredCounts.female,
     );
+    final resolvedSelection = resolvedResult.session;
+    final predictedRestPlayerNames = resolvedResult.predictedRestPlayerNames;
 
     final selectedMales = resolvedSelection.male.selectedCount;
     final selectedFemales = resolvedSelection.female.selectedCount;
@@ -88,31 +95,39 @@ class SessionNotifier extends ChangeNotifier {
       return RequirementResult(
         false,
         '同時出場制限により男女ともに不足します (男:${requiredCounts.male - selectedMales}人, 女:${requiredCounts.female - selectedFemales}人不足)',
+        predictedRestPlayerNames: predictedRestPlayerNames,
       );
     }
     if (selectedMales < requiredCounts.male) {
       return RequirementResult(
         false,
         '同時出場制限により男性が足りません (${requiredCounts.male - selectedMales}人不足)',
+        predictedRestPlayerNames: predictedRestPlayerNames,
       );
     }
     if (selectedFemales < requiredCounts.female) {
       return RequirementResult(
         false,
         '同時出場制限により女性が足りません (${requiredCounts.female - selectedFemales}人不足)',
+        predictedRestPlayerNames: predictedRestPlayerNames,
       );
     }
     if (resolvedSelection.hasCrossGenderConflict) {
       return RequirementResult(
         false,
         '同時出場制限を解消できない組み合わせです。コートタイプを変更してください。',
+        predictedRestPlayerNames: predictedRestPlayerNames,
       );
     }
 
-    return RequirementResult(true, null);
+    return RequirementResult(
+      true,
+      null,
+      predictedRestPlayerNames: predictedRestPlayerNames,
+    );
   }
 
-  MatchSessionSelection _buildResolvedSelection({
+  _ResolvedSelectionResult _buildResolvedSelection({
     required int requiredMale,
     required int requiredFemale,
   }) {
@@ -125,8 +140,12 @@ class SessionNotifier extends ChangeNotifier {
 
     int retryCount = 0;
     const int maxRetries = 5;
+    final restedNames = <String>{};
 
     while (session.hasCrossGenderConflict && retryCount < maxRetries) {
+      final predicted = _predictRestPlayerNames(session);
+      restedNames.addAll(predicted);
+
       session = session.resolveConflicts();
       session = MatchSessionSelection(
         male: available.males.refillSelection(session.male, requiredMale),
@@ -135,7 +154,28 @@ class SessionNotifier extends ChangeNotifier {
       retryCount++;
     }
 
-    return session;
+    return _ResolvedSelectionResult(
+      session: session,
+      predictedRestPlayerNames: restedNames.toList(growable: false),
+    );
+  }
+
+  List<String> _predictRestPlayerNames(MatchSessionSelection session) {
+    final predictedNames = <String>[];
+    final maleMap = {for (final male in session.male.allCandidates) male.id: male};
+
+    for (final female in session.female.allCandidates) {
+      final partnerId = female.player.excludedPartnerId;
+      if (partnerId == null) continue;
+
+      final male = maleMap[partnerId];
+      if (male == null || male.player.excludedPartnerId != female.id) continue;
+
+      final shouldRestFemale = female.shouldRestOver(male);
+      predictedNames.add(shouldRestFemale ? female.name : male.name);
+    }
+
+    return predictedNames;
   }
 
   Future<void> onPlayersUpdated() async {
@@ -347,5 +387,15 @@ class _RequiredPlayerCounts {
   const _RequiredPlayerCounts({
     required this.male,
     required this.female,
+  });
+}
+
+class _ResolvedSelectionResult {
+  final MatchSessionSelection session;
+  final List<String> predictedRestPlayerNames;
+
+  const _ResolvedSelectionResult({
+    required this.session,
+    required this.predictedRestPlayerNames,
   });
 }

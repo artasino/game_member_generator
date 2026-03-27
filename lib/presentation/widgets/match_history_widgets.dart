@@ -863,6 +863,20 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                       fontWeight: FontWeight.w900),
                 ),
               ),
+            if (res.canGenerate &&
+                types.isNotEmpty &&
+                res.predictedRestPlayerNames.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: Text(
+                  '同時出場制限により次に休む候補: ${res.predictedRestPlayerNames.join(' / ')}',
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
