@@ -61,23 +61,18 @@ class SessionNotifier extends ChangeNotifier {
   /// 現在のアクティブプレイヤーで、指定された試合形式が組めるかチェックする
   RequirementResult checkRequirements(List<MatchType> types) {
     final requiredCounts = _calculateRequiredCounts(types);
-
     final activeAvailable = _getActiveAvailablePool();
-    final activeMales = activeAvailable.males.length;
-    final activeFemales = activeAvailable.females.length;
-
-    if (activeMales < requiredCounts.male &&
-        activeFemales < requiredCounts.female) {
-      return RequirementResult(
-        false,
-        '男女ともに人数が足りません (男:${requiredCounts.male - activeMales}人, 女:${requiredCounts.female - activeFemales}人不足)',
-      );
-    }
-    if (activeMales < requiredCounts.male) {
-      return RequirementResult(false, '男性が足りません (${requiredCounts.male - activeMales}人不足)');
-    }
-    if (activeFemales < requiredCounts.female) {
-      return RequirementResult(false, '女性が足りません (${requiredCounts.female - activeFemales}人不足)');
+    final activeCounts = _GenderCounts(
+      male: activeAvailable.males.length,
+      female: activeAvailable.females.length,
+    );
+    final initialShortage = _buildShortageResult(
+      requiredCounts: requiredCounts,
+      availableCounts: activeCounts,
+      reasonPrefix: '',
+    );
+    if (initialShortage != null) {
+      return initialShortage;
     }
 
     final conflictImpact = _evaluateConflictImpact(
@@ -86,30 +81,18 @@ class SessionNotifier extends ChangeNotifier {
       availablePool: activeAvailable,
     );
     final predictedRestPlayerNames = conflictImpact.predictedRestPlayerNames;
-    final effectiveMales = activeMales - conflictImpact.removedMaleCount;
-    final effectiveFemales = activeFemales - conflictImpact.removedFemaleCount;
-
-    if (effectiveMales < requiredCounts.male &&
-        effectiveFemales < requiredCounts.female) {
-      return RequirementResult(
-        false,
-        '同時出場制限により男女ともに不足します (男:${requiredCounts.male - effectiveMales}人, 女:${requiredCounts.female - effectiveFemales}人不足)',
-        predictedRestPlayerNames: predictedRestPlayerNames,
-      );
-    }
-    if (effectiveMales < requiredCounts.male) {
-      return RequirementResult(
-        false,
-        '同時出場制限により男性が足りません (${requiredCounts.male - effectiveMales}人不足)',
-        predictedRestPlayerNames: predictedRestPlayerNames,
-      );
-    }
-    if (effectiveFemales < requiredCounts.female) {
-      return RequirementResult(
-        false,
-        '同時出場制限により女性が足りません (${requiredCounts.female - effectiveFemales}人不足)',
-        predictedRestPlayerNames: predictedRestPlayerNames,
-      );
+    final effectiveCounts = _GenderCounts(
+      male: activeCounts.male - conflictImpact.removedMaleCount,
+      female: activeCounts.female - conflictImpact.removedFemaleCount,
+    );
+    final conflictShortage = _buildShortageResult(
+      requiredCounts: requiredCounts,
+      availableCounts: effectiveCounts,
+      reasonPrefix: '同時出場制限により',
+      predictedRestPlayerNames: predictedRestPlayerNames,
+    );
+    if (conflictShortage != null) {
+      return conflictShortage;
     }
     if (conflictImpact.hasUnresolvedConflict) {
       return RequirementResult(
@@ -132,6 +115,48 @@ class SessionNotifier extends ChangeNotifier {
       null,
       predictedRestPlayerNames: predictedRestPlayerNames,
     );
+  }
+
+  RequirementResult? _buildShortageResult({
+    required _RequiredPlayerCounts requiredCounts,
+    required _GenderCounts availableCounts,
+    required String reasonPrefix,
+    List<String> predictedRestPlayerNames = const [],
+  }) {
+    final missingMale = requiredCounts.male - availableCounts.male;
+    final missingFemale = requiredCounts.female - availableCounts.female;
+
+    if (missingMale <= 0 && missingFemale <= 0) {
+      return null;
+    }
+
+    final message = _buildShortageMessage(
+      missingMale: missingMale,
+      missingFemale: missingFemale,
+      reasonPrefix: reasonPrefix,
+    );
+    return RequirementResult(
+      false,
+      message,
+      predictedRestPlayerNames: predictedRestPlayerNames,
+    );
+  }
+
+  String _buildShortageMessage({
+    required int missingMale,
+    required int missingFemale,
+    required String reasonPrefix,
+  }) {
+    final shortagePrefix = reasonPrefix.isEmpty ? '' : '$reasonPrefix';
+
+    if (missingMale > 0 && missingFemale > 0) {
+      final suffix = reasonPrefix.isEmpty ? '足りません' : '不足します';
+      return '${shortagePrefix}男女ともに人数が$suffix (男:${missingMale}人, 女:${missingFemale}人不足)';
+    }
+    if (missingMale > 0) {
+      return '${shortagePrefix}男性が足りません (${missingMale}人不足)';
+    }
+    return '${shortagePrefix}女性が足りません (${missingFemale}人不足)';
   }
 
   _ConflictImpact _evaluateConflictImpact({
@@ -432,6 +457,16 @@ class _RequiredPlayerCounts {
   final int female;
 
   const _RequiredPlayerCounts({
+    required this.male,
+    required this.female,
+  });
+}
+
+class _GenderCounts {
+  final int male;
+  final int female;
+
+  const _GenderCounts({
     required this.male,
     required this.female,
   });
