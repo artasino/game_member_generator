@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/gender.dart';
+import '../../domain/entities/match_session_selection.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/player_stats_pool.dart';
@@ -56,14 +57,12 @@ class SessionNotifier extends ChangeNotifier {
   RequirementResult checkRequirements(List<MatchType> types) {
     final requiredCounts = _calculateRequiredCounts(types);
 
-    final activeMales = _cachedPool.all
-        .where((p) => p.player.isActive && p.player.gender == Gender.male)
-        .length;
-    final activeFemales = _cachedPool.all
-        .where((p) => p.player.isActive && p.player.gender == Gender.female)
-        .length;
+    final activeAvailable = _cachedPool.filterAvailable();
+    final activeMales = activeAvailable.males.length;
+    final activeFemales = activeAvailable.females.length;
 
-    if (activeMales < requiredCounts.male && activeFemales < requiredCounts.female) {
+    if (activeMales < requiredCounts.male &&
+        activeFemales < requiredCounts.female) {
       return RequirementResult(
         false,
         '男女ともに人数が足りません (男:${requiredCounts.male - activeMales}人, 女:${requiredCounts.female - activeFemales}人不足)',
@@ -76,7 +75,67 @@ class SessionNotifier extends ChangeNotifier {
       return RequirementResult(false, '女性が足りません (${requiredCounts.female - activeFemales}人不足)');
     }
 
+    final resolvedSelection = _buildResolvedSelection(
+      requiredMale: requiredCounts.male,
+      requiredFemale: requiredCounts.female,
+    );
+
+    final selectedMales = resolvedSelection.male.selectedCount;
+    final selectedFemales = resolvedSelection.female.selectedCount;
+
+    if (selectedMales < requiredCounts.male &&
+        selectedFemales < requiredCounts.female) {
+      return RequirementResult(
+        false,
+        '同時出場制限により男女ともに不足します (男:${requiredCounts.male - selectedMales}人, 女:${requiredCounts.female - selectedFemales}人不足)',
+      );
+    }
+    if (selectedMales < requiredCounts.male) {
+      return RequirementResult(
+        false,
+        '同時出場制限により男性が足りません (${requiredCounts.male - selectedMales}人不足)',
+      );
+    }
+    if (selectedFemales < requiredCounts.female) {
+      return RequirementResult(
+        false,
+        '同時出場制限により女性が足りません (${requiredCounts.female - selectedFemales}人不足)',
+      );
+    }
+    if (resolvedSelection.hasCrossGenderConflict) {
+      return RequirementResult(
+        false,
+        '同時出場制限を解消できない組み合わせです。コートタイプを変更してください。',
+      );
+    }
+
     return RequirementResult(true, null);
+  }
+
+  MatchSessionSelection _buildResolvedSelection({
+    required int requiredMale,
+    required int requiredFemale,
+  }) {
+    final available = _cachedPool.filterAvailable();
+
+    var session = MatchSessionSelection(
+      male: available.males.splitSelection(requiredMale),
+      female: available.females.splitSelection(requiredFemale),
+    );
+
+    int retryCount = 0;
+    const int maxRetries = 5;
+
+    while (session.hasCrossGenderConflict && retryCount < maxRetries) {
+      session = session.resolveConflicts();
+      session = MatchSessionSelection(
+        male: available.males.refillSelection(session.male, requiredMale),
+        female: available.females.refillSelection(session.female, requiredFemale),
+      );
+      retryCount++;
+    }
+
+    return session;
   }
 
   Future<void> onPlayersUpdated() async {

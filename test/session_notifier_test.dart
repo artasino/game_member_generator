@@ -219,4 +219,41 @@ void main() {
           pool.all.firstWhere((p) => p.player.id == '5').stats.totalMatches, 1);
     });
   });
+
+  group('SessionNotifier - 同時出場制限を考慮したバリデーション', () {
+    test('同時出場制限で人数不足になる構成は生成不可になること', () async {
+      const m1 = Player(
+        id: 'm1',
+        name: 'M1',
+        yomigana: 'm1',
+        gender: Gender.male,
+        excludedPartnerId: 'f1',
+      );
+      const m2 =
+          Player(id: 'm2', name: 'M2', yomigana: 'm2', gender: Gender.male);
+      const f1 = Player(
+        id: 'f1',
+        name: 'F1',
+        yomigana: 'f1',
+        gender: Gender.female,
+        excludedPartnerId: 'm1',
+      );
+      const f2 =
+          Player(id: 'f2', name: 'F2', yomigana: 'f2', gender: Gender.female);
+      const f3 =
+          Player(id: 'f3', name: 'F3', yomigana: 'f3', gender: Gender.female);
+      const f4 =
+          Player(id: 'f4', name: 'F4', yomigana: 'f4', gender: Gender.female);
+
+      playerRepo.players = [m1, m2, f1, f2, f3, f4];
+      await notifier.onPlayersUpdated();
+
+      final mixedOnly = notifier.checkRequirements([MatchType.mixedDoubles]);
+      final womenOnly = notifier.checkRequirements([MatchType.womenDoubles]);
+
+      expect(mixedOnly.canGenerate, isFalse);
+      expect(mixedOnly.errorMessage, contains('同時出場制限'));
+      expect(womenOnly.canGenerate, isTrue);
+    });
+  });
 }

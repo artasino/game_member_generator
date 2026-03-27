@@ -798,11 +798,17 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                       runSpacing: 16,
                       children: MatchType.values.map((type) {
                         final color = _getMatchTypeColor(context, type);
+                        final tentativeTypes = [...types, type];
+                        final canAddType = widget.notifier
+                            .checkRequirements(tentativeTypes)
+                            .canGenerate;
                         return ActionChip(
                           label: Text(type.displayName,
                               style: const TextStyle(
                                   fontWeight: FontWeight.w900, fontSize: 16)),
-                          onPressed: () => setState(() => types.add(type)),
+                          onPressed: canAddType
+                              ? () => setState(() => types.add(type))
+                              : null,
                           avatar: Icon(Icons.add, size: 20, color: color),
                           side: BorderSide(color: color, width: 2.5),
                           padding: const EdgeInsets.symmetric(
