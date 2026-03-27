@@ -86,29 +86,33 @@ class SessionNotifier extends ChangeNotifier {
     );
     final resolvedSelection = resolvedResult.session;
     final predictedRestPlayerNames = resolvedResult.predictedRestPlayerNames;
+    final removedPlayers = resolvedResult.removedPlayersByConflict.values;
+    final removedMales =
+        removedPlayers.where((player) => player.gender == Gender.male).length;
+    final removedFemales =
+        removedPlayers.where((player) => player.gender == Gender.female).length;
+    final effectiveMales = activeMales - removedMales;
+    final effectiveFemales = activeFemales - removedFemales;
 
-    final selectedMales = resolvedSelection.male.selectedCount;
-    final selectedFemales = resolvedSelection.female.selectedCount;
-
-    if (selectedMales < requiredCounts.male &&
-        selectedFemales < requiredCounts.female) {
+    if (effectiveMales < requiredCounts.male &&
+        effectiveFemales < requiredCounts.female) {
       return RequirementResult(
         false,
-        '同時出場制限により男女ともに不足します (男:${requiredCounts.male - selectedMales}人, 女:${requiredCounts.female - selectedFemales}人不足)',
+        '同時出場制限により男女ともに不足します (男:${requiredCounts.male - effectiveMales}人, 女:${requiredCounts.female - effectiveFemales}人不足)',
         predictedRestPlayerNames: predictedRestPlayerNames,
       );
     }
-    if (selectedMales < requiredCounts.male) {
+    if (effectiveMales < requiredCounts.male) {
       return RequirementResult(
         false,
-        '同時出場制限により男性が足りません (${requiredCounts.male - selectedMales}人不足)',
+        '同時出場制限により男性が足りません (${requiredCounts.male - effectiveMales}人不足)',
         predictedRestPlayerNames: predictedRestPlayerNames,
       );
     }
-    if (selectedFemales < requiredCounts.female) {
+    if (effectiveFemales < requiredCounts.female) {
       return RequirementResult(
         false,
-        '同時出場制限により女性が足りません (${requiredCounts.female - selectedFemales}人不足)',
+        '同時出場制限により女性が足りません (${requiredCounts.female - effectiveFemales}人不足)',
         predictedRestPlayerNames: predictedRestPlayerNames,
       );
     }
@@ -140,11 +144,13 @@ class SessionNotifier extends ChangeNotifier {
 
     int retryCount = 0;
     const int maxRetries = 5;
-    final restedNames = <String>{};
+    final removedByConflict = <String, _ConflictRemovedPlayer>{};
 
     while (session.hasCrossGenderConflict && retryCount < maxRetries) {
-      final predicted = _predictRestPlayerNames(session);
-      restedNames.addAll(predicted);
+      final predicted = _predictRestPlayers(session);
+      for (final player in predicted) {
+        removedByConflict[player.id] = player;
+      }
 
       session = session.resolveConflicts();
       session = MatchSessionSelection(
@@ -156,12 +162,12 @@ class SessionNotifier extends ChangeNotifier {
 
     return _ResolvedSelectionResult(
       session: session,
-      predictedRestPlayerNames: restedNames.toList(growable: false),
+      removedPlayersByConflict: removedByConflict,
     );
   }
 
-  List<String> _predictRestPlayerNames(MatchSessionSelection session) {
-    final predictedNames = <String>[];
+  List<_ConflictRemovedPlayer> _predictRestPlayers(MatchSessionSelection session) {
+    final predictedPlayers = <_ConflictRemovedPlayer>[];
     final maleMap = {for (final male in session.male.allCandidates) male.id: male};
 
     for (final female in session.female.allCandidates) {
@@ -172,10 +178,17 @@ class SessionNotifier extends ChangeNotifier {
       if (male == null || male.player.excludedPartnerId != female.id) continue;
 
       final shouldRestFemale = female.shouldRestOver(male);
-      predictedNames.add(shouldRestFemale ? female.name : male.name);
+      final removed = shouldRestFemale ? female : male;
+      predictedPlayers.add(
+        _ConflictRemovedPlayer(
+          id: removed.id,
+          name: removed.name,
+          gender: removed.player.gender,
+        ),
+      );
     }
 
-    return predictedNames;
+    return predictedPlayers;
   }
 
   Future<void> onPlayersUpdated() async {
@@ -392,10 +405,25 @@ class _RequiredPlayerCounts {
 
 class _ResolvedSelectionResult {
   final MatchSessionSelection session;
-  final List<String> predictedRestPlayerNames;
+  final Map<String, _ConflictRemovedPlayer> removedPlayersByConflict;
+
+  List<String> get predictedRestPlayerNames =>
+      removedPlayersByConflict.values.map((player) => player.name).toList();
 
   const _ResolvedSelectionResult({
     required this.session,
-    required this.predictedRestPlayerNames,
+    required this.removedPlayersByConflict,
+  });
+}
+
+class _ConflictRemovedPlayer {
+  final String id;
+  final String name;
+  final Gender gender;
+
+  const _ConflictRemovedPlayer({
+    required this.id,
+    required this.name,
+    required this.gender,
   });
 }
