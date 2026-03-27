@@ -19,14 +19,35 @@ class SharedPreferencesCourtSettingsRepository
       return CourtSettings([MatchType.menDoubles]);
     }
 
-    final List<dynamic> types = jsonDecode(jsonString);
-    return CourtSettings(types.map((t) => MatchType.values[t as int]).toList());
+    final dynamic decoded = jsonDecode(jsonString);
+    if (decoded is List<dynamic>) {
+      return CourtSettings(
+        decoded.map((t) => MatchType.values[t as int]).toList(),
+      );
+    }
+
+    final Map<String, dynamic> map = decoded as Map<String, dynamic>;
+    final types = (map['matchTypes'] as List<dynamic>? ?? [])
+        .map((t) => MatchType.values[t as int])
+        .toList();
+    final autoCourtCount = (map['autoCourtCount'] as int?) ?? 2;
+    final autoCourtPolicyIndex = (map['autoCourtPolicy'] as int?) ?? 1;
+
+    return CourtSettings(
+      types.isEmpty ? [MatchType.menDoubles] : types,
+      autoCourtCount: autoCourtCount,
+      autoCourtPolicy: AutoCourtPolicy.values[autoCourtPolicyIndex],
+    );
   }
 
   @override
   Future<void> update(CourtSettings settings) async {
     final prefs = await _prefs;
-    final types = settings.matchTypes.map((t) => t.index).toList();
-    await prefs.setString(_settingsKey, jsonEncode(types));
+    final payload = {
+      'matchTypes': settings.matchTypes.map((t) => t.index).toList(),
+      'autoCourtCount': settings.autoCourtCount,
+      'autoCourtPolicy': settings.autoCourtPolicy.index,
+    };
+    await prefs.setString(_settingsKey, jsonEncode(payload));
   }
 }

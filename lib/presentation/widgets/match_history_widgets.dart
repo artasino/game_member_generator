@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/config/app_config.dart';
 
+import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/game.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
@@ -694,6 +695,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
   List<MatchType> types = [];
   bool loading = true;
   bool isAutoRecommendEnabled = false; // デフォルトは自動選択
+  int autoCourtCount = 2;
+  AutoCourtPolicy autoCourtPolicy = AutoCourtPolicy.balance;
 
   @override
   void initState() {
@@ -710,15 +713,34 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         isAutoRecommendEnabled = false;
       } else {
         types = List.from(s.matchTypes);
+        autoCourtCount = s.autoCourtCount;
+        autoCourtPolicy = s.autoCourtPolicy;
       }
       loading = false;
+    });
+  }
+
+  List<MatchType> _buildAutoTypes() {
+    return List<MatchType>.generate(autoCourtCount, (index) {
+      switch (autoCourtPolicy) {
+        case AutoCourtPolicy.genderSeparated:
+          return index.isEven ? MatchType.menDoubles : MatchType.womenDoubles;
+        case AutoCourtPolicy.balance:
+          if (index == autoCourtCount - 1 && autoCourtCount.isOdd) {
+            return MatchType.mixedDoubles;
+          }
+          return index.isEven ? MatchType.menDoubles : MatchType.womenDoubles;
+        case AutoCourtPolicy.mix:
+          return MatchType.mixedDoubles;
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     if (loading) return const SizedBox.shrink();
-    final res = widget.notifier.checkRequirements(types);
+    final selectedTypes = isAutoRecommendEnabled ? _buildAutoTypes() : types;
+    final res = widget.notifier.checkRequirements(selectedTypes);
     final theme = Theme.of(context);
 
     // アクティブ人数のカウント
@@ -781,6 +803,73 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                 },
               ),
               const SizedBox(height: 24),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: isAutoRecommendEnabled
+                    ? Column(
+                        key: const ValueKey('auto_settings'),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text('コート数',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
+                              const SizedBox(width: 16),
+                              DropdownButton<int>(
+                                value: autoCourtCount,
+                                items: List.generate(6, (i) => i + 1)
+                                    .map((count) => DropdownMenuItem<int>(
+                                          value: count,
+                                          child: Text('$count 面'),
+                                        ))
+                                    .toList(),
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setState(() => autoCourtCount = value);
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Text('生成ポリシー',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          SegmentedButton<AutoCourtPolicy>(
+                            segments: AutoCourtPolicy.values
+                                .map(
+                                  (policy) => ButtonSegment<AutoCourtPolicy>(
+                                    value: policy,
+                                    label: Text(policy.displayName),
+                                  ),
+                                )
+                                .toList(),
+                            selected: {autoCourtPolicy},
+                            onSelectionChanged:
+                                (Set<AutoCourtPolicy> newSelection) {
+                              setState(() {
+                                autoCourtPolicy = newSelection.first;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: selectedTypes.map((type) {
+                              return Chip(
+                                label: Text(type.displayName),
+                                visualDensity: VisualDensity.compact,
+                              );
+                            }).toList(),
+                          ),
+                          const Divider(height: 32),
+                        ],
+                      )
+                    : const SizedBox.shrink(
+                        key: ValueKey('manual_settings'),
+                      ),
+              ),
             ],
 
             AnimatedOpacity(
@@ -852,7 +941,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               ),
             ),
 
-            if (!res.canGenerate && types.isNotEmpty)
+            if (!res.canGenerate && selectedTypes.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 24),
                 child: Text(
@@ -864,7 +953,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                 ),
               ),
             if (res.canGenerate &&
-                types.isNotEmpty &&
+                selectedTypes.isNotEmpty &&
                 res.predictedRestPlayerNames.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 24),
@@ -888,9 +977,16 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         ),
         AppActionButton(
           label: 'スタート',
-          onPressed: !res.canGenerate || types.isEmpty
+          onPressed: !res.canGenerate || selectedTypes.isEmpty
               ? null
-              : () => Navigator.pop(context, types),
+              : () => Navigator.pop(
+                    context,
+                    CourtSettings(
+                      selectedTypes,
+                      autoCourtCount: autoCourtCount,
+                      autoCourtPolicy: autoCourtPolicy,
+                    ),
+                  ),
           isPrimary: true,
         ),
       ],
