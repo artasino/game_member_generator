@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/gender.dart';
+import '../../domain/entities/match_session_selection.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/player_stats_pool.dart';
@@ -16,8 +17,13 @@ import '../../domain/services/player_stats_calculator.dart';
 class RequirementResult {
   final bool canGenerate;
   final String? errorMessage;
+  final List<String> predictedRestPlayerNames;
 
-  RequirementResult(this.canGenerate, this.errorMessage);
+  RequirementResult(
+    this.canGenerate,
+    this.errorMessage, {
+    this.predictedRestPlayerNames = const [],
+  });
 }
 
 /// 試合履歴（セッション）の状態管理と統計計算を行うNotifier
@@ -56,14 +62,12 @@ class SessionNotifier extends ChangeNotifier {
   RequirementResult checkRequirements(List<MatchType> types) {
     final requiredCounts = _calculateRequiredCounts(types);
 
-    final activeMales = _cachedPool.all
-        .where((p) => p.player.isActive && p.player.gender == Gender.male)
-        .length;
-    final activeFemales = _cachedPool.all
-        .where((p) => p.player.isActive && p.player.gender == Gender.female)
-        .length;
+    final activeAvailable = _getActiveAvailablePool();
+    final activeMales = activeAvailable.males.length;
+    final activeFemales = activeAvailable.females.length;
 
-    if (activeMales < requiredCounts.male && activeFemales < requiredCounts.female) {
+    if (activeMales < requiredCounts.male &&
+        activeFemales < requiredCounts.female) {
       return RequirementResult(
         false,
         '男女ともに人数が足りません (男:${requiredCounts.male - activeMales}人, 女:${requiredCounts.female - activeFemales}人不足)',
@@ -76,7 +80,149 @@ class SessionNotifier extends ChangeNotifier {
       return RequirementResult(false, '女性が足りません (${requiredCounts.female - activeFemales}人不足)');
     }
 
-    return RequirementResult(true, null);
+    final conflictImpact = _evaluateConflictImpact(
+      requiredMale: requiredCounts.male,
+      requiredFemale: requiredCounts.female,
+      availablePool: activeAvailable,
+    );
+    final predictedRestPlayerNames = conflictImpact.predictedRestPlayerNames;
+    final effectiveMales = activeMales - conflictImpact.removedMaleCount;
+    final effectiveFemales = activeFemales - conflictImpact.removedFemaleCount;
+
+    if (effectiveMales < requiredCounts.male &&
+        effectiveFemales < requiredCounts.female) {
+      return RequirementResult(
+        false,
+        '同時出場制限により男女ともに不足します (男:${requiredCounts.male - effectiveMales}人, 女:${requiredCounts.female - effectiveFemales}人不足)',
+        predictedRestPlayerNames: predictedRestPlayerNames,
+      );
+    }
+    if (effectiveMales < requiredCounts.male) {
+      return RequirementResult(
+        false,
+        '同時出場制限により男性が足りません (${requiredCounts.male - effectiveMales}人不足)',
+        predictedRestPlayerNames: predictedRestPlayerNames,
+      );
+    }
+    if (effectiveFemales < requiredCounts.female) {
+      return RequirementResult(
+        false,
+        '同時出場制限により女性が足りません (${requiredCounts.female - effectiveFemales}人不足)',
+        predictedRestPlayerNames: predictedRestPlayerNames,
+      );
+    }
+    if (conflictImpact.hasUnresolvedConflict) {
+      return RequirementResult(
+        false,
+        '同時出場制限を解消できない組み合わせです。コートタイプを変更してください。',
+        predictedRestPlayerNames: predictedRestPlayerNames,
+      );
+    }
+
+    if (!_canGenerateWithCurrentAlgorithm(types, activeAvailable)) {
+      return RequirementResult(
+        false,
+        'この組み合わせでは試合を生成できません。コートタイプを変更してください。',
+        predictedRestPlayerNames: predictedRestPlayerNames,
+      );
+    }
+
+    return RequirementResult(
+      true,
+      null,
+      predictedRestPlayerNames: predictedRestPlayerNames,
+    );
+  }
+
+  _ConflictImpact _evaluateConflictImpact({
+    required int requiredMale,
+    required int requiredFemale,
+    required PlayerStatsPool availablePool,
+  }) {
+    var session = MatchSessionSelection(
+      male: availablePool.males.splitSelection(requiredMale),
+      female: availablePool.females.splitSelection(requiredFemale),
+    );
+
+    int retryCount = 0;
+    const int maxRetries = 5;
+    final removedMaleIds = <String>{};
+    final removedFemaleIds = <String>{};
+    final predictedRestNames = <String>{};
+
+    while (session.hasCrossGenderConflict && retryCount < maxRetries) {
+      for (final player in _predictRestPlayers(session)) {
+        predictedRestNames.add(player.name);
+        if (player.gender == Gender.male) {
+          removedMaleIds.add(player.id);
+        } else {
+          removedFemaleIds.add(player.id);
+        }
+      }
+
+      session = session.resolveConflicts();
+      session = MatchSessionSelection(
+        male: availablePool.males.refillSelection(session.male, requiredMale),
+        female:
+            availablePool.females.refillSelection(session.female, requiredFemale),
+      );
+      retryCount++;
+    }
+
+    return _ConflictImpact(
+      removedMaleCount: removedMaleIds.length,
+      removedFemaleCount: removedFemaleIds.length,
+      hasUnresolvedConflict: session.hasCrossGenderConflict,
+      predictedRestPlayerNames: predictedRestNames.toList(growable: false),
+    );
+  }
+
+  PlayerStatsPool _getActiveAvailablePool() {
+    return PlayerStatsPool(
+      _cachedPool.all
+          .where((player) => player.player.isActive && !player.player.isMustRest)
+          .toList(growable: false),
+    );
+  }
+
+  bool _canGenerateWithCurrentAlgorithm(
+    List<MatchType> types,
+    PlayerStatsPool activeAvailablePool,
+  ) {
+    try {
+      final generated = matchMakingService.algorithm.generateMatches(
+        matchTypes: types,
+        playerPool: activeAvailablePool,
+      );
+      return generated.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  List<_PredictedRemoval> _predictRestPlayers(MatchSessionSelection session) {
+    final predictedPlayers = <_PredictedRemoval>[];
+    final maleMap = {for (final male in session.male.allCandidates) male.id: male};
+
+    for (final female in session.female.allCandidates) {
+      final partnerId = female.player.excludedPartnerId;
+      if (partnerId == null) continue;
+
+      final male = maleMap[partnerId];
+      if (male == null || male.player.excludedPartnerId != female.id) continue;
+
+      final shouldRestFemale = female.shouldRestOver(male);
+      final removed = shouldRestFemale ? female : male;
+      predictedPlayers.add(
+        _PredictedRemoval(
+          id: removed.id,
+          name: removed.name,
+          gender: removed.player.gender,
+        ),
+      );
+    }
+
+    return predictedPlayers;
   }
 
   Future<void> onPlayersUpdated() async {
@@ -288,5 +434,31 @@ class _RequiredPlayerCounts {
   const _RequiredPlayerCounts({
     required this.male,
     required this.female,
+  });
+}
+
+class _ConflictImpact {
+  final int removedMaleCount;
+  final int removedFemaleCount;
+  final bool hasUnresolvedConflict;
+  final List<String> predictedRestPlayerNames;
+
+  const _ConflictImpact({
+    required this.removedMaleCount,
+    required this.removedFemaleCount,
+    required this.hasUnresolvedConflict,
+    required this.predictedRestPlayerNames,
+  });
+}
+
+class _PredictedRemoval {
+  final String id;
+  final String name;
+  final Gender gender;
+
+  const _PredictedRemoval({
+    required this.id,
+    required this.name,
+    required this.gender,
   });
 }
