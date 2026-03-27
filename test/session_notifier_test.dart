@@ -289,5 +289,29 @@ void main() {
       expect(mixedOnly.canGenerate, isTrue);
       expect(mixedOnly.predictedRestPlayerNames, isNotEmpty);
     });
+
+    test('非アクティブな人数をカウントしないこと', () async {
+      const m1 =
+          Player(id: 'm1', name: 'M1', yomigana: 'm1', gender: Gender.male);
+      const m2 =
+          Player(id: 'm2', name: 'M2', yomigana: 'm2', gender: Gender.male);
+      const m3 =
+          Player(id: 'm3', name: 'M3', yomigana: 'm3', gender: Gender.male);
+      const m4 = Player(
+        id: 'm4',
+        name: 'M4',
+        yomigana: 'm4',
+        gender: Gender.male,
+        isActive: false,
+      );
+
+      playerRepo.players = [m1, m2, m3, m4];
+      await notifier.onPlayersUpdated();
+
+      final menOnly = notifier.checkRequirements([MatchType.menDoubles]);
+
+      expect(menOnly.canGenerate, isFalse);
+      expect(menOnly.errorMessage, contains('男性が足りません'));
+    });
   });
 }

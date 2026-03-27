@@ -62,7 +62,7 @@ class SessionNotifier extends ChangeNotifier {
   RequirementResult checkRequirements(List<MatchType> types) {
     final requiredCounts = _calculateRequiredCounts(types);
 
-    final activeAvailable = _cachedPool.filterAvailable();
+    final activeAvailable = _getActiveAvailablePool();
     final activeMales = activeAvailable.males.length;
     final activeFemales = activeAvailable.females.length;
 
@@ -83,6 +83,7 @@ class SessionNotifier extends ChangeNotifier {
     final resolvedResult = _buildResolvedSelection(
       requiredMale: requiredCounts.male,
       requiredFemale: requiredCounts.female,
+      availablePool: activeAvailable,
     );
     final resolvedSelection = resolvedResult.session;
     final predictedRestPlayerNames = resolvedResult.predictedRestPlayerNames;
@@ -124,6 +125,14 @@ class SessionNotifier extends ChangeNotifier {
       );
     }
 
+    if (!_canGenerateWithCurrentAlgorithm(types, activeAvailable)) {
+      return RequirementResult(
+        false,
+        'この組み合わせでは試合を生成できません。コートタイプを変更してください。',
+        predictedRestPlayerNames: predictedRestPlayerNames,
+      );
+    }
+
     return RequirementResult(
       true,
       null,
@@ -134,8 +143,9 @@ class SessionNotifier extends ChangeNotifier {
   _ResolvedSelectionResult _buildResolvedSelection({
     required int requiredMale,
     required int requiredFemale,
+    required PlayerStatsPool availablePool,
   }) {
-    final available = _cachedPool.filterAvailable();
+    final available = availablePool;
 
     var session = MatchSessionSelection(
       male: available.males.splitSelection(requiredMale),
@@ -164,6 +174,29 @@ class SessionNotifier extends ChangeNotifier {
       session: session,
       removedPlayersByConflict: removedByConflict,
     );
+  }
+
+  PlayerStatsPool _getActiveAvailablePool() {
+    return PlayerStatsPool(
+      _cachedPool.all
+          .where((player) => player.player.isActive && !player.player.isMustRest)
+          .toList(growable: false),
+    );
+  }
+
+  bool _canGenerateWithCurrentAlgorithm(
+    List<MatchType> types,
+    PlayerStatsPool activeAvailablePool,
+  ) {
+    try {
+      final generated = matchMakingService.algorithm.generateMatches(
+        matchTypes: types,
+        playerPool: activeAvailablePool,
+      );
+      return generated.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
   }
 
   List<_ConflictRemovedPlayer> _predictRestPlayers(MatchSessionSelection session) {
