@@ -59,7 +59,10 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   /// 現在のアクティブプレイヤーで、指定された試合形式が組めるかチェックする
-  RequirementResult checkRequirements(List<MatchType> types) {
+  RequirementResult checkRequirements(
+    List<MatchType> types, {
+    bool performAlgorithmCheck = true,
+  }) {
     final requiredCounts = _calculateRequiredCounts(types);
     final activeAvailable = _getActiveAvailablePool();
     final activeCounts = _GenderCounts(
@@ -102,7 +105,8 @@ class SessionNotifier extends ChangeNotifier {
       );
     }
 
-    if (!_canGenerateWithCurrentAlgorithm(types, activeAvailable)) {
+    if (performAlgorithmCheck &&
+        !_canGenerateWithCurrentAlgorithm(types, activeAvailable)) {
       return RequirementResult(
         false,
         'この組み合わせでは試合を生成できません。コートタイプを変更してください。',

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/court_settings.dart';
-import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/session.dart';
 import '../notifiers/session_notifier.dart';
@@ -223,7 +222,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   }
 
   void _showSettings(bool isRecalc) async {
-    final types = await showDialog<List<MatchType>>(
+    final settings = await showDialog<CourtSettings>(
       context: context,
       builder: (context) => MatchSettingsDialog(
         notifier: widget.notifier,
@@ -232,17 +231,17 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             isRecalc ? widget.notifier.sessions[_currentIndex!] : null,
       ),
     );
-    if (types == null) return;
+    if (settings == null) return;
 
     try {
       if (isRecalc) {
         await widget.notifier.recalculateSession(
           widget.notifier.sessions[_currentIndex!].index,
-          CourtSettings(types),
+          settings,
         );
         _updateIndexSafely(targetIndex: _currentIndex);
       } else {
-        await widget.notifier.generateSessionWithSettings(CourtSettings(types));
+        await widget.notifier.generateSessionWithSettings(settings);
         _updateIndexSafely();
       }
     } catch (e) {
