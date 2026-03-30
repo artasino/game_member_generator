@@ -47,15 +47,13 @@ class GamesArea extends StatelessWidget {
   Widget build(BuildContext context) {
     final int count = session.games.length;
 
-    // 列数の決定
     int cross;
-    // 縦画面（スマホ等）を想定し、幅が狭い場合は1列に固定
     if (screenWidth < 500 * scale) {
       cross = 1;
     } else if (count == 4) {
-      cross = 2; // 4試合のときは2x2
+      cross = 2;
     } else if (count == 3) {
-      cross = 3; // 3試合のときは横に3つ
+      cross = 3;
     } else {
       final double minCardWidth = 360 * scale;
       cross = (screenWidth / minCardWidth).floor().clamp(1, 3);
@@ -125,8 +123,6 @@ class GameCard extends StatelessWidget {
         pool.all.where((p) => p.player.id == game.teamB.player1.id).firstOrNull;
     final pairCountB = p2Stats?.stats.partnerCounts[game.teamB.player2.id] ?? 0;
 
-    final typeColor = _getMatchTypeColor(context, game.type);
-
     return Card(
       elevation: 4,
       clipBehavior: Clip.antiAlias,
@@ -134,7 +130,6 @@ class GameCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16 * scale),
         side: BorderSide(color: colorScheme.outlineVariant, width: 2),
       ),
-      color: colorScheme.surface,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -150,28 +145,20 @@ class GameCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    SizedBox(width: 8 * scale),
-                    CircleAvatar(
-                      radius: 16 * scale,
-                      backgroundColor: colorScheme.primary,
-                      child: Text(
-                        '${index + 1}',
-                        style: TextStyle(
-                            color: colorScheme.onPrimary,
-                            fontSize: 18 * scale,
-                            fontWeight: FontWeight.w900),
-                      ),
-                    ),
-                  ],
+                CircleAvatar(
+                  radius: 16 * scale,
+                  backgroundColor: colorScheme.primary,
+                  child: Text('${index + 1}',
+                      style: TextStyle(
+                          color: colorScheme.onPrimary,
+                          fontSize: 18 * scale,
+                          fontWeight: FontWeight.bold)),
                 ),
                 AppBadge(
-                  label: game.type.displayName,
-                  color: typeColor,
-                  isFilled: true,
-                  scale: scale,
-                ),
+                    label: game.type.displayName,
+                    color: _getMatchTypeColor(context, game.type),
+                    isFilled: true,
+                    scale: scale),
               ],
             ),
           ),
@@ -180,28 +167,24 @@ class GameCard extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: TeamColumn(
-                    team: game.teamA,
-                    pairCount: pairCountA,
-                    scale: scale,
-                    selectedPlayer: selectedPlayer,
-                    onPlayerTap: onPlayerTap,
-                    onPlayerLongPress: onPlayerLongPress,
-                    showPairInfo: showPairInfo,
-                  ),
-                ),
+                    child: TeamColumn(
+                        team: game.teamA,
+                        pairCount: pairCountA,
+                        scale: scale,
+                        selectedPlayer: selectedPlayer,
+                        onPlayerTap: onPlayerTap,
+                        onPlayerLongPress: onPlayerLongPress,
+                        showPairInfo: showPairInfo)),
                 _VSDivider(scale: scale),
                 Expanded(
-                  child: TeamColumn(
-                    team: game.teamB,
-                    pairCount: pairCountB,
-                    scale: scale,
-                    selectedPlayer: selectedPlayer,
-                    onPlayerTap: onPlayerTap,
-                    onPlayerLongPress: onPlayerLongPress,
-                    showPairInfo: showPairInfo,
-                  ),
-                ),
+                    child: TeamColumn(
+                        team: game.teamB,
+                        pairCount: pairCountB,
+                        scale: scale,
+                        selectedPlayer: selectedPlayer,
+                        onPlayerTap: onPlayerTap,
+                        onPlayerLongPress: onPlayerLongPress,
+                        showPairInfo: showPairInfo)),
               ],
             ),
           ),
@@ -227,7 +210,7 @@ class _VSDivider extends StatelessWidget {
               style: TextStyle(
                   fontSize: 18 * scale,
                   fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.outline.withValues(alpha: 0.4))),
+                  color: theme.colorScheme.outline.withOpacity(0.4))),
           Container(
               width: 2,
               height: 60 * scale,
@@ -247,38 +230,35 @@ class TeamColumn extends StatelessWidget {
   final Function(Player) onPlayerLongPress;
   final bool showPairInfo;
 
-  const TeamColumn({
-    super.key,
-    required this.team,
-    required this.pairCount,
-    required this.scale,
-    required this.selectedPlayer,
-    required this.onPlayerTap,
-    required this.onPlayerLongPress,
-    required this.showPairInfo,
-  });
+  const TeamColumn(
+      {super.key,
+      required this.team,
+      required this.pairCount,
+      required this.scale,
+      this.selectedPlayer,
+      required this.onPlayerTap,
+      required this.onPlayerLongPress,
+      required this.showPairInfo});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         PlayerTag(
-          player: team.player1,
-          isSelected: selectedPlayer?.id == team.player1.id,
-          onTap: () => onPlayerTap(team.player1),
-          onLongPress: () => onPlayerLongPress(team.player1),
-          scale: scale,
-        ),
-        SizedBox(height: 8 * scale),
+            player: team.player1,
+            isSelected: selectedPlayer?.id == team.player1.id,
+            onTap: () => onPlayerTap(team.player1),
+            onLongPress: () => onPlayerLongPress(team.player1),
+            scale: scale),
+        const SizedBox(height: 8),
         PlayerTag(
-          player: team.player2,
-          isSelected: selectedPlayer?.id == team.player2.id,
-          onTap: () => onPlayerTap(team.player2),
-          onLongPress: () => onPlayerLongPress(team.player2),
-          scale: scale,
-        ),
+            player: team.player2,
+            isSelected: selectedPlayer?.id == team.player2.id,
+            onTap: () => onPlayerTap(team.player2),
+            onLongPress: () => onPlayerLongPress(team.player2),
+            scale: scale),
         if (showPairInfo && pairCount > 0) ...[
-          SizedBox(height: 6 * scale),
+          const SizedBox(height: 6),
           PairInfoLabel(count: pairCount, scale: scale),
         ],
       ],
@@ -293,55 +273,46 @@ class PlayerTag extends StatelessWidget {
   final VoidCallback onLongPress;
   final double scale;
 
-  const PlayerTag({
-    super.key,
-    required this.player,
-    required this.isSelected,
-    required this.onTap,
-    required this.onLongPress,
-    required this.scale,
-  });
+  const PlayerTag(
+      {super.key,
+      required this.player,
+      required this.isSelected,
+      required this.onTap,
+      required this.onLongPress,
+      required this.scale});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final genderColor = GenderTheme.getColor(player.gender);
 
     return InkWell(
       onTap: onTap,
       onLongPress: onLongPress,
-      onDoubleTap: onLongPress,
       borderRadius: BorderRadius.circular(12 * scale),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         alignment: Alignment.center,
         width: double.infinity,
-        height: 64 * scale,
-        padding: EdgeInsets.symmetric(horizontal: 10 * scale),
+        height: 60 * scale,
         decoration: BoxDecoration(
           color: isSelected
-              ? colorScheme.primaryContainer
-              : genderColor.withValues(alpha: 0.1),
+              ? theme.colorScheme.primaryContainer
+              : genderColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12 * scale),
           border: Border.all(
-            color: isSelected
-                ? colorScheme.primary
-                : genderColor.withValues(alpha: 0.4),
-            width: isSelected ? 3.0 : 1.5,
-          ),
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : genderColor.withOpacity(0.4),
+              width: isSelected ? 3 : 1.5),
         ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            player.name,
+        child: Text(player.name,
             style: TextStyle(
-                fontSize: 32 * scale,
-                color:
-                    isSelected ? colorScheme.onPrimaryContainer : Colors.black,
-                fontWeight: FontWeight.w900),
-          ),
-        ),
+                fontSize: 24 * scale,
+                fontWeight: FontWeight.w900,
+                color: isSelected
+                    ? theme.colorScheme.onPrimaryContainer
+                    : Colors.black87)),
       ),
     );
   }
@@ -349,106 +320,68 @@ class PlayerTag extends StatelessWidget {
 
 class RestingContainer extends StatelessWidget {
   final Session session;
+  final PlayerStatsPool pool;
   final double scale;
   final double maxWidth;
   final String? selectedPlayerId;
   final Function(Player) onPlayerTap;
   final Function(Player) onPlayerLongPress;
-  final PlayerStatsPool pool;
 
-  const RestingContainer({
-    super.key,
-    required this.session,
-    required this.scale,
-    required this.maxWidth,
-    this.selectedPlayerId,
-    required this.onPlayerTap,
-    required this.onPlayerLongPress,
-    required this.pool,
-  });
+  const RestingContainer(
+      {super.key,
+      required this.session,
+      required this.pool,
+      required this.scale,
+      required this.maxWidth,
+      this.selectedPlayerId,
+      required this.onPlayerTap,
+      required this.onPlayerLongPress});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final rs = scale.clamp(0.8, 1.2);
-
-    // 休憩中メンバーを男女でソート
     final sortedResting = List<Player>.from(session.restingPlayers)
-      ..sort((a, b) {
-        // Gender.male を先、Gender.female を後に
-        if (a.gender == b.gender) return a.name.compareTo(b.name);
-        return a.gender == Gender.male ? -1 : 1;
-      });
-
-    // 試合に出ているプレイヤーのIDセット
-    final activePlayerIds = session.games
-        .expand((g) => [
-              g.teamA.player1.id,
-              g.teamA.player2.id,
-              g.teamB.player1.id,
-              g.teamB.player2.id
-            ])
-        .toSet();
+      ..sort((a, b) => a.gender == b.gender
+          ? a.name.compareTo(b.name)
+          : (a.gender == Gender.male ? -1 : 1));
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 8 * rs, horizontal: 16 * rs),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.transparent,
-        border: Border(
-            top: BorderSide(
-                color:
-                    theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
-      ),
+          border:
+              Border(top: BorderSide(color: theme.colorScheme.outlineVariant))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
               Icon(Icons.bedtime_outlined,
-                  size: 14 * rs, color: theme.colorScheme.secondary),
-              SizedBox(width: 6 * rs),
-              Text('休憩中',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      color: theme.colorScheme.secondary,
-                      fontSize: 12 * rs)),
-              SizedBox(width: 10 * rs),
-              AppBadge(
-                label: '${session.restingPlayers.length} 名',
-                color: theme.colorScheme.secondary,
-                isFilled: true,
-                scale: rs,
-              ),
+                  size: 16, color: theme.colorScheme.secondary),
+              const SizedBox(width: 8),
+              Text('休憩中 (${session.restingPlayers.length}名)',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.secondary)),
             ],
           ),
-          SizedBox(height: 6 * rs),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: sortedResting.map((p) {
-                // ペアが試合に出ているために自分が休んでいるか判定
-                final partnerId = p.excludedPartnerId;
-                final isConflictRest =
-                    partnerId != null && activePlayerIds.contains(partnerId);
-
-                return Padding(
-                  padding: EdgeInsets.only(right: 8 * rs),
-                  child: RestingChip(
-                    player: p,
-                    isSelected: selectedPlayerId == p.id,
-                    consecutiveRests:
-                        pool.getPlayer(p.id).stats.consecutiveRests,
-                    isConflictRest: isConflictRest,
-                    onTap: () => onPlayerTap(p),
-                    onLongPress: () => onPlayerLongPress(p),
-                    onDoubleTap: () => onPlayerLongPress(p),
-                    scale: rs,
-                  ),
-                );
-              }).toList(),
-            ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: sortedResting
+                .map((p) => RestingChip(
+                      player: p,
+                      isSelected: selectedPlayerId == p.id,
+                      consecutiveRests: pool.all
+                          .firstWhere((ps) => ps.player.id == p.id)
+                          .stats
+                          .consecutiveRests,
+                      onTap: () => onPlayerTap(p),
+                      onLongPress: () => onPlayerLongPress(p),
+                      scale: scale,
+                    ))
+                .toList(),
           ),
         ],
       ),
@@ -459,84 +392,52 @@ class RestingContainer extends StatelessWidget {
 class RestingChip extends StatelessWidget {
   final Player player;
   final bool isSelected;
+  final int consecutiveRests;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
-  final VoidCallback onDoubleTap;
   final double scale;
-  final int consecutiveRests;
-  final bool isConflictRest;
 
-  const RestingChip({
-    super.key,
-    required this.player,
-    required this.isSelected,
-    required this.onTap,
-    required this.onLongPress,
-    required this.onDoubleTap,
-    required this.scale,
-    required this.consecutiveRests,
-    this.isConflictRest = false,
-  });
+  const RestingChip(
+      {super.key,
+      required this.player,
+      required this.isSelected,
+      required this.consecutiveRests,
+      required this.onTap,
+      required this.onLongPress,
+      required this.scale});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final genderColor = GenderTheme.getColor(player.gender);
-    final isConsecutive = consecutiveRests >= 2;
-
+    final color = GenderTheme.getColor(player.gender);
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
-      onDoubleTap: onDoubleTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding:
-            EdgeInsets.symmetric(horizontal: 10 * scale, vertical: 4 * scale),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
-              : (isConsecutive
-                  ? genderColor.withValues(alpha: 0.15)
-                  : genderColor.withValues(alpha: 0.08)),
-          borderRadius: BorderRadius.circular(12 * scale),
+              : color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
               color: isSelected
                   ? theme.colorScheme.primary
-                  : (isConsecutive
-                      ? genderColor.withValues(alpha: 0.6)
-                      : genderColor.withValues(alpha: 0.3)),
-              width: isConsecutive ? 2.5 : 1.5),
+                  : color.withOpacity(0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isConflictRest) ...[
-              Icon(Icons.child_care,
-                  size: 16 * scale, color: Colors.orange.shade800),
-              SizedBox(width: 6 * scale),
+            if (consecutiveRests >= 2) ...[
+              Icon(Icons.bedtime, size: 14, color: color),
+              const SizedBox(width: 4)
             ],
-            if (isConsecutive) ...[
-              Icon(Icons.bedtime, size: 16 * scale, color: genderColor),
-              const SizedBox(width: 2),
-              Text(
-                '$consecutiveRests',
+            Text(player.name,
                 style: TextStyle(
-                  fontSize: 14 * scale,
-                  fontWeight: FontWeight.w900,
-                  color: genderColor,
-                ),
-              ),
-              SizedBox(width: 6 * scale),
-            ],
-            Text(
-              player.name,
-              style: TextStyle(
-                  fontSize: 18 * scale,
-                  color: isSelected
-                      ? theme.colorScheme.onPrimaryContainer
-                      : Colors.black87,
-                  fontWeight: FontWeight.w900),
-            ),
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? theme.colorScheme.onPrimaryContainer
+                        : Colors.black87)),
           ],
         ),
       ),
@@ -552,14 +453,11 @@ class PairInfoLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isFrequent = count > 1;
     return AppBadge(
-      label: '$count',
-      color: isFrequent ? Colors.orange.shade700 : theme.colorScheme.outline,
-      icon: Icons.people_alt_outlined,
-      scale: scale,
-    );
+        label: '$count',
+        color: count > 1 ? Colors.orange.shade700 : Colors.grey,
+        icon: Icons.people_alt_outlined,
+        scale: scale);
   }
 }
 
@@ -572,104 +470,61 @@ class MatchHistoryHeader extends StatelessWidget {
   final Function(int) onIndexChange;
   final VoidCallback onCancelSwap;
 
-  const MatchHistoryHeader({
-    super.key,
-    required this.isSwapping,
-    this.session,
-    required this.total,
-    this.currentIndex,
-    this.selectedPlayer,
-    required this.onIndexChange,
-    required this.onCancelSwap,
-  });
+  const MatchHistoryHeader(
+      {super.key,
+      required this.isSwapping,
+      this.session,
+      required this.total,
+      this.currentIndex,
+      this.selectedPlayer,
+      required this.onIndexChange,
+      required this.onCancelSwap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    if (session == null) {
-      return Text('HISTORY',
-          style: TextStyle(
-              fontWeight: FontWeight.w900,
-              letterSpacing: 2.0,
-              color: colorScheme.onPrimary));
-    }
-
     if (isSwapping) {
-      return Row(
-        children: [
-          Icon(Icons.swap_horiz_rounded,
-              color: colorScheme.onPrimary, size: 36),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'SWAP: ${selectedPlayer!.name}',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                  color: colorScheme.onPrimary, fontWeight: FontWeight.w900),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          AppActionButton(
-            label: 'キャンセル',
+      return Row(children: [
+        const Icon(Icons.swap_horiz, color: Colors.white, size: 28),
+        const SizedBox(width: 8),
+        Expanded(
+            child: Text('入れ替え対象: ${selectedPlayer?.name}',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16))),
+        TextButton(
             onPressed: onCancelSwap,
-            isPrimary: false,
-            color: colorScheme.onPrimary,
-          ),
-        ],
-      );
+            child: const Text('キャンセル', style: TextStyle(color: Colors.white))),
+      ]);
     }
-
-    final bool canGoBack = currentIndex! > 0;
-    final bool canGoForward = currentIndex! < total - 1;
+    if (session == null) {
+      return const Text('HISTORY',
+          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2));
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
-          icon: Icon(
-            Icons.chevron_left_rounded,
-            size: 56,
-            color: canGoBack
-                ? colorScheme.onPrimary
-                : colorScheme.onPrimary.withValues(alpha: 0.3),
-          ),
-          onPressed: canGoBack ? () => onIndexChange(currentIndex! - 1) : null,
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'MATCH ${session!.index}',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                  color: colorScheme.onPrimary,
-                ),
-              ),
-              Text(
-                'HISTORY: $total',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: colorScheme.onPrimary.withValues(alpha: 0.8),
-                ),
-              ),
-            ],
-          ),
-        ),
+            icon: const Icon(Icons.chevron_left, color: Colors.white),
+            onPressed: currentIndex! > 0
+                ? () => onIndexChange(currentIndex! - 1)
+                : null),
+        Column(mainAxisSize: MainAxisSize.min, children: [
+          Text('MATCH ${session!.index}',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          Text('$total 試合中 ${currentIndex! + 1} 試合目',
+              style: const TextStyle(color: Colors.white70, fontSize: 10)),
+        ]),
         IconButton(
-          icon: Icon(
-            Icons.chevron_right_rounded,
-            size: 56,
-            color: canGoForward
-                ? colorScheme.onPrimary
-                : colorScheme.onPrimary.withValues(alpha: 0.3),
-          ),
-          onPressed:
-              canGoForward ? () => onIndexChange(currentIndex! + 1) : null,
-        ),
+            icon: const Icon(Icons.chevron_right, color: Colors.white),
+            onPressed: currentIndex! < total - 1
+                ? () => onIndexChange(currentIndex! + 1)
+                : null),
       ],
     );
   }
@@ -680,12 +535,11 @@ class MatchSettingsDialog extends StatefulWidget {
   final bool isRecalc;
   final Session? currentSession;
 
-  const MatchSettingsDialog({
-    super.key,
-    required this.notifier,
-    required this.isRecalc,
-    this.currentSession,
-  });
+  const MatchSettingsDialog(
+      {super.key,
+      required this.notifier,
+      required this.isRecalc,
+      this.currentSession});
 
   @override
   State<MatchSettingsDialog> createState() => _MatchSettingsDialogState();
@@ -694,9 +548,10 @@ class MatchSettingsDialog extends StatefulWidget {
 class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
   List<MatchType> types = [];
   bool loading = true;
-  bool isAutoRecommendEnabled = false; // デフォルトは自動選択
+  bool isAutoRecommendEnabled = false;
   int autoCourtCount = 2;
   AutoCourtPolicy autoCourtPolicy = AutoCourtPolicy.balance;
+  RequirementResult? _requirementResult;
 
   @override
   void initState() {
@@ -715,8 +570,17 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         types = List.from(s.matchTypes);
         autoCourtCount = s.autoCourtCount;
         autoCourtPolicy = s.autoCourtPolicy;
+        isAutoRecommendEnabled = AppConfig.autoRecommendEnabled;
       }
       loading = false;
+      _updateRequirement();
+    });
+  }
+
+  void _updateRequirement() {
+    final selectedTypes = isAutoRecommendEnabled ? _buildAutoTypes() : types;
+    setState(() {
+      _requirementResult = widget.notifier.checkRequirements(selectedTypes);
     });
   }
 
@@ -739,284 +603,192 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     if (loading) return const SizedBox.shrink();
-    final selectedTypes = isAutoRecommendEnabled ? _buildAutoTypes() : types;
-    final res = widget.notifier.checkRequirements(selectedTypes);
+    final res =
+        _requirementResult ?? const RequirementResult(canGenerate: true);
     final theme = Theme.of(context);
-
-    // アクティブ人数のカウント
-    final activeMale = widget.notifier.playerStatsPool.all
-        .where((p) => p.player.isActive && p.player.gender == Gender.male);
-    final activeMaleLen = activeMale.length;
-    final mustRestMaleLen = activeMale.where((p) => p.player.isMustRest).length;
-    final activeFemale = widget.notifier.playerStatsPool.all
-        .where((p) => p.player.isActive && p.player.gender == Gender.female);
-    final activeFemaleLen = activeFemale.length;
-    final mustRestFemaleLen =
-        activeFemale.where((p) => p.player.isMustRest).length;
+    final selectedTypes = isAutoRecommendEnabled ? _buildAutoTypes() : types;
+    final pool = widget.notifier.playerStatsPool;
+    final activeMale = pool.all
+        .where((p) => p.player.isActive && p.player.gender == Gender.male)
+        .length;
+    final activeFemale = pool.all
+        .where((p) => p.player.isActive && p.player.gender == Gender.female)
+        .length;
 
     return AlertDialog(
-      title: Text('MATCH SETTINGS',
-          style: TextStyle(
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-              color: theme.colorScheme.onSurface)),
+      title: const Text('MATCH SETTINGS',
+          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5)),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 現在の参加人数表示
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _CompactGenderBadge(
-                  label: '男性: $activeMaleLen 名(休$mustRestMaleLen）',
-                  color: Colors.blue.shade700,
-                ),
-                const SizedBox(width: 12),
-                _CompactGenderBadge(
-                  label: '女性: $activeFemaleLen 名(休$mustRestFemaleLen）',
-                  color: Colors.pink.shade600,
-                ),
-              ],
-            ),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              _CompactBadge(
+                  label: '男性: $activeMale 名', color: Colors.blue.shade700),
+              const SizedBox(width: 12),
+              _CompactBadge(
+                  label: '女性: $activeFemale 名', color: Colors.pink.shade600),
+            ]),
             const SizedBox(height: 20),
             const Divider(),
-            const SizedBox(height: 12),
             if (AppConfig.autoRecommendEnabled) ...[
-              // 自動・手動切り替え
               SegmentedButton<bool>(
                 segments: const [
                   ButtonSegment(
                       value: true,
-                      label: Text('自動選択'),
+                      label: Text('自動'),
                       icon: Icon(Icons.auto_awesome)),
                   ButtonSegment(
                       value: false,
-                      label: Text('手動選択'),
-                      icon: Icon(Icons.touch_app)),
+                      label: Text('手動'),
+                      icon: Icon(Icons.touch_app))
                 ],
                 selected: {isAutoRecommendEnabled},
-                onSelectionChanged: (Set<bool> newSelection) {
-                  setState(() {
-                    isAutoRecommendEnabled = newSelection.first;
-                  });
+                onSelectionChanged: (val) {
+                  setState(() => isAutoRecommendEnabled = val.first);
+                  _updateRequirement();
                 },
               ),
-              const SizedBox(height: 24),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: isAutoRecommendEnabled
-                    ? Column(
-                        key: const ValueKey('auto_settings'),
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Text('コート数',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
-                              const SizedBox(width: 16),
-                              DropdownButton<int>(
-                                value: autoCourtCount,
-                                items: List.generate(6, (i) => i + 1)
-                                    .map((count) => DropdownMenuItem<int>(
-                                          value: count,
-                                          child: Text('$count 面'),
-                                        ))
-                                    .toList(),
-                                onChanged: (value) {
-                                  if (value == null) return;
-                                  setState(() => autoCourtCount = value);
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          const Text('生成ポリシー',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          SegmentedButton<AutoCourtPolicy>(
-                            segments: AutoCourtPolicy.values
-                                .map(
-                                  (policy) => ButtonSegment<AutoCourtPolicy>(
-                                    value: policy,
-                                    label: Text(policy.displayName),
-                                  ),
-                                )
-                                .toList(),
-                            selected: {autoCourtPolicy},
-                            onSelectionChanged:
-                                (Set<AutoCourtPolicy> newSelection) {
-                              setState(() {
-                                autoCourtPolicy = newSelection.first;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 14),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: selectedTypes.map((type) {
-                              return Chip(
-                                label: Text(type.displayName),
-                                visualDensity: VisualDensity.compact,
-                              );
-                            }).toList(),
-                          ),
-                          const Divider(height: 32),
-                        ],
-                      )
-                    : const SizedBox.shrink(
-                        key: ValueKey('manual_settings'),
-                      ),
-              ),
+              const SizedBox(height: 20),
+              if (isAutoRecommendEnabled) _buildAutoSettingsSection(),
             ],
-
-            AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              opacity: isAutoRecommendEnabled ? 0.5 : 1.0,
-              child: IgnorePointer(
-                ignoring: isAutoRecommendEnabled,
-                child: Column(
-                  children: [
-                    const Text('Select match types for each court',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 16,
-                      runSpacing: 16,
-                      children: MatchType.values.map((type) {
-                        final color = _getMatchTypeColor(context, type);
-                        final tentativeTypes = [...types, type];
-                        final canAddType = widget.notifier
-                            .checkRequirements(tentativeTypes)
-                            .canGenerate;
-                        return ActionChip(
-                          label: Text(type.displayName,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w900, fontSize: 16)),
-                          onPressed: canAddType
-                              ? () => setState(() => types.add(type))
-                              : null,
-                          avatar: Icon(Icons.add, size: 20, color: color),
-                          side: BorderSide(color: color, width: 2.5),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                        );
-                      }).toList(),
-                    ),
-                    const Divider(height: 48, thickness: 2.5),
-                    if (types.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Text('EMPTY',
-                            style: TextStyle(
-                                color: Colors.grey,
-                                fontWeight: FontWeight.w900)),
-                      )
-                    else
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: types.asMap().entries.map((e) {
-                          final color = _getMatchTypeColor(context, e.value);
-                          return InputChip(
-                            label: Text(e.value.displayName,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 16)),
-                            onDeleted: () =>
-                                setState(() => types.removeAt(e.key)),
-                            deleteIconColor: Colors.white,
-                            backgroundColor: color,
-                            side: BorderSide.none,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                          );
-                        }).toList(),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-
+            if (!isAutoRecommendEnabled) _buildManualSettingsSection(context),
             if (!res.canGenerate && selectedTypes.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 24),
-                child: Text(
-                  res.errorMessage ?? '',
-                  style: TextStyle(
-                      color: theme.colorScheme.error,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900),
-                ),
-              ),
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Text(res.errorMessage ?? '',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: theme.colorScheme.error,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13))),
             if (res.canGenerate &&
                 selectedTypes.isNotEmpty &&
                 res.predictedRestPlayerNames.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 24),
-                child: Text(
-                  '同時出場制限により次に休む候補: ${res.predictedRestPlayerNames.join(' / ')}',
-                  style: TextStyle(
-                    color: theme.colorScheme.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Text(
+                      '同時出場制限による選外候補:\n${res.predictedRestPlayerNames.join(', ')}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold))),
           ],
         ),
       ),
       actions: [
         AppActionButton(
-          label: 'キャンセル',
-          onPressed: () => Navigator.pop(context),
-          isPrimary: false,
-        ),
+            label: 'キャンセル',
+            onPressed: () => Navigator.pop(context),
+            isPrimary: false),
         AppActionButton(
-          label: 'スタート',
-          onPressed: !res.canGenerate || selectedTypes.isEmpty
-              ? null
-              : () => Navigator.pop(
+            label: 'スタート',
+            onPressed: !res.canGenerate || selectedTypes.isEmpty
+                ? null
+                : () => Navigator.pop(
                     context,
-                    CourtSettings(
-                      selectedTypes,
-                      autoCourtCount: autoCourtCount,
-                      autoCourtPolicy: autoCourtPolicy,
-                    ),
-                  ),
-          isPrimary: true,
-        ),
+                    CourtSettings(selectedTypes,
+                        autoCourtCount: autoCourtCount,
+                        autoCourtPolicy: autoCourtPolicy)),
+            isPrimary: true),
       ],
     );
   }
+
+  Widget _buildAutoSettingsSection() {
+    return Column(children: [
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        const Text('コート数', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(width: 16),
+        DropdownButton<int>(
+            value: autoCourtCount,
+            items: List.generate(6, (i) => i + 1)
+                .map((c) => DropdownMenuItem(value: c, child: Text('$c 面')))
+                .toList(),
+            onChanged: (v) {
+              if (v == null) return;
+              setState(() => autoCourtCount = v);
+              _updateRequirement();
+            }),
+      ]),
+      const SizedBox(height: 12),
+      const Text('生成ポリシー', style: TextStyle(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 8),
+      SegmentedButton<AutoCourtPolicy>(
+          segments: AutoCourtPolicy.values
+              .map((p) => ButtonSegment(value: p, label: Text(p.displayName)))
+              .toList(),
+          selected: {autoCourtPolicy},
+          onSelectionChanged: (val) {
+            setState(() => autoCourtPolicy = val.first);
+            _updateRequirement();
+          }),
+    ]);
+  }
+
+  Widget _buildManualSettingsSection(BuildContext context) {
+    return Column(children: [
+      const Text('形式を選択', style: TextStyle(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 16),
+      Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.center,
+          children: MatchType.values
+              .map((type) => ActionChip(
+                  label: Text(type.displayName,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    setState(() => types.add(type));
+                    _updateRequirement();
+                  },
+                  avatar: Icon(Icons.add,
+                      size: 18, color: _getMatchTypeColor(context, type)),
+                  side: BorderSide(color: _getMatchTypeColor(context, type))))
+              .toList()),
+      const SizedBox(height: 20),
+      if (types.isNotEmpty)
+        Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: types
+                .asMap()
+                .entries
+                .map((e) => InputChip(
+                    label: Text(e.value.displayName,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                    onDeleted: () {
+                      setState(() => types.removeAt(e.key));
+                      _updateRequirement();
+                    },
+                    deleteIconColor: Colors.white,
+                    backgroundColor: _getMatchTypeColor(context, e.value),
+                    side: BorderSide.none))
+                .toList()),
+    ]);
+  }
 }
 
-class _CompactGenderBadge extends StatelessWidget {
+class _CompactBadge extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _CompactGenderBadge({required this.label, required this.color});
+  const _CompactBadge({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 14,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withOpacity(0.5))),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontSize: 13, fontWeight: FontWeight.bold)),
     );
   }
 }

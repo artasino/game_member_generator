@@ -1,5 +1,3 @@
-import 'dart:developer' as dev;
-
 import 'package:collection/collection.dart';
 
 import 'player_selection.dart';
@@ -42,14 +40,10 @@ class MatchSessionSelection {
 
       final m = maleMap[partnerId];
       if (m != null && m.player.excludedPartnerId == f.id) {
-        // どちらを休ませるか（PlayerWithStatsの判定ロジックを利用）
+        // どちらを休ませるか
         final bool fShouldRest = f.shouldRestOver(m);
         final removeId = fShouldRest ? f.id : m.id;
-        final removedName = fShouldRest ? f.name : m.name;
-
         toRemoveIds.add(removeId);
-
-        dev.log('制限ペア解消: $removedName を選外へ', name: 'MatchAlgo');
       }
     }
 

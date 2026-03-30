@@ -311,7 +311,7 @@ void main() {
       final menOnly = notifier.checkRequirements([MatchType.menDoubles]);
 
       expect(menOnly.canGenerate, isFalse);
-      expect(menOnly.errorMessage, contains('男性が足りません'));
+      expect(menOnly.errorMessage, contains('男性が不足します'));
     });
   });
 }
