@@ -1,214 +1,135 @@
-import '../entities/gender.dart';
+import 'dart:developer' as dev;
+
 import '../entities/match_session_selection.dart';
 import '../entities/match_type.dart';
 import '../entities/player_stats_pool.dart';
 
-/// 性別ごとの必要人数を保持するクラス
-class RequiredPlayerCounts {
-  final int male;
-  final int female;
-
-  const RequiredPlayerCounts({required this.male, required this.female});
-}
-
-/// 人数不足や同時出場制限などの判定結果を保持するクラス
+/// 試合生成の要件判定結果
 class RequirementResult {
   final bool canGenerate;
   final String? errorMessage;
   final List<String> predictedRestPlayerNames;
 
-  const RequirementResult(
-    this.canGenerate,
-    this.errorMessage, {
+  const RequirementResult({
+    required this.canGenerate,
+    this.errorMessage,
     this.predictedRestPlayerNames = const [],
   });
+
+  factory RequirementResult.empty() =>
+      const RequirementResult(canGenerate: true);
 }
 
-/// 試合生成の要件（人数、制限ペア）をチェックするドメインサービス
+/// 試合生成に必要な人数と同時出場制限をチェックするサービス
 class MatchRequirementService {
   const MatchRequirementService();
 
-  /// 指定されたマッチタイプとプレイヤープールに基づいて要件をチェックする
+  /// 指定された構成で判定を行う
   RequirementResult check(List<MatchType> types, PlayerStatsPool pool) {
-    final required = calculateRequiredCounts(types);
-    final activeAvailable = _getActiveAvailablePool(pool);
+    if (types.isEmpty) return RequirementResult.empty();
 
-    final activeMaleCount = activeAvailable.males.length;
-    final activeFemaleCount = activeAvailable.females.length;
+    // 1. 必要人数の算出
+    final (reqM, reqF) = _calculateRequired(types);
 
-    // 1. 基本的な人数不足チェック
-    final initialShortage = _buildShortageResult(
-      requiredCounts: required,
-      availableMale: activeMaleCount,
-      availableFemale: activeFemaleCount,
-      reasonPrefix: '',
-    );
-    if (initialShortage != null) return initialShortage;
-
-    // 2. 同時出場制限（コンフリクト）の影響を評価
-    final conflictImpact = _evaluateConflictImpact(
-      requiredMale: required.male,
-      requiredFemale: required.female,
-      availablePool: activeAvailable,
+    // 2. 有効プレイヤーの抽出 (Active かつ 休み希望でない)
+    final available = PlayerStatsPool(
+      pool.all.where((p) => p.player.isActive && !p.player.isMustRest).toList(),
     );
 
-    final predictedRestNames = conflictImpact.predictedRestPlayerNames;
-
-    // 3. コンフリクト考慮後の人数不足チェック
-    final effectiveMaleCount =
-        activeMaleCount - conflictImpact.removedMaleCount;
-    final effectiveFemaleCount =
-        activeFemaleCount - conflictImpact.removedFemaleCount;
-
-    final conflictShortage = _buildShortageResult(
-      requiredCounts: required,
-      availableMale: effectiveMaleCount,
-      availableFemale: effectiveFemaleCount,
-      reasonPrefix: '同時出場制限により',
-      predictedRestPlayerNames: predictedRestNames,
-    );
-    if (conflictShortage != null) return conflictShortage;
-
-    // 4. コンフリクト解消不可チェック
-    if (conflictImpact.hasUnresolvedConflict) {
+    // 3. 基本的な人数チェック
+    if (available.males.length < reqM || available.females.length < reqF) {
       return RequirementResult(
-        false,
-        '同時出場制限を解消できない組み合わせです。コートタイプを変更してください。',
-        predictedRestPlayerNames: predictedRestNames,
+        canGenerate: false,
+        errorMessage: _buildShortageMsg(
+            reqM - available.males.length, reqF - available.females.length),
+      );
+    }
+
+    // 4. 同時出場制限の解消シミュレーション
+    final (restNames, resolvedSel) =
+        _simulateConflictResolution(reqM, reqF, available);
+
+    dev.log('--- 同時出場制限の解消シミュレーション結果 ---$restNames', name: 'MatchAlgo');
+
+    // 5. 最終判定
+    final shortageM = reqM - resolvedSel.male.selectedCount;
+    final shortageF = reqF - resolvedSel.female.selectedCount;
+
+    if (shortageM > 0 || shortageF > 0) {
+      return RequirementResult(
+        canGenerate: false,
+        errorMessage:
+            _buildShortageMsg(shortageM, shortageF, prefix: '同時出場制限により'),
+        predictedRestPlayerNames: restNames,
+      );
+    }
+
+    if (resolvedSel.hasCrossGenderConflict) {
+      return RequirementResult(
+        canGenerate: false,
+        errorMessage: '同時出場制限を解消できない組み合わせです。',
+        predictedRestPlayerNames: restNames,
       );
     }
 
     return RequirementResult(
-      true,
-      null,
-      predictedRestPlayerNames: predictedRestNames,
+      canGenerate: true,
+      predictedRestPlayerNames: restNames,
     );
   }
 
-  /// 試合形式のリストから、必要な男女それぞれの人数を算出する
-  RequiredPlayerCounts calculateRequiredCounts(List<MatchType> types) {
-    var male = 0;
-    var female = 0;
-    for (final type in types) {
-      switch (type) {
-        case MatchType.menDoubles:
-          male += 4;
-          break;
-        case MatchType.womenDoubles:
-          female += 4;
-          break;
-        case MatchType.mixedDoubles:
-          male += 2;
-          female += 2;
-          break;
+  /// 必要人数を算出 (男性, 女性)
+  (int male, int female) _calculateRequired(List<MatchType> types) {
+    int m = 0, f = 0;
+    for (final t in types) {
+      if (t == MatchType.menDoubles)
+        m += 4;
+      else if (t == MatchType.womenDoubles)
+        f += 4;
+      else {
+        m += 2;
+        f += 2;
       }
     }
-    return RequiredPlayerCounts(male: male, female: female);
+    return (m, f);
   }
 
-  PlayerStatsPool _getActiveAvailablePool(PlayerStatsPool pool) {
-    return PlayerStatsPool(
-      pool.all
-          .where((p) => p.player.isActive && !p.player.isMustRest)
-          .toList(growable: false),
-    );
-  }
-
-  RequirementResult? _buildShortageResult({
-    required RequiredPlayerCounts requiredCounts,
-    required int availableMale,
-    required int availableFemale,
-    required String reasonPrefix,
-    List<String> predictedRestPlayerNames = const [],
-  }) {
-    final missingMale = requiredCounts.male - availableMale;
-    final missingFemale = requiredCounts.female - availableFemale;
-
-    if (missingMale <= 0 && missingFemale <= 0) return null;
-
-    final shortagePrefix = reasonPrefix.isEmpty ? '' : '$reasonPrefix';
-    String message;
-    if (missingMale > 0 && missingFemale > 0) {
-      final suffix = reasonPrefix.isEmpty ? '足りません' : '不足します';
-      message =
-          '$shortagePrefix男女ともに人数が$suffix (男:$missingMale人, 女:$missingFemale人不足)';
-    } else if (missingMale > 0) {
-      message = '$shortagePrefix男性が足りません ($missingMale人不足)';
-    } else {
-      message = '$shortagePrefix女性が足りません ($missingFemale人不足)';
-    }
-
-    return RequirementResult(
-      false,
-      message,
-      predictedRestPlayerNames: predictedRestPlayerNames,
-    );
-  }
-
-  _ConflictImpact _evaluateConflictImpact({
-    required int requiredMale,
-    required int requiredFemale,
-    required PlayerStatsPool availablePool,
-  }) {
-    var session = MatchSessionSelection(
-      male: availablePool.males.splitSelection(requiredMale),
-      female: availablePool.females.splitSelection(requiredFemale),
+  /// 制限解消のシミュレーションを行い、選外となったプレイヤー名と最終的な選抜状態を返す
+  (List<String> names, MatchSessionSelection finalSel)
+      _simulateConflictResolution(int reqM, int reqF, PlayerStatsPool pool) {
+    var sel = MatchSessionSelection(
+      male: pool.males.splitSelection(reqM),
+      female: pool.females.splitSelection(reqF),
     );
 
-    int retryCount = 0;
-    const int maxRetries = 5;
-    final removedMaleIds = <String>{};
-    final removedFemaleIds = <String>{};
-    final predictedRestNames = <String>{};
+    final restedNames = <String>{};
+    for (int i = 0; i < 5 && sel.hasCrossGenderConflict; i++) {
+      _collectConflictNames(sel, restedNames);
 
-    while (session.hasCrossGenderConflict && retryCount < maxRetries) {
-      final maleMap = {for (final m in session.male.allCandidates) m.id: m};
-      for (final female in session.female.allCandidates) {
-        final partnerId = female.player.excludedPartnerId;
-        if (partnerId == null) continue;
-        final male = maleMap[partnerId];
-        if (male == null || male.player.excludedPartnerId != female.id)
-          continue;
-
-        final bool fShouldRest = female.shouldRestOver(male);
-        final removed = fShouldRest ? female : male;
-
-        predictedRestNames.add(removed.name);
-        if (removed.player.gender == Gender.male) {
-          removedMaleIds.add(removed.id);
-        } else {
-          removedFemaleIds.add(removed.id);
-        }
-      }
-
-      session = session.resolveConflicts();
-      session = MatchSessionSelection(
-        male: availablePool.males.refillSelection(session.male, requiredMale),
-        female: availablePool.females
-            .refillSelection(session.female, requiredFemale),
+      sel = sel.resolveConflicts();
+      sel = MatchSessionSelection(
+        male: pool.males.refillSelection(sel.male, reqM),
+        female: pool.females.refillSelection(sel.female, reqF),
       );
-      retryCount++;
     }
-
-    return _ConflictImpact(
-      removedMaleCount: removedMaleIds.length,
-      removedFemaleCount: removedFemaleIds.length,
-      hasUnresolvedConflict: session.hasCrossGenderConflict,
-      predictedRestPlayerNames: predictedRestNames.toList(growable: false),
-    );
+    return (restedNames.toList(), sel);
   }
-}
 
-class _ConflictImpact {
-  final int removedMaleCount;
-  final int removedFemaleCount;
-  final bool hasUnresolvedConflict;
-  final List<String> predictedRestPlayerNames;
+  void _collectConflictNames(MatchSessionSelection sel, Set<String> names) {
+    final maleMap = {for (final m in sel.male.allCandidates) m.id: m};
+    for (final f in sel.female.allCandidates) {
+      final pId = f.player.excludedPartnerId;
+      if (pId == null) continue;
+      final m = maleMap[pId];
+      if (m != null && m.player.excludedPartnerId == f.id) {
+        names.add(f.shouldRestOver(m) ? f.name : m.name);
+      }
+    }
+  }
 
-  const _ConflictImpact({
-    required this.removedMaleCount,
-    required this.removedFemaleCount,
-    required this.hasUnresolvedConflict,
-    required this.predictedRestPlayerNames,
-  });
+  String _buildShortageMsg(int m, int f, {String prefix = ''}) {
+    final p = prefix.isNotEmpty ? '$prefix ' : '';
+    if (m > 0 && f > 0) return '${p}男女ともに人数が不足します (男:$m, 女:$f)';
+    return '${p}${m > 0 ? '男性' : '女性'}が不足します (${m > 0 ? m : f}人)';
+  }
 }

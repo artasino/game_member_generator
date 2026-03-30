@@ -1012,7 +1012,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               ListTile(
                 leading: const Icon(Icons.person_add),
                 title: const Text('1人ずつ登録'),
-                subtitle: const Text('従来どおり個別に登録します'),
+                subtitle: const Text('個別に登録します'),
                 onTap: () {
                   Navigator.pop(context);
                   _showAddEditDialog(parentContext);
