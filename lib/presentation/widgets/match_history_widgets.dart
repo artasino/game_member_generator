@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/config/app_config.dart';
 
@@ -546,9 +548,10 @@ class MatchSettingsDialog extends StatefulWidget {
 
 class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
   List<MatchType> types = [];
+  List<MatchType> currentRecommendTypes = [];
   bool loading = true;
   bool isAutoRecommendEnabled = false;
-  int autoCourtCount = 2;
+  int autoCourtCount = 3;
   AutoCourtPolicy autoCourtPolicy = AutoCourtPolicy.balance;
   RequirementResult? _requirementResult;
 
@@ -591,19 +594,96 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
   }
 
   List<MatchType> _buildAutoTypes() {
-    return List<MatchType>.generate(autoCourtCount, (index) {
-      switch (autoCourtPolicy) {
-        case AutoCourtPolicy.genderSeparated:
-          return index.isEven ? MatchType.menDoubles : MatchType.womenDoubles;
-        case AutoCourtPolicy.balance:
-          if (index == autoCourtCount - 1 && autoCourtCount.isOdd) {
-            return MatchType.mixedDoubles;
+    var maleCount = widget.notifier.playerStatsPool.activeMales.length;
+    var femaleCount = widget.notifier.playerStatsPool.activeFemales.length;
+    Map<Gender, int> genderHistory =
+        widget.notifier.getGenderParticipationTotalCounts();
+    var maleGameCount = genderHistory[Gender.male] ?? 0;
+    var femaleGameCount = genderHistory[Gender.female] ?? 0;
+
+    List<MatchType> types = [];
+    int maxMaleDoublesNum = maleCount ~/ 4;
+    int maxMaleDoublesNumPossible = min(maxMaleDoublesNum, autoCourtCount);
+    int maxFemaleDoublesNum = femaleCount ~/ 4;
+    int maxFemaleDoublesNumPossible = min(maxFemaleDoublesNum, autoCourtCount);
+    int maxMixNum = min(maleCount ~/ 2, femaleCount ~/ 2);
+    int maxMixNumPossible = min(maxMixNum, autoCourtCount);
+    switch (autoCourtPolicy) {
+      case AutoCourtPolicy.genderSeparated:
+        double equalityScore = double.infinity;
+        for (var mdNum = 0; mdNum <= maxMaleDoublesNumPossible; mdNum++) {
+          for (var wdNum = 0; wdNum <= maxFemaleDoublesNumPossible; wdNum++) {
+            print("$mdNum,$wdNum");
+            if ((mdNum + wdNum) != autoCourtCount) {
+              continue;
+            }
+            var maleGameNewCount = maleGameCount + mdNum * 4;
+            var femaleGameNewCount = femaleGameCount + wdNum * 4;
+            var newEqualityScore = pow(
+                    maleGameNewCount / maleCount -
+                        femaleGameNewCount / femaleCount,
+                    2)
+                .toDouble();
+            if (newEqualityScore < equalityScore) {
+              equalityScore = newEqualityScore;
+              types = [
+                ...List.filled(mdNum, MatchType.menDoubles),
+                ...List.filled(wdNum, MatchType.womenDoubles),
+              ];
+            }
           }
-          return index.isEven ? MatchType.menDoubles : MatchType.womenDoubles;
-        case AutoCourtPolicy.mix:
-          return MatchType.mixedDoubles;
-      }
-    });
+        }
+        setState(() {
+          currentRecommendTypes = types;
+        });
+        return types;
+      case AutoCourtPolicy.mix:
+        types = [
+          ...List.filled(maxMixNumPossible, MatchType.mixedDoubles),
+        ];
+
+        setState(() {
+          currentRecommendTypes = types;
+        });
+        return types;
+      case AutoCourtPolicy.balance:
+        double equalityScore = double.infinity;
+        // 今回はmixを１コートか０コートしか入れないことにする
+        if (maxMixNumPossible > 0) {
+          for (var mixNum = 0; mixNum <= maxMixNumPossible; mixNum++) {
+            for (var mdNum = 0; mdNum <= maxMaleDoublesNumPossible; mdNum++) {
+              for (var wdNum = 0;
+                  wdNum <= maxFemaleDoublesNumPossible;
+                  wdNum++) {
+                if (mdNum + wdNum + mixNum != autoCourtCount) {
+                  continue;
+                }
+                var maleGameNewCount = maleGameCount + mdNum * 4 + mixNum * 2;
+                var femaleGameNewCount =
+                    femaleGameCount + wdNum * 4 + mixNum * 2;
+                var newEqualityScore = pow(
+                        maleGameNewCount / maleCount -
+                            femaleGameNewCount / femaleCount,
+                        2)
+                    .toDouble();
+                if (newEqualityScore < equalityScore) {
+                  equalityScore = newEqualityScore;
+                  types = [
+                    ...List.filled(mdNum, MatchType.menDoubles),
+                    ...List.filled(wdNum, MatchType.womenDoubles),
+                    ...List.filled(mixNum, MatchType.mixedDoubles),
+                  ];
+                }
+              }
+            }
+          }
+        }
+
+        setState(() {
+          currentRecommendTypes = types;
+        });
+        return types;
+    }
   }
 
   @override
@@ -614,12 +694,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     final theme = Theme.of(context);
     final selectedTypes = isAutoRecommendEnabled ? _buildAutoTypes() : types;
     final pool = widget.notifier.playerStatsPool;
-    final activeMale = pool.all
-        .where((p) => p.player.isActive && p.player.gender == Gender.male)
-        .length;
-    final activeFemale = pool.all
-        .where((p) => p.player.isActive && p.player.gender == Gender.female)
-        .length;
+    final activeMaleLen = pool.activeMales.length;
+    final activeFemaleLen = pool.activeFemales.length;
 
     return AlertDialog(
       title: const Text('MATCH SETTINGS',
@@ -630,10 +706,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           children: [
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               _CompactBadge(
-                  label: '男性: $activeMale 名', color: Colors.blue.shade700),
+                  label: '男性: $activeMaleLen 名', color: Colors.blue.shade700),
               const SizedBox(width: 12),
               _CompactBadge(
-                  label: '女性: $activeFemale 名', color: Colors.pink.shade600),
+                  label: '女性: $activeFemaleLen 名', color: Colors.pink.shade600),
             ]),
             const SizedBox(height: 20),
             const Divider(),
@@ -730,6 +806,49 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
             setState(() => autoCourtPolicy = val.first);
             _updateRequirement();
           }),
+      const Text('形式を選択', style: TextStyle(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 16),
+      Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.center,
+          children: MatchType.values
+              .map((type) => ActionChip(
+                  label: Text(type.displayName,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: _checkRequirementWithAddType(type)
+                      ? () {
+                          setState(() {
+                            currentRecommendTypes.add(type);
+                          });
+                          _updateRequirement();
+                        }
+                      : null,
+                  avatar: Icon(Icons.add,
+                      size: 18, color: _getMatchTypeColor(context, type)),
+                  side: BorderSide(color: _getMatchTypeColor(context, type))))
+              .toList()),
+      const SizedBox(height: 20),
+      if (currentRecommendTypes.isNotEmpty)
+        Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: currentRecommendTypes
+                .asMap()
+                .entries
+                .map((e) => InputChip(
+                    label: Text(e.value.displayName,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                    onDeleted: () {
+                      setState(() => currentRecommendTypes.removeAt(e.key));
+                      _updateRequirement();
+                    },
+                    deleteIconColor: Colors.white,
+                    backgroundColor: _getMatchTypeColor(context, e.value),
+                    side: BorderSide.none))
+                .toList()),
     ]);
   }
 

@@ -26,6 +26,17 @@ class PlayerStatsPool {
         _players.where((p) => p.player.gender == Gender.female).toList(),
       );
 
+  /// アクティブなプレイヤーのみのプールを返す
+  PlayerStatsPool get active => PlayerStatsPool(
+        _players.where((p) => p.player.isActive).toList(),
+      );
+
+  /// アクティブな男性のみのプールを返す
+  PlayerStatsPool get activeMales => active.males;
+
+  /// アクティブな女性のみのプールを返す
+  PlayerStatsPool get activeFemales => active.females;
+
   /// 特定のIDリストに含まれるプレイヤーのみのプールを返す
   PlayerStatsPool filterByIds(Set<String> ids) {
     return PlayerStatsPool(
