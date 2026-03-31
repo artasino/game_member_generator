@@ -36,8 +36,8 @@ class _ShuttleHistoryDialogState extends State<ShuttleHistoryDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title:
-          const Text('シャトル消費履歴', style: TextStyle(fontWeight: FontWeight.bold)),
+      title: const Text('シャトル/ボール消費履歴',
+          style: TextStyle(fontWeight: FontWeight.bold)),
       content: SizedBox(
         width: double.maxFinite,
         height: 400,
@@ -67,7 +67,7 @@ class _ShuttleHistoryDialogState extends State<ShuttleHistoryDialog> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('合計シャトル: ${record.totalShuttles} 個',
+                      Text('合計シャトル/ボール: ${record.totalShuttles} 個',
                           style: const TextStyle(fontSize: 12)),
                       Text(
                         record.matchTypeCounts.entries

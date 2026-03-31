@@ -45,7 +45,7 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(stock == null ? 'シャトル在庫を登録' : '在庫を編集'),
+          title: Text(stock == null ? 'シャトル/ボール在庫を登録' : '在庫を編集'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -111,7 +111,8 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('シャトル在庫一覧', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('シャトル/ボール在庫一覧',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           IconButton(
             icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
             onPressed: () => _showAddEditDialog(),

@@ -14,7 +14,7 @@ import '../widgets/shuttle_history_dialog.dart';
 import '../widgets/shuttle_stock_dialog.dart';
 
 enum ExpenseType {
-  shuttle('シャトル', Symbols.badminton, Colors.orange),
+  shuttle('シャトル/ボール', Symbols.badminton, Colors.orange),
   court('場所代', Icons.stadium, Colors.blue),
   other('その他', Icons.more_horiz, Colors.teal);
 
@@ -81,13 +81,7 @@ class ShuttleCalculationScreen extends StatefulWidget {
 }
 
 class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
-  final List<ExpenseEntry> _entries = [
-    ExpenseEntry(
-        name: 'シャトル',
-        type: ExpenseType.shuttle,
-        pricePerDozens: 0,
-        shuttleCount: 0)
-  ];
+  final List<ExpenseEntry> _entries = [];
 
   bool _useGenderSplit = false; // true: 男女ごとに計算, false: 全体化
 
@@ -273,7 +267,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                 setState(() {
                   _entries.clear();
                   _entries.add(ExpenseEntry(
-                      name: 'シャトル',
+                      name: 'シャトル/ボール',
                       type: ExpenseType.shuttle,
                       pricePerDozens: 0,
                       shuttleCount: 0));
@@ -285,7 +279,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   value: 'stock',
                   child: ListTile(
                       leading: Icon(Icons.inventory_2_outlined),
-                      title: Text('シャトル在庫管理'),
+                      title: Text('シャトル/ボール在庫管理'),
                       contentPadding: EdgeInsets.zero)),
               const PopupMenuItem(
                   value: 'history',
