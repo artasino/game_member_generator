@@ -23,10 +23,12 @@ class CourtSettings {
   List<MatchType> matchTypes;
   int autoCourtCount;
   AutoCourtPolicy autoCourtPolicy;
+  bool isAutoRecommendMode;
 
   CourtSettings(
     this.matchTypes, {
-    this.autoCourtCount = 2,
-    this.autoCourtPolicy = AutoCourtPolicy.balance,
+    this.autoCourtCount = 3,
+    this.autoCourtPolicy = AutoCourtPolicy.genderSeparated,
+    this.isAutoRecommendMode = false,
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/config/app_config.dart';
 
@@ -546,9 +548,10 @@ class MatchSettingsDialog extends StatefulWidget {
 
 class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
   List<MatchType> types = [];
+  List<MatchType> currentRecommendTypes = [];
   bool loading = true;
-  bool isAutoRecommendEnabled = false;
-  int autoCourtCount = 2;
+  bool isAutoRecommendMode = false;
+  int autoCourtCount = 3;
   AutoCourtPolicy autoCourtPolicy = AutoCourtPolicy.balance;
   RequirementResult? _requirementResult;
 
@@ -564,12 +567,12 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     setState(() {
       if (widget.isRecalc && widget.currentSession != null) {
         types = widget.currentSession!.games.map((g) => g.type).toList();
-        isAutoRecommendEnabled = false;
+        isAutoRecommendMode = false;
       } else {
         types = List.from(s.matchTypes);
         autoCourtCount = s.autoCourtCount;
         autoCourtPolicy = s.autoCourtPolicy;
-        isAutoRecommendEnabled = AppConfig.autoRecommendEnabled;
+        isAutoRecommendMode = s.isAutoRecommendMode;
       }
       loading = false;
       _updateRequirement();
@@ -577,26 +580,109 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
   }
 
   void _updateRequirement() {
-    final selectedTypes = isAutoRecommendEnabled ? _buildAutoTypes() : types;
+    final selectedTypes = isAutoRecommendMode ? _buildAutoTypes() : types;
     setState(() {
       _requirementResult = widget.notifier.checkRequirements(selectedTypes);
     });
   }
 
+  bool _checkRequirementWithAddType(MatchType type) {
+    var selectedTypes = isAutoRecommendMode ? _buildAutoTypes() : types;
+    List<MatchType> newTypes = List.from(selectedTypes);
+    newTypes.add(type);
+    return widget.notifier.checkRequirements(newTypes).canGenerate;
+  }
+
   List<MatchType> _buildAutoTypes() {
-    return List<MatchType>.generate(autoCourtCount, (index) {
-      switch (autoCourtPolicy) {
-        case AutoCourtPolicy.genderSeparated:
-          return index.isEven ? MatchType.menDoubles : MatchType.womenDoubles;
-        case AutoCourtPolicy.balance:
-          if (index == autoCourtCount - 1 && autoCourtCount.isOdd) {
-            return MatchType.mixedDoubles;
+    var maleCount = widget.notifier.playerStatsPool.activeMales.length;
+    var femaleCount = widget.notifier.playerStatsPool.activeFemales.length;
+    Map<Gender, int> genderHistory =
+        widget.notifier.getGenderParticipationTotalCounts();
+    var maleGameCount = genderHistory[Gender.male] ?? 0;
+    var femaleGameCount = genderHistory[Gender.female] ?? 0;
+
+    List<MatchType> types = [];
+    int maxMaleDoublesNum = maleCount ~/ 4;
+    int maxMaleDoublesNumPossible = min(maxMaleDoublesNum, autoCourtCount);
+    int maxFemaleDoublesNum = femaleCount ~/ 4;
+    int maxFemaleDoublesNumPossible = min(maxFemaleDoublesNum, autoCourtCount);
+    int maxMixNum = min(maleCount ~/ 2, femaleCount ~/ 2);
+    int maxMixNumPossible = min(maxMixNum, autoCourtCount);
+    switch (autoCourtPolicy) {
+      case AutoCourtPolicy.genderSeparated:
+        double equalityScore = double.infinity;
+        for (var mdNum = 0; mdNum <= maxMaleDoublesNumPossible; mdNum++) {
+          for (var wdNum = 0; wdNum <= maxFemaleDoublesNumPossible; wdNum++) {
+            if ((mdNum + wdNum) != autoCourtCount) {
+              continue;
+            }
+            var maleGameNewCount = maleGameCount + mdNum * 4;
+            var femaleGameNewCount = femaleGameCount + wdNum * 4;
+            var newEqualityScore = pow(
+                    maleGameNewCount / maleCount -
+                        femaleGameNewCount / femaleCount,
+                    2)
+                .toDouble();
+            if (newEqualityScore < equalityScore) {
+              equalityScore = newEqualityScore;
+              types = [
+                ...List.filled(mdNum, MatchType.menDoubles),
+                ...List.filled(wdNum, MatchType.womenDoubles),
+              ];
+            }
           }
-          return index.isEven ? MatchType.menDoubles : MatchType.womenDoubles;
-        case AutoCourtPolicy.mix:
-          return MatchType.mixedDoubles;
-      }
-    });
+        }
+        setState(() {
+          currentRecommendTypes = types;
+        });
+        return types;
+      case AutoCourtPolicy.mix:
+        types = [
+          ...List.filled(maxMixNumPossible, MatchType.mixedDoubles),
+        ];
+
+        setState(() {
+          currentRecommendTypes = types;
+        });
+        return types;
+      case AutoCourtPolicy.balance:
+        double equalityScore = double.infinity;
+        // 今回はmixを１コートか０コートしか入れないことにする
+        if (maxMixNumPossible > 0) {
+          for (var mixNum = 0; mixNum <= maxMixNumPossible; mixNum++) {
+            for (var mdNum = 0; mdNum <= maxMaleDoublesNumPossible; mdNum++) {
+              for (var wdNum = 0;
+                  wdNum <= maxFemaleDoublesNumPossible;
+                  wdNum++) {
+                if (mdNum + wdNum + mixNum != autoCourtCount) {
+                  continue;
+                }
+                var maleGameNewCount = maleGameCount + mdNum * 4 + mixNum * 2;
+                var femaleGameNewCount =
+                    femaleGameCount + wdNum * 4 + mixNum * 2;
+                var newEqualityScore = pow(
+                        maleGameNewCount / maleCount -
+                            femaleGameNewCount / femaleCount,
+                        2)
+                    .toDouble();
+                if (newEqualityScore < equalityScore) {
+                  equalityScore = newEqualityScore;
+                  types = [
+                    ...List.filled(mdNum, MatchType.menDoubles),
+                    ...List.filled(wdNum, MatchType.womenDoubles),
+                    ...List.filled(mixNum, MatchType.mixedDoubles),
+                  ];
+                }
+              }
+            }
+          }
+        }
+
+        setState(() {
+          currentRecommendTypes = types;
+        });
+        return types;
+    }
   }
 
   @override
@@ -605,14 +691,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     final res =
         _requirementResult ?? const RequirementResult(canGenerate: true);
     final theme = Theme.of(context);
-    final selectedTypes = isAutoRecommendEnabled ? _buildAutoTypes() : types;
+    final selectedTypes = isAutoRecommendMode ? _buildAutoTypes() : types;
     final pool = widget.notifier.playerStatsPool;
-    final activeMale = pool.all
-        .where((p) => p.player.isActive && p.player.gender == Gender.male)
-        .length;
-    final activeFemale = pool.all
-        .where((p) => p.player.isActive && p.player.gender == Gender.female)
-        .length;
+    final activeMaleLen = pool.activeMales.length;
+    final activeFemaleLen = pool.activeFemales.length;
 
     return AlertDialog(
       title: const Text('MATCH SETTINGS',
@@ -623,10 +705,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           children: [
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               _CompactBadge(
-                  label: '男性: $activeMale 名', color: Colors.blue.shade700),
+                  label: '男性: $activeMaleLen 名', color: Colors.blue.shade700),
               const SizedBox(width: 12),
               _CompactBadge(
-                  label: '女性: $activeFemale 名', color: Colors.pink.shade600),
+                  label: '女性: $activeFemaleLen 名', color: Colors.pink.shade600),
             ]),
             const SizedBox(height: 20),
             const Divider(),
@@ -642,16 +724,18 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                       label: Text('手動'),
                       icon: Icon(Icons.touch_app))
                 ],
-                selected: {isAutoRecommendEnabled},
+                selected: {isAutoRecommendMode},
                 onSelectionChanged: (val) {
-                  setState(() => isAutoRecommendEnabled = val.first);
-                  _updateRequirement();
+                  setState(() {
+                    isAutoRecommendMode = val.first;
+                    _updateRequirement();
+                  });
                 },
               ),
               const SizedBox(height: 20),
-              if (isAutoRecommendEnabled) _buildAutoSettingsSection(),
+              if (isAutoRecommendMode) _buildAutoSettingsSection(),
             ],
-            if (!isAutoRecommendEnabled) _buildManualSettingsSection(context),
+            if (!isAutoRecommendMode) _buildManualSettingsSection(context),
             if (!res.canGenerate && selectedTypes.isNotEmpty)
               Padding(
                   padding: const EdgeInsets.only(top: 20),
@@ -689,7 +773,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                     context,
                     CourtSettings(selectedTypes,
                         autoCourtCount: autoCourtCount,
-                        autoCourtPolicy: autoCourtPolicy)),
+                        autoCourtPolicy: autoCourtPolicy,
+                        isAutoRecommendMode: isAutoRecommendMode)),
             isPrimary: true),
       ],
     );
@@ -707,8 +792,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                 .toList(),
             onChanged: (v) {
               if (v == null) return;
-              setState(() => autoCourtCount = v);
-              _updateRequirement();
+              setState(() {
+                autoCourtCount = v;
+                _updateRequirement();
+              });
             }),
       ]),
       const SizedBox(height: 12),
@@ -720,9 +807,56 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               .toList(),
           selected: {autoCourtPolicy},
           onSelectionChanged: (val) {
-            setState(() => autoCourtPolicy = val.first);
-            _updateRequirement();
+            setState(() {
+              autoCourtPolicy = val.first;
+              _updateRequirement();
+            });
           }),
+      const Text('形式を選択', style: TextStyle(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 16),
+      Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.center,
+          children: MatchType.values
+              .map((type) => ActionChip(
+                  label: Text(type.displayName,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: _checkRequirementWithAddType(type)
+                      ? () {
+                          setState(() {
+                            currentRecommendTypes.add(type);
+                          });
+                          _updateRequirement();
+                        }
+                      : null,
+                  avatar: Icon(Icons.add,
+                      size: 18, color: _getMatchTypeColor(context, type)),
+                  side: BorderSide(color: _getMatchTypeColor(context, type))))
+              .toList()),
+      const SizedBox(height: 20),
+      if (currentRecommendTypes.isNotEmpty)
+        Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: currentRecommendTypes
+                .asMap()
+                .entries
+                .map((e) => InputChip(
+                    label: Text(e.value.displayName,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                    onDeleted: () {
+                      setState(() {
+                        currentRecommendTypes.removeAt(e.key);
+                        _updateRequirement();
+                      });
+                    },
+                    deleteIconColor: Colors.white,
+                    backgroundColor: _getMatchTypeColor(context, e.value),
+                    side: BorderSide.none))
+                .toList()),
     ]);
   }
 
@@ -738,10 +872,14 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               .map((type) => ActionChip(
                   label: Text(type.displayName,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
-                  onPressed: () {
-                    setState(() => types.add(type));
-                    _updateRequirement();
-                  },
+                  onPressed: _checkRequirementWithAddType(type)
+                      ? () {
+                          setState(() {
+                            types.add(type);
+                          });
+                          _updateRequirement();
+                        }
+                      : null,
                   avatar: Icon(Icons.add,
                       size: 18, color: _getMatchTypeColor(context, type)),
                   side: BorderSide(color: _getMatchTypeColor(context, type))))
@@ -760,8 +898,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                         style: const TextStyle(
                             color: Colors.white, fontWeight: FontWeight.bold)),
                     onDeleted: () {
-                      setState(() => types.removeAt(e.key));
-                      _updateRequirement();
+                      setState(() {
+                        types.removeAt(e.key);
+                        _updateRequirement();
+                      });
                     },
                     deleteIconColor: Colors.white,
                     backgroundColor: _getMatchTypeColor(context, e.value),

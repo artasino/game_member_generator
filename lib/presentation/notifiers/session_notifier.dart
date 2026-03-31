@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/court_settings.dart';
+import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/player_stats_pool.dart';
@@ -81,6 +82,44 @@ class SessionNotifier extends ChangeNotifier {
     _allPlayersCache = allPlayers;
     _cachedPool = _buildPoolForSessions(allPlayers, _sessions);
     _requirementCache.clear();
+  }
+
+  /// 各形式（MatchType）の累計試合数を取得する
+  Map<MatchType, int> getMatchTypeTotalCounts() {
+    final Map<MatchType, int> counts = {};
+    for (final session in _sessions) {
+      for (final game in session.games) {
+        counts[game.type] = (counts[game.type] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }
+
+  /// 男女それぞれの延べ出場回数を取得する
+  Map<Gender, int> getGenderParticipationTotalCounts() {
+    int maleCount = 0;
+    int femaleCount = 0;
+    for (final session in _sessions) {
+      for (final game in session.games) {
+        final players = [
+          game.teamA.player1,
+          game.teamA.player2,
+          game.teamB.player1,
+          game.teamB.player2,
+        ];
+        for (final p in players) {
+          if (p.gender == Gender.male) {
+            maleCount++;
+          } else if (p.gender == Gender.female) {
+            femaleCount++;
+          }
+        }
+      }
+    }
+    return {
+      Gender.male: maleCount,
+      Gender.female: femaleCount,
+    };
   }
 
   /// 指定セッション(含む)までの履歴のみを使って統計プールを作る
