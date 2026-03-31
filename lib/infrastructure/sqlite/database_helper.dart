@@ -28,7 +28,7 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'game_member_generator.db');
     return await openDatabase(
       path,
-      version: 5, // バージョンを 5 に上げました (シャトル記録用)
+      version: 6, // バージョンを 6 に上げました (シャトル在庫用)
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE players(
@@ -61,6 +61,15 @@ class DatabaseHelper {
             match_counts TEXT
           )
         ''');
+        await db.execute('''
+          CREATE TABLE shuttle_stocks(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            price_per_dozens REAL,
+            payer_id TEXT,
+            purchase_date TEXT
+          )
+        ''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -87,6 +96,17 @@ class DatabaseHelper {
               date TEXT,
               total_shuttles INTEGER,
               match_counts TEXT
+            )
+          ''');
+        }
+        if (oldVersion < 6) {
+          await db.execute('''
+            CREATE TABLE shuttle_stocks(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT,
+              price_per_dozens REAL,
+              payer_id TEXT,
+              purchase_date TEXT
             )
           ''');
         }

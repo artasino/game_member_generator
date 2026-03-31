@@ -7,8 +7,11 @@ import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/shuttle_usage_record.dart';
+import '../../domain/entities/shuttle_stock.dart';
 import '../../domain/repository/shuttle_usage_repository.dart';
+import '../../domain/repository/shuttle_stock_repository.dart';
 import '../widgets/shuttle_history_dialog.dart';
+import '../widgets/shuttle_stock_dialog.dart';
 
 enum ExpenseType {
   shuttle('シャトル', Symbols.badminton, Colors.orange),
@@ -63,12 +66,14 @@ class ShuttleCalculationScreen extends StatefulWidget {
   final PlayerNotifier playerNotifier;
   final SessionNotifier sessionNotifier;
   final ShuttleUsageRepository shuttleRepository;
+  final ShuttleStockRepository stockRepository;
 
   const ShuttleCalculationScreen({
     super.key,
     required this.playerNotifier,
     required this.sessionNotifier,
     required this.shuttleRepository,
+    required this.stockRepository,
   });
 
   @override
@@ -124,6 +129,38 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       builder: (context) =>
           ShuttleHistoryDialog(repository: widget.shuttleRepository),
     );
+  }
+
+  void _showStockManager() {
+    showDialog(
+      context: context,
+      builder: (context) => ShuttleStockDialog(
+        repository: widget.stockRepository,
+        activePlayers:
+            widget.playerNotifier.players.where((p) => p.isActive).toList(),
+      ),
+    );
+  }
+
+  Future<void> _selectFromStock(int index) async {
+    final activePlayers =
+        widget.playerNotifier.players.where((p) => p.isActive).toList();
+    final ShuttleStock? selected = await showDialog<ShuttleStock>(
+      context: context,
+      builder: (context) => ShuttleStockDialog(
+        repository: widget.stockRepository,
+        activePlayers: activePlayers,
+        isSelectionMode: true,
+      ),
+    );
+
+    if (selected != null) {
+      setState(() {
+        _entries[index].name = selected.name;
+        _entries[index].pricePerDozens = selected.pricePerDozens;
+        _entries[index].payerId = selected.payerId;
+      });
+    }
   }
 
   @override
@@ -232,6 +269,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'history') _showHistory();
+              if (value == 'stock') _showStockManager();
               if (value == 'reset') {
                 setState(() {
                   _entries.clear();
@@ -244,6 +282,12 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                  value: 'stock',
+                  child: ListTile(
+                      leading: Icon(Icons.inventory_2_outlined),
+                      title: Text('シャトル在庫管理'),
+                      contentPadding: EdgeInsets.zero)),
               const PopupMenuItem(
                   value: 'history',
                   child: ListTile(
@@ -268,7 +312,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
               totalGames, typeCounts, speedTotal, speedMale, speedFemale),
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
               itemCount: _entries.length,
               itemBuilder: (context, index) =>
                   _buildExpenseCard(index, activePlayers),
@@ -285,15 +329,15 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   Widget _buildInfoBar(int m, int f, int t) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _countChip("男子", m, Colors.blue),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           _countChip("女子", f, Colors.pink),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           _countChip("合計", t, Colors.grey.shade700),
         ],
       ),
@@ -424,6 +468,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   child: SizedBox(
                     height: 32,
                     child: TextFormField(
+                      key: ValueKey('name_${index}_${entry.name}'),
                       initialValue: entry.name,
                       decoration: const InputDecoration(
                         isDense: true,
@@ -437,6 +482,14 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                     ),
                   ),
                 ),
+                if (entry.type == ExpenseType.shuttle)
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.inventory_2_outlined,
+                        size: 18, color: Colors.blue),
+                    tooltip: '在庫から選択',
+                    onPressed: () => _selectFromStock(index),
+                  ),
                 if (_useGenderSplit) _buildSplitTargetDropdown(entry),
                 IconButton(
                   visualDensity: VisualDensity.compact,
@@ -457,36 +510,59 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                 Expanded(
                   flex: 65,
                   child: entry.type == ExpenseType.shuttle
-                      ? Row(
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              flex: 3,
-                              child: _compactTextField(
-                                label: '単価',
-                                suffix: '円',
-                                initialValue: entry.pricePerDozens > 0
-                                    ? entry.pricePerDozens.toStringAsFixed(0)
-                                    : '',
-                                onChanged: (v) => entry.pricePerDozens =
-                                    double.tryParse(v) ?? 0,
-                              ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: _compactTextField(
+                                    key: ValueKey(
+                                        'price_${index}_${entry.pricePerDozens}'),
+                                    label: '単価',
+                                    suffix: '円',
+                                    initialValue: entry.pricePerDozens > 0
+                                        ? entry.pricePerDozens
+                                            .toStringAsFixed(0)
+                                        : '',
+                                    onChanged: (v) => entry.pricePerDozens =
+                                        double.tryParse(v) ?? 0,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  flex: 2,
+                                  child: _compactTextField(
+                                    key: ValueKey(
+                                        'count_${index}_${entry.shuttleCount}'),
+                                    label: '数',
+                                    suffix: '個',
+                                    initialValue: entry.shuttleCount > 0
+                                        ? entry.shuttleCount.toString()
+                                        : '',
+                                    onChanged: (v) => entry.shuttleCount =
+                                        int.tryParse(v) ?? 0,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              flex: 2,
-                              child: _compactTextField(
-                                label: '数',
-                                suffix: '個',
-                                initialValue: entry.shuttleCount > 0
-                                    ? entry.shuttleCount.toString()
-                                    : '',
-                                onChanged: (v) =>
-                                    entry.shuttleCount = int.tryParse(v) ?? 0,
+                            if (entry.shuttleCount > 0 &&
+                                entry.pricePerDozens > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6, left: 4),
+                                child: Text(
+                                  '(¥${(entry.pricePerDozens / 12).toStringAsFixed(1)}/個 × ${entry.shuttleCount}個) = ',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey.shade600,
+                                      fontStyle: FontStyle.italic),
+                                ),
                               ),
-                            ),
                           ],
                         )
                       : _compactTextField(
+                          key: ValueKey('amount_${index}_${entry.amount}'),
                           label: '金額',
                           suffix: '円',
                           initialValue: entry.amount > 0
@@ -575,14 +651,17 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     );
   }
 
-  Widget _compactTextField(
-      {required String label,
-      required String suffix,
-      required String initialValue,
-      required Function(String) onChanged}) {
+  Widget _compactTextField({
+    Key? key,
+    required String label,
+    required String suffix,
+    required String initialValue,
+    required Function(String) onChanged,
+  }) {
     return SizedBox(
       height: 42,
       child: TextFormField(
+        key: key,
         initialValue: initialValue,
         decoration: InputDecoration(
           labelText: label,
