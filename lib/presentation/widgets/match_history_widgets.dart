@@ -567,10 +567,12 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     setState(() {
       if (widget.isRecalc && widget.currentSession != null) {
         types = widget.currentSession!.games.map((g) => g.type).toList();
+        isAutoRecommendMode = false;
       } else {
         types = List.from(s.matchTypes);
         autoCourtCount = s.autoCourtCount;
         autoCourtPolicy = s.autoCourtPolicy;
+        isAutoRecommendMode = s.isAutoRecommendMode;
       }
       loading = false;
       _updateRequirement();
@@ -724,8 +726,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                 ],
                 selected: {isAutoRecommendMode},
                 onSelectionChanged: (val) {
-                  setState(() => isAutoRecommendMode = val.first);
-                  _updateRequirement();
+                  setState(() {
+                    isAutoRecommendMode = val.first;
+                    _updateRequirement();
+                  });
                 },
               ),
               const SizedBox(height: 20),
@@ -769,7 +773,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                     context,
                     CourtSettings(selectedTypes,
                         autoCourtCount: autoCourtCount,
-                        autoCourtPolicy: autoCourtPolicy)),
+                        autoCourtPolicy: autoCourtPolicy,
+                        isAutoRecommendMode: isAutoRecommendMode)),
             isPrimary: true),
       ],
     );
@@ -787,8 +792,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                 .toList(),
             onChanged: (v) {
               if (v == null) return;
-              setState(() => autoCourtCount = v);
-              _updateRequirement();
+              setState(() {
+                autoCourtCount = v;
+                _updateRequirement();
+              });
             }),
       ]),
       const SizedBox(height: 12),
@@ -800,8 +807,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               .toList(),
           selected: {autoCourtPolicy},
           onSelectionChanged: (val) {
-            setState(() => autoCourtPolicy = val.first);
-            _updateRequirement();
+            setState(() {
+              autoCourtPolicy = val.first;
+              _updateRequirement();
+            });
           }),
       const Text('形式を選択', style: TextStyle(fontWeight: FontWeight.bold)),
       const SizedBox(height: 16),
@@ -839,8 +848,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                         style: const TextStyle(
                             color: Colors.white, fontWeight: FontWeight.bold)),
                     onDeleted: () {
-                      setState(() => currentRecommendTypes.removeAt(e.key));
-                      _updateRequirement();
+                      setState(() {
+                        currentRecommendTypes.removeAt(e.key);
+                        _updateRequirement();
+                      });
                     },
                     deleteIconColor: Colors.white,
                     backgroundColor: _getMatchTypeColor(context, e.value),
@@ -887,8 +898,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                         style: const TextStyle(
                             color: Colors.white, fontWeight: FontWeight.bold)),
                     onDeleted: () {
-                      setState(() => types.removeAt(e.key));
-                      _updateRequirement();
+                      setState(() {
+                        types.removeAt(e.key);
+                        _updateRequirement();
+                      });
                     },
                     deleteIconColor: Colors.white,
                     backgroundColor: _getMatchTypeColor(context, e.value),

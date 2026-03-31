@@ -1,5 +1,7 @@
 import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart';
+
 import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/repository/court_settings_repository.dart';
@@ -35,11 +37,13 @@ class SqliteCourtSettingsRepository implements CourtSettingsRepository {
         .toList();
     final autoCourtCount = (map['autoCourtCount'] as int?) ?? 2;
     final autoCourtPolicyIndex = (map['autoCourtPolicy'] as int?) ?? 1;
+    final isAutoRecommendMode = (map['isAutoRecommendMode'] as bool?) ?? false;
 
     return CourtSettings(
       types.isEmpty ? [MatchType.menDoubles] : types,
       autoCourtCount: autoCourtCount,
       autoCourtPolicy: AutoCourtPolicy.values[autoCourtPolicyIndex],
+      isAutoRecommendMode: isAutoRecommendMode,
     );
   }
 
@@ -50,6 +54,7 @@ class SqliteCourtSettingsRepository implements CourtSettingsRepository {
       'matchTypes': settings.matchTypes.map((t) => t.index).toList(),
       'autoCourtCount': settings.autoCourtCount,
       'autoCourtPolicy': settings.autoCourtPolicy.index,
+      'isAutoRecommendMode': settings.isAutoRecommendMode,
     };
     await db.insert(
       'settings',
