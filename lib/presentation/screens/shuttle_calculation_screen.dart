@@ -1,0 +1,876 @@
+import 'package:flutter/material.dart';
+import 'package:game_member_generator/presentation/notifiers/player_notifier.dart';
+import 'package:game_member_generator/presentation/notifiers/session_notifier.dart';
+import 'package:material_symbols_icons/symbols.dart';
+
+import '../../domain/entities/gender.dart';
+import '../../domain/entities/match_type.dart';
+import '../../domain/entities/player.dart';
+import '../../domain/entities/shuttle_usage_record.dart';
+import '../../domain/entities/shuttle_stock.dart';
+import '../../domain/repository/shuttle_usage_repository.dart';
+import '../../domain/repository/shuttle_stock_repository.dart';
+import '../widgets/shuttle_history_dialog.dart';
+import '../widgets/shuttle_stock_dialog.dart';
+
+enum ExpenseType {
+  shuttle('シャトル', Symbols.badminton, Colors.orange),
+  court('場所代', Icons.stadium, Colors.blue),
+  other('その他', Icons.more_horiz, Colors.teal);
+
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const ExpenseType(this.label, this.icon, this.color);
+}
+
+enum SplitTarget {
+  all('全員'),
+  male('男子'),
+  female('女子');
+
+  final String label;
+
+  const SplitTarget(this.label);
+}
+
+class ExpenseEntry {
+  String name;
+  ExpenseType type;
+  double amount;
+  double pricePerDozens;
+  int shuttleCount;
+  String? payerId;
+  SplitTarget target;
+
+  ExpenseEntry({
+    required this.name,
+    required this.type,
+    this.amount = 0,
+    this.pricePerDozens = 0,
+    this.shuttleCount = 0,
+    this.payerId,
+    this.target = SplitTarget.all,
+  });
+
+  double get total {
+    if (type == ExpenseType.shuttle) {
+      return (pricePerDozens / 12) * shuttleCount;
+    }
+    return amount;
+  }
+}
+
+class ShuttleCalculationScreen extends StatefulWidget {
+  final PlayerNotifier playerNotifier;
+  final SessionNotifier sessionNotifier;
+  final ShuttleUsageRepository shuttleRepository;
+  final ShuttleStockRepository stockRepository;
+
+  const ShuttleCalculationScreen({
+    super.key,
+    required this.playerNotifier,
+    required this.sessionNotifier,
+    required this.shuttleRepository,
+    required this.stockRepository,
+  });
+
+  @override
+  State<StatefulWidget> createState() => ShuttleCalculationPageState();
+}
+
+class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
+  final List<ExpenseEntry> _entries = [
+    ExpenseEntry(
+        name: 'シャトル',
+        type: ExpenseType.shuttle,
+        pricePerDozens: 0,
+        shuttleCount: 0)
+  ];
+
+  bool _useGenderSplit = false; // true: 男女ごとに計算, false: 全体化
+
+  Future<void> _saveRecord() async {
+    final sessions = widget.sessionNotifier.sessions;
+    final Map<MatchType, int> typeCounts = {};
+    for (var s in sessions) {
+      for (var g in s.games) {
+        typeCounts[g.type] = (typeCounts[g.type] ?? 0) + 1;
+      }
+    }
+
+    final totalShuttles = _entries
+        .where((e) => e.type == ExpenseType.shuttle)
+        .fold(0, (sum, e) => sum + e.shuttleCount);
+
+    if (totalShuttles == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('シャトルの使用数が0です')),
+      );
+      return;
+    }
+
+    await widget.shuttleRepository.save(ShuttleUsageRecord(
+      date: DateTime.now(),
+      totalShuttles: totalShuttles,
+      matchTypeCounts: typeCounts,
+    ));
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('消費記録を保存しました')),
+    );
+  }
+
+  void _showHistory() {
+    showDialog(
+      context: context,
+      builder: (context) =>
+          ShuttleHistoryDialog(repository: widget.shuttleRepository),
+    );
+  }
+
+  void _showStockManager() {
+    showDialog(
+      context: context,
+      builder: (context) => ShuttleStockDialog(
+        repository: widget.stockRepository,
+        activePlayers:
+            widget.playerNotifier.players.where((p) => p.isActive).toList(),
+      ),
+    );
+  }
+
+  Future<void> _selectFromStock(int index) async {
+    final activePlayers =
+        widget.playerNotifier.players.where((p) => p.isActive).toList();
+    final ShuttleStock? selected = await showDialog<ShuttleStock>(
+      context: context,
+      builder: (context) => ShuttleStockDialog(
+        repository: widget.stockRepository,
+        activePlayers: activePlayers,
+        isSelectionMode: true,
+      ),
+    );
+
+    if (selected != null) {
+      setState(() {
+        _entries[index].name = selected.name;
+        _entries[index].pricePerDozens = selected.pricePerDozens;
+        _entries[index].payerId = selected.payerId;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final activePlayers =
+        widget.playerNotifier.players.where((p) => p.isActive).toList();
+    final maleCount =
+        activePlayers.where((p) => p.gender == Gender.male).length;
+    final femaleCount =
+        activePlayers.where((p) => p.gender == Gender.female).length;
+    final totalCount = maleCount + femaleCount;
+
+    // --- 試合数と有効試合数の計算 ---
+    final sessions = widget.sessionNotifier.sessions;
+    final Map<MatchType, int> typeCounts = {};
+    double maleEffectiveGames = 0;
+    double femaleEffectiveGames = 0;
+
+    for (var s in sessions) {
+      for (var g in s.games) {
+        typeCounts[g.type] = (typeCounts[g.type] ?? 0) + 1;
+        if (g.type == MatchType.menDoubles) {
+          maleEffectiveGames += 1.0;
+        } else if (g.type == MatchType.womenDoubles) {
+          femaleEffectiveGames += 1.0;
+        } else {
+          maleEffectiveGames += 0.5;
+          femaleEffectiveGames += 0.5;
+        }
+      }
+    }
+    final totalGames = sessions.fold(0, (sum, s) => sum + s.games.length);
+
+    // --- シャトル消費スピード計算 ---
+    double totalShuttles = 0;
+    double maleShuttles = 0;
+    double femaleShuttles = 0;
+
+    for (var entry in _entries.where((e) => e.type == ExpenseType.shuttle)) {
+      final count = entry.shuttleCount.toDouble();
+      totalShuttles += count;
+      if (entry.target == SplitTarget.male) {
+        maleShuttles += count;
+      } else if (entry.target == SplitTarget.female) {
+        femaleShuttles += count;
+      } else {
+        // 全員対象の場合は男女で50%ずつ (ご要望通り)
+        maleShuttles += count * 0.5;
+        femaleShuttles += count * 0.5;
+      }
+    }
+
+    final speedTotal = totalGames > 0 ? totalShuttles / totalGames : 0.0;
+    final speedMale =
+        maleEffectiveGames > 0 ? maleShuttles / maleEffectiveGames : 0.0;
+    final speedFemale =
+        femaleEffectiveGames > 0 ? femaleShuttles / femaleEffectiveGames : 0.0;
+
+    // --- 費用計算ロジック ---
+    double totalAmount = _entries.fold(0, (sum, item) => sum + item.total);
+    double maleShare = 0;
+    double femaleShare = 0;
+
+    if (!_useGenderSplit) {
+      final perPerson = totalCount > 0 ? totalAmount / totalCount : 0.0;
+      maleShare = perPerson;
+      femaleShare = perPerson;
+    } else {
+      for (var entry in _entries) {
+        final amount = entry.total;
+        switch (entry.target) {
+          case SplitTarget.all:
+            if (totalCount > 0) {
+              final share = amount / totalCount;
+              maleShare += share;
+              femaleShare += share;
+            }
+          case SplitTarget.male:
+            if (maleCount > 0) {
+              maleShare += amount / maleCount;
+            }
+          case SplitTarget.female:
+            if (femaleCount > 0) {
+              femaleShare += amount / femaleCount;
+            }
+        }
+      }
+    }
+
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surfaceContainerLow,
+      appBar: AppBar(
+        title: const Text('EXPENSE CALC',
+            style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+        centerTitle: true,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.save),
+            tooltip: '保存',
+            onPressed: _saveRecord,
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'history') _showHistory();
+              if (value == 'stock') _showStockManager();
+              if (value == 'reset') {
+                setState(() {
+                  _entries.clear();
+                  _entries.add(ExpenseEntry(
+                      name: 'シャトル',
+                      type: ExpenseType.shuttle,
+                      pricePerDozens: 0,
+                      shuttleCount: 0));
+                });
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                  value: 'stock',
+                  child: ListTile(
+                      leading: Icon(Icons.inventory_2_outlined),
+                      title: Text('シャトル在庫管理'),
+                      contentPadding: EdgeInsets.zero)),
+              const PopupMenuItem(
+                  value: 'history',
+                  child: ListTile(
+                      leading: Icon(Icons.history),
+                      title: Text('履歴を表示'),
+                      contentPadding: EdgeInsets.zero)),
+              const PopupMenuItem(
+                  value: 'reset',
+                  child: ListTile(
+                      leading: Icon(Icons.refresh),
+                      title: Text('リセット'),
+                      contentPadding: EdgeInsets.zero)),
+            ],
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          _buildInfoBar(maleCount, femaleCount, totalCount),
+          _buildModeSelectorHeader(),
+          _buildConsumptionSpeedBanner(
+              totalGames, typeCounts, speedTotal, speedMale, speedFemale),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+              itemCount: _entries.length,
+              itemBuilder: (context, index) =>
+                  _buildExpenseCard(index, activePlayers),
+            ),
+          ),
+        ],
+      ),
+      bottomSheet: _buildSummaryPanel(totalAmount, maleShare, femaleShare),
+      floatingActionButton: _buildAddButtonMenu(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _buildInfoBar(int m, int f, int t) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _countChip("男子", m, Colors.blue),
+          const SizedBox(width: 12),
+          _countChip("女子", f, Colors.pink),
+          const SizedBox(width: 12),
+          _countChip("合計", t, Colors.grey.shade700),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeSelectorHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: SizedBox(
+        width: double.infinity,
+        height: 36,
+        child: SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(
+                value: false,
+                label: Text('均等に割り勘',
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+            ButtonSegment(
+                value: true,
+                label: Text('男女別に計算',
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+          ],
+          selected: {_useGenderSplit},
+          onSelectionChanged: (v) => setState(() => _useGenderSplit = v.first),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConsumptionSpeedBanner(int games, Map<MatchType, int> typeCounts,
+      double total, double male, double female) {
+    final theme = Theme.of(context);
+
+    final matchTypeSummary = MatchType.values
+        .where((t) => (typeCounts[t] ?? 0) > 0)
+        .map((t) => '${t.displayName}:${typeCounts[t]}')
+        .join(', ');
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outlineVariant, width: 0.5),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.speed, color: theme.colorScheme.secondary, size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('消費スピード ($games 試合)',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.secondary)),
+                    if (matchTypeSummary.isNotEmpty)
+                      Text('($matchTypeSummary)',
+                          style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                if (!_useGenderSplit)
+                  Text('${total.toStringAsFixed(2)} 個 / 試合',
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w900))
+                else
+                  Row(
+                    children: [
+                      Text('男: ${male.toStringAsFixed(2)}',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.blue.shade800)),
+                      const SizedBox(width: 12),
+                      Text('女: ${female.toStringAsFixed(2)}',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.pink.shade800)),
+                      const Spacer(),
+                      Text('計: ${total.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExpenseCard(int index, List<Player> activePlayers) {
+    final entry = _entries[index];
+    final theme = Theme.of(context);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: theme.colorScheme.outlineVariant, width: 0.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 2, 4, 8),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(entry.type.icon, size: 16, color: entry.type.color),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SizedBox(
+                    height: 32,
+                    child: TextFormField(
+                      key: ValueKey('name_${index}_${entry.name}'),
+                      initialValue: entry.name,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(vertical: 8),
+                        border: InputBorder.none,
+                        hintText: '項目名',
+                      ),
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.bold),
+                      onChanged: (v) => entry.name = v,
+                    ),
+                  ),
+                ),
+                if (entry.type == ExpenseType.shuttle)
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.inventory_2_outlined,
+                        size: 18, color: Colors.blue),
+                    tooltip: '在庫から選択',
+                    onPressed: () => _selectFromStock(index),
+                  ),
+                if (_useGenderSplit) _buildSplitTargetDropdown(entry),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.close, color: Colors.grey, size: 18),
+                  onPressed: () => setState(() {
+                    if (_entries.length > 1) _entries.removeAt(index);
+                  }),
+                ),
+              ],
+            ),
+            const Divider(height: 1, thickness: 0.5),
+            const SizedBox(height: 6),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // 入力エリア (左側)
+                Expanded(
+                  flex: 65,
+                  child: entry.type == ExpenseType.shuttle
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: _compactTextField(
+                                    key: ValueKey(
+                                        'price_${index}_${entry.pricePerDozens}'),
+                                    label: '単価',
+                                    suffix: '円',
+                                    initialValue: entry.pricePerDozens > 0
+                                        ? entry.pricePerDozens
+                                            .toStringAsFixed(0)
+                                        : '',
+                                    onChanged: (v) => entry.pricePerDozens =
+                                        double.tryParse(v) ?? 0,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  flex: 2,
+                                  child: _compactTextField(
+                                    key: ValueKey(
+                                        'count_${index}_${entry.shuttleCount}'),
+                                    label: '数',
+                                    suffix: '個',
+                                    initialValue: entry.shuttleCount > 0
+                                        ? entry.shuttleCount.toString()
+                                        : '',
+                                    onChanged: (v) => entry.shuttleCount =
+                                        int.tryParse(v) ?? 0,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (entry.shuttleCount > 0 &&
+                                entry.pricePerDozens > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6, left: 4),
+                                child: Text(
+                                  '(¥${(entry.pricePerDozens / 12).toStringAsFixed(1)}/個 × ${entry.shuttleCount}個) = ',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey.shade600,
+                                      fontStyle: FontStyle.italic),
+                                ),
+                              ),
+                          ],
+                        )
+                      : _compactTextField(
+                          key: ValueKey('amount_${index}_${entry.amount}'),
+                          label: '金額',
+                          suffix: '円',
+                          initialValue: entry.amount > 0
+                              ? entry.amount.toStringAsFixed(0)
+                              : '',
+                          onChanged: (v) =>
+                              entry.amount = double.tryParse(v) ?? 0,
+                        ),
+                ),
+                const SizedBox(width: 8),
+                // 支払人・小計エリア (右側)
+                Expanded(
+                  flex: 35,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _buildPayerDropdown(entry, activePlayers),
+                      Text(
+                        '¥${entry.total.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSplitTargetDropdown(ExpenseEntry entry) {
+    return Container(
+      height: 24,
+      margin: const EdgeInsets.only(right: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: DropdownButton<SplitTarget>(
+        value: entry.target,
+        underline: const SizedBox(),
+        isDense: true,
+        items: SplitTarget.values
+            .map((t) => DropdownMenuItem(
+                value: t,
+                child: Text(t.label,
+                    style: const TextStyle(
+                        fontSize: 10, fontWeight: FontWeight.bold))))
+            .toList(),
+        onChanged: (v) => setState(() {
+          if (v != null) entry.target = v;
+        }),
+      ),
+    );
+  }
+
+  Widget _buildPayerDropdown(ExpenseEntry entry, List<Player> activePlayers) {
+    return SizedBox(
+      height: 20,
+      child: DropdownButton<String>(
+        value: entry.payerId,
+        underline: const SizedBox(),
+        isExpanded: true,
+        alignment: Alignment.centerRight,
+        hint: const Text('支払人なし',
+            style: TextStyle(fontSize: 9), textAlign: TextAlign.right),
+        icon: const Icon(Icons.arrow_drop_down, size: 12),
+        items: [
+          const DropdownMenuItem<String>(
+              value: null, child: Text('なし', style: TextStyle(fontSize: 10))),
+          ...activePlayers.map((p) => DropdownMenuItem(
+              value: p.id,
+              child: Text(p.name,
+                  style: const TextStyle(fontSize: 10),
+                  overflow: TextOverflow.ellipsis)))
+        ],
+        onChanged: (v) => setState(() => entry.payerId = v),
+      ),
+    );
+  }
+
+  Widget _compactTextField({
+    Key? key,
+    required String label,
+    required String suffix,
+    required String initialValue,
+    required Function(String) onChanged,
+  }) {
+    return SizedBox(
+      height: 42,
+      child: TextFormField(
+        key: key,
+        initialValue: initialValue,
+        decoration: InputDecoration(
+          labelText: label,
+          suffixText: suffix,
+          isDense: true,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          border: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8))),
+          labelStyle: const TextStyle(fontSize: 9),
+          filled: true,
+          fillColor: Theme.of(context).colorScheme.surface,
+        ),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+        keyboardType: TextInputType.number,
+        onChanged: (v) => setState(() => onChanged(v)),
+      ),
+    );
+  }
+
+  Widget _buildAddButtonMenu() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: ExpenseType.values
+            .map((t) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: _typeAddButton(t),
+                ))
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _typeAddButton(ExpenseType type) {
+    return ActionChip(
+      avatar: Icon(type.icon, size: 14, color: type.color),
+      label: Text(type.label,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      onPressed: () => setState(() {
+        _entries.add(ExpenseEntry(
+          name: type.label,
+          type: type,
+          pricePerDozens: 0,
+          shuttleCount: 0,
+        ));
+      }),
+    );
+  }
+
+  Widget _buildSummaryPanel(double total, double mShare, double fShare) {
+    final theme = Theme.of(context);
+    final mRound = (mShare / 100).ceil() * 100;
+    final fRound = (fShare / 100).ceil() * 100;
+
+    final Map<ExpenseType, double> typeTotals = {};
+    for (var entry in _entries) {
+      typeTotals[entry.type] = (typeTotals[entry.type] ?? 0) + entry.total;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: const [
+          BoxShadow(
+              color: Colors.black12, blurRadius: 15, offset: Offset(0, -5))
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // カテゴリ別内訳
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("内訳",
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary)),
+                        const SizedBox(height: 4),
+                        ...ExpenseType.values
+                            .where((t) => (typeTotals[t] ?? 0) > 0)
+                            .map((t) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 1),
+                                  child: Row(
+                                    children: [
+                                      Icon(t.icon,
+                                          size: 9,
+                                          color:
+                                              t.color.withValues(alpha: 0.7)),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                          child: Text(t.label,
+                                              style: const TextStyle(
+                                                  fontSize: 10))),
+                                      Text(
+                                          "¥${typeTotals[t]!.toStringAsFixed(0)}",
+                                          style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                )),
+                      ],
+                    ),
+                  ),
+                  Container(
+                      height: 30,
+                      width: 1,
+                      color: theme.colorScheme.outlineVariant,
+                      margin: const EdgeInsets.symmetric(horizontal: 16)),
+                  // 合計費用
+                  Expanded(
+                    flex: 4,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text("総額",
+                            style: TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.bold)),
+                        Text("¥${total.toStringAsFixed(0)}",
+                            style: TextStyle(
+                                fontSize: 22, fontWeight: FontWeight.w900)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (!_useGenderSplit)
+                _resultBox("集金額 (一人あたり)", mRound, theme.colorScheme.primary,
+                    isLarge: true)
+              else
+                Row(
+                  children: [
+                    Expanded(
+                        child:
+                            _resultBox("男子集金", mRound, Colors.blue.shade800)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child:
+                            _resultBox("女子集金", fRound, Colors.pink.shade800)),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _resultBox(String label, int value, Color color,
+      {bool isLarge = false}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+      ),
+      child: Column(
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: color.withValues(alpha: 0.8))),
+          Text("¥$value",
+              style: TextStyle(
+                  fontSize: isLarge ? 26 : 20,
+                  fontWeight: FontWeight.w900,
+                  color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _countChip(String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Text("$label: $count",
+          style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: color.withValues(alpha: 0.8))),
+    );
+  }
+}
