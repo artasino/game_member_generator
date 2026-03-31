@@ -46,14 +46,6 @@ void main() async {
 
   // 初回起動時のみサンプルデータを投入するロジック
   final players = await repositories.playerRepository.getAll();
-  if (players.isEmpty) {
-    for (int i = 1; i <= 2; i++) {
-      await playerNotifier.addPlayer(Player(
-          id: 'M$i', name: '男子$i', yomigana: 'だんし$i', gender: Gender.male));
-      await playerNotifier.addPlayer(Player(
-          id: 'F$i', name: '女子$i', yomigana: 'じょし$i', gender: Gender.female));
-    }
-  }
 
   runApp(MyApp(
     playerNotifier: playerNotifier,
