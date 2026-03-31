@@ -550,7 +550,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
   List<MatchType> types = [];
   List<MatchType> currentRecommendTypes = [];
   bool loading = true;
-  bool isAutoRecommendEnabled = false;
+  bool isAutoRecommendMode = false;
   int autoCourtCount = 3;
   AutoCourtPolicy autoCourtPolicy = AutoCourtPolicy.balance;
   RequirementResult? _requirementResult;
@@ -567,12 +567,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     setState(() {
       if (widget.isRecalc && widget.currentSession != null) {
         types = widget.currentSession!.games.map((g) => g.type).toList();
-        isAutoRecommendEnabled = false;
       } else {
         types = List.from(s.matchTypes);
         autoCourtCount = s.autoCourtCount;
         autoCourtPolicy = s.autoCourtPolicy;
-        isAutoRecommendEnabled = AppConfig.autoRecommendEnabled;
       }
       loading = false;
       _updateRequirement();
@@ -580,14 +578,14 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
   }
 
   void _updateRequirement() {
-    final selectedTypes = isAutoRecommendEnabled ? _buildAutoTypes() : types;
+    final selectedTypes = isAutoRecommendMode ? _buildAutoTypes() : types;
     setState(() {
       _requirementResult = widget.notifier.checkRequirements(selectedTypes);
     });
   }
 
   bool _checkRequirementWithAddType(MatchType type) {
-    var selectedTypes = isAutoRecommendEnabled ? _buildAutoTypes() : types;
+    var selectedTypes = isAutoRecommendMode ? _buildAutoTypes() : types;
     List<MatchType> newTypes = List.from(selectedTypes);
     newTypes.add(type);
     return widget.notifier.checkRequirements(newTypes).canGenerate;
@@ -613,7 +611,6 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         double equalityScore = double.infinity;
         for (var mdNum = 0; mdNum <= maxMaleDoublesNumPossible; mdNum++) {
           for (var wdNum = 0; wdNum <= maxFemaleDoublesNumPossible; wdNum++) {
-            print("$mdNum,$wdNum");
             if ((mdNum + wdNum) != autoCourtCount) {
               continue;
             }
@@ -692,7 +689,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     final res =
         _requirementResult ?? const RequirementResult(canGenerate: true);
     final theme = Theme.of(context);
-    final selectedTypes = isAutoRecommendEnabled ? _buildAutoTypes() : types;
+    final selectedTypes = isAutoRecommendMode ? _buildAutoTypes() : types;
     final pool = widget.notifier.playerStatsPool;
     final activeMaleLen = pool.activeMales.length;
     final activeFemaleLen = pool.activeFemales.length;
@@ -725,16 +722,16 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                       label: Text('手動'),
                       icon: Icon(Icons.touch_app))
                 ],
-                selected: {isAutoRecommendEnabled},
+                selected: {isAutoRecommendMode},
                 onSelectionChanged: (val) {
-                  setState(() => isAutoRecommendEnabled = val.first);
+                  setState(() => isAutoRecommendMode = val.first);
                   _updateRequirement();
                 },
               ),
               const SizedBox(height: 20),
-              if (isAutoRecommendEnabled) _buildAutoSettingsSection(),
+              if (isAutoRecommendMode) _buildAutoSettingsSection(),
             ],
-            if (!isAutoRecommendEnabled) _buildManualSettingsSection(context),
+            if (!isAutoRecommendMode) _buildManualSettingsSection(context),
             if (!res.canGenerate && selectedTypes.isNotEmpty)
               Padding(
                   padding: const EdgeInsets.only(top: 20),
