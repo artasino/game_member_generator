@@ -583,6 +583,13 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     });
   }
 
+  bool _checkRequirementWithAddType(MatchType type) {
+    var selectedTypes = isAutoRecommendEnabled ? _buildAutoTypes() : types;
+    List<MatchType> newTypes = List.from(selectedTypes);
+    newTypes.add(type);
+    return widget.notifier.checkRequirements(newTypes).canGenerate;
+  }
+
   List<MatchType> _buildAutoTypes() {
     return List<MatchType>.generate(autoCourtCount, (index) {
       switch (autoCourtPolicy) {
@@ -738,10 +745,14 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               .map((type) => ActionChip(
                   label: Text(type.displayName,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
-                  onPressed: () {
-                    setState(() => types.add(type));
-                    _updateRequirement();
-                  },
+                  onPressed: _checkRequirementWithAddType(type)
+                      ? () {
+                          setState(() {
+                            types.add(type);
+                          });
+                          _updateRequirement();
+                        }
+                      : null,
                   avatar: Icon(Icons.add,
                       size: 18, color: _getMatchTypeColor(context, type)),
                   side: BorderSide(color: _getMatchTypeColor(context, type))))
