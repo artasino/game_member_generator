@@ -26,7 +26,7 @@ class CourtSettings {
 
   CourtSettings(
     this.matchTypes, {
-    this.autoCourtCount = 2,
-    this.autoCourtPolicy = AutoCourtPolicy.balance,
+    this.autoCourtCount = 3,
+    this.autoCourtPolicy = AutoCourtPolicy.genderSeparated,
   });
 }
