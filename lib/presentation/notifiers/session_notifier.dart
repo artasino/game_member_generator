@@ -57,10 +57,8 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   /// 現在のアクティブプレイヤーで、指定された試合形式が組めるかチェックする
-  /// UIから頻繁に呼ばれるため、キャッシュを利用し、重い計算（アルゴリズム実行）は行わない
   RequirementResult checkRequirements(List<MatchType> types) {
-    // キャッシュキーの生成（性別ごとの必要人数をベースにする）
-    final counts = _calculateRequiredCounts(types);
+    final counts = _requirementService.calculateRequired(types);
     final cacheKey = '${counts.male}-${counts.female}';
 
     if (_requirementCache.containsKey(cacheKey)) {
@@ -101,25 +99,18 @@ class SessionNotifier extends ChangeNotifier {
     int femaleCount = 0;
     for (final session in _sessions) {
       for (final game in session.games) {
-        final players = [
+        for (final p in [
           game.teamA.player1,
           game.teamA.player2,
           game.teamB.player1,
-          game.teamB.player2,
-        ];
-        for (final p in players) {
-          if (p.gender == Gender.male) {
-            maleCount++;
-          } else if (p.gender == Gender.female) {
-            femaleCount++;
-          }
+          game.teamB.player2
+        ]) {
+          if (p.gender == Gender.male) maleCount++;
+          if (p.gender == Gender.female) femaleCount++;
         }
       }
     }
-    return {
-      Gender.male: maleCount,
-      Gender.female: femaleCount,
-    };
+    return {Gender.male: maleCount, Gender.female: femaleCount};
   }
 
   /// 指定セッション(含む)までの履歴のみを使って統計プールを作る
@@ -147,7 +138,8 @@ class SessionNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> recalculateSession(int sessionIndex, CourtSettings settings) async {
+  Future<void> recalculateSession(
+      int sessionIndex, CourtSettings settings) async {
     _isGenerating = true;
     notifyListeners();
 
@@ -165,7 +157,8 @@ class SessionNotifier extends ChangeNotifier {
       await sessionRepository.update(updatedSession);
 
       _sessions = originalSessions;
-      final index = _sessions.indexWhere((session) => session.index == sessionIndex);
+      final index =
+          _sessions.indexWhere((session) => session.index == sessionIndex);
       if (index != -1) {
         _sessions[index] = updatedSession;
       }
@@ -208,14 +201,10 @@ class SessionNotifier extends ChangeNotifier {
 
   int getPairCount(Team team, {int? upToIndex}) {
     var count = 0;
-    final id1 = team.player1.id;
-    final id2 = team.player2.id;
     for (final session in _sessions) {
-      if (upToIndex != null && session.index > upToIndex) {
-        break;
-      }
+      if (upToIndex != null && session.index > upToIndex) break;
       for (final game in session.games) {
-        if (_isMatch(game.teamA, id1, id2) || _isMatch(game.teamB, id1, id2)) {
+        if (_isMatch(game.teamA, team) || _isMatch(game.teamB, team)) {
           count++;
         }
       }
@@ -223,49 +212,28 @@ class SessionNotifier extends ChangeNotifier {
     return count;
   }
 
-  bool _isMatch(Team team, String id1, String id2) {
-    final teamId1 = team.player1.id;
-    final teamId2 = team.player2.id;
-    return (teamId1 == id1 && teamId2 == id2) ||
-        (teamId1 == id2 && teamId2 == id1);
+  bool _isMatch(Team t1, Team t2) {
+    return (t1.player1.id == t2.player1.id && t1.player2.id == t2.player2.id) ||
+        (t1.player1.id == t2.player2.id && t1.player2.id == t2.player1.id);
   }
 
   Future<void> swapPlayers(Session session, Player p1, Player p2) async {
     final newGames = session.games.map((game) {
-      final newTeamA = _swapInTeam(game.teamA, p1, p2);
-      final newTeamB = _swapInTeam(game.teamB, p1, p2);
-      return game.copyWith(teamA: newTeamA, teamB: newTeamB);
+      return game.copyWith(
+        teamA: game.teamA.swapPlayers(p1, p2),
+        teamB: game.teamB.swapPlayers(p1, p2),
+      );
     }).toList(growable: false);
 
     final newResting = session.restingPlayers.map((player) {
-      if (player.id == p1.id) {
-        return p2;
-      }
-      if (player.id == p2.id) {
-        return p1;
-      }
+      if (player.id == p1.id) return p2;
+      if (player.id == p2.id) return p1;
       return player;
     }).toList(growable: false);
 
     await updateSession(
       session.copyWith(games: newGames, restingPlayers: newResting),
     );
-  }
-
-  Team _swapInTeam(Team team, Player p1, Player p2) {
-    var newP1 = team.player1;
-    var newP2 = team.player2;
-    if (team.player1.id == p1.id) {
-      newP1 = p2;
-    } else if (team.player1.id == p2.id) {
-      newP1 = p1;
-    }
-    if (team.player2.id == p1.id) {
-      newP2 = p2;
-    } else if (team.player2.id == p2.id) {
-      newP2 = p1;
-    }
-    return team.copyWith(player1: newP1, player2: newP2);
   }
 
   Future<void> updateSession(Session session) async {
@@ -286,36 +254,4 @@ class SessionNotifier extends ChangeNotifier {
   Future<CourtSettings> getCurrentSettings() async {
     return await courtSettingsRepository.get();
   }
-
-  _RequiredPlayerCounts _calculateRequiredCounts(List<MatchType> types) {
-    var requiredMale = 0;
-    var requiredFemale = 0;
-
-    for (final type in types) {
-      switch (type) {
-        case MatchType.menDoubles:
-          requiredMale += 4;
-          break;
-        case MatchType.womenDoubles:
-          requiredFemale += 4;
-          break;
-        case MatchType.mixedDoubles:
-          requiredMale += 2;
-          requiredFemale += 2;
-          break;
-      }
-    }
-
-    return _RequiredPlayerCounts(male: requiredMale, female: requiredFemale);
-  }
-}
-
-class _RequiredPlayerCounts {
-  final int male;
-  final int female;
-
-  const _RequiredPlayerCounts({
-    required this.male,
-    required this.female,
-  });
 }

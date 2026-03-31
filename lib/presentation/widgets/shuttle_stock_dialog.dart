@@ -62,7 +62,7 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: selectedPayerId,
+                initialValue: selectedPayerId,
                 decoration: const InputDecoration(labelText: '購入者 (支払人)'),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('未指定')),

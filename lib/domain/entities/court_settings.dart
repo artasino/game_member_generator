@@ -20,15 +20,60 @@ extension AutoCourtPolicyX on AutoCourtPolicy {
 }
 
 class CourtSettings {
-  List<MatchType> matchTypes;
-  int autoCourtCount;
-  AutoCourtPolicy autoCourtPolicy;
-  bool isAutoRecommendMode;
+  final List<MatchType> matchTypes;
+  final int autoCourtCount;
+  final AutoCourtPolicy autoCourtPolicy;
+  final bool isAutoRecommendMode;
 
-  CourtSettings(
+  const CourtSettings(
     this.matchTypes, {
     this.autoCourtCount = 3,
     this.autoCourtPolicy = AutoCourtPolicy.genderSeparated,
     this.isAutoRecommendMode = false,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'matchTypes': matchTypes.map((t) => t.index).toList(),
+      'autoCourtCount': autoCourtCount,
+      'autoCourtPolicy': autoCourtPolicy.index,
+      'isAutoRecommendMode': isAutoRecommendMode,
+    };
+  }
+
+  factory CourtSettings.fromJson(dynamic json) {
+    if (json is List<dynamic>) {
+      // Compatibility with old format where only matchTypes were stored as a list
+      return CourtSettings(
+        json.map((t) => MatchType.values[t as int]).toList(),
+      );
+    }
+
+    final Map<String, dynamic> map = json as Map<String, dynamic>;
+    final types = (map['matchTypes'] as List<dynamic>? ?? [])
+        .map((t) => MatchType.values[t as int])
+        .toList();
+
+    return CourtSettings(
+      types.isEmpty ? [MatchType.menDoubles] : types,
+      autoCourtCount: (map['autoCourtCount'] as int?) ?? 2,
+      autoCourtPolicy:
+          AutoCourtPolicy.values[(map['autoCourtPolicy'] as int?) ?? 1],
+      isAutoRecommendMode: (map['isAutoRecommendMode'] as bool?) ?? false,
+    );
+  }
+
+  CourtSettings copyWith({
+    List<MatchType>? matchTypes,
+    int? autoCourtCount,
+    AutoCourtPolicy? autoCourtPolicy,
+    bool? isAutoRecommendMode,
+  }) {
+    return CourtSettings(
+      matchTypes ?? this.matchTypes,
+      autoCourtCount: autoCourtCount ?? this.autoCourtCount,
+      autoCourtPolicy: autoCourtPolicy ?? this.autoCourtPolicy,
+      isAutoRecommendMode: isAutoRecommendMode ?? this.isAutoRecommendMode,
+    );
+  }
 }

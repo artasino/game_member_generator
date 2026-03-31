@@ -1,17 +1,20 @@
 import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart';
+
 import '../../domain/entities/session.dart';
 import '../../domain/repository/session_repository/session_history_repository.dart';
 import 'database_helper.dart';
 
 class SqliteSessionHistoryRepository implements SessionHistoryRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  static const String _tableName = 'sessions';
 
   @override
   Future<List<Session>> getAll() async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps =
-        await db.query('sessions', orderBy: 'id ASC');
+        await db.query(_tableName, orderBy: 'id ASC');
     return maps.map((map) {
       return Session.fromJson(jsonDecode(map['content']));
     }).toList();
@@ -21,7 +24,7 @@ class SqliteSessionHistoryRepository implements SessionHistoryRepository {
   Future<void> add(Session session) async {
     final db = await _dbHelper.database;
     await db.insert(
-      'sessions',
+      _tableName,
       {
         'id': session.index,
         'content': jsonEncode(session.toJson()),
@@ -34,7 +37,7 @@ class SqliteSessionHistoryRepository implements SessionHistoryRepository {
   Future<void> update(Session session) async {
     final db = await _dbHelper.database;
     await db.update(
-      'sessions',
+      _tableName,
       {
         'content': jsonEncode(session.toJson()),
       },
@@ -46,6 +49,6 @@ class SqliteSessionHistoryRepository implements SessionHistoryRepository {
   @override
   Future<void> clear() async {
     final db = await _dbHelper.database;
-    await db.delete('sessions');
+    await db.delete(_tableName);
   }
 }
