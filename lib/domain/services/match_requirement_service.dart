@@ -1,5 +1,6 @@
 import 'dart:developer' as dev;
 
+import '../entities/gender.dart';
 import '../entities/match_session_selection.dart';
 import '../entities/match_type.dart';
 import '../entities/player_stats_pool.dart';
@@ -85,14 +86,55 @@ class MatchRequirementService {
     for (final t in types) {
       if (t == MatchType.menDoubles) {
         m += 4;
-      } else if (t == MatchType.womenDoubles)
+      } else if (t == MatchType.womenDoubles) {
         f += 4;
-      else {
+      } else {
         m += 2;
         f += 2;
       }
     }
     return RequiredPlayerCounts(male: m, female: f);
+  }
+
+  /// 同時出場制限を考慮した「実質的な」有効人数を計算する
+  /// ペアのうち1人しか出られない場合、優先度に基づいて休むべき方を決定し、その性別のカウントを1減らす
+  EffectivePlayerCounts calculateEffectiveCounts(PlayerStatsPool pool) {
+    final available = pool.all
+        .where((p) => p.player.isActive && !p.player.isMustRest)
+        .toList();
+    int m = available.where((p) => p.player.gender == Gender.male).length;
+    int f = available.where((p) => p.player.gender == Gender.female).length;
+
+    final idMap = {for (final p in available) p.player.id: p};
+    final processedPairs = <String>{};
+
+    for (final p in available) {
+      final partnerId = p.player.excludedPartnerId;
+      if (partnerId == null || processedPairs.contains(p.player.id)) continue;
+
+      final partner = idMap[partnerId];
+      // 相手もアクティブかつ有効な場合のみ「制限」としてカウント
+      if (partner != null && partner.player.excludedPartnerId == p.player.id) {
+        // 出場優先度（shouldRestOver）に基づいて、どちらか一方を実質的な数から除外する
+        if (p.shouldRestOver(partner)) {
+          // pが休むべき（＝カウントに入れない）
+          if (p.player.gender == Gender.male)
+            m--;
+          else
+            f--;
+        } else {
+          // partnerが休むべき（＝カウントに入れない）
+          if (partner.player.gender == Gender.male)
+            m--;
+          else
+            f--;
+        }
+        processedPairs.add(p.player.id);
+        processedPairs.add(partnerId);
+      }
+    }
+
+    return EffectivePlayerCounts(male: m.toDouble(), female: f.toDouble());
   }
 
   /// 制限解消のシミュレーションを行い、選外となったプレイヤー名と最終的な選抜状態を返す
@@ -140,6 +182,16 @@ class RequiredPlayerCounts {
   final int female;
 
   const RequiredPlayerCounts({
+    required this.male,
+    required this.female,
+  });
+}
+
+class EffectivePlayerCounts {
+  final double male;
+  final double female;
+
+  const EffectivePlayerCounts({
     required this.male,
     required this.female,
   });

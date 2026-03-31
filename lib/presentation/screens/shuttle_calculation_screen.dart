@@ -6,10 +6,10 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
-import '../../domain/entities/shuttle_usage_record.dart';
 import '../../domain/entities/shuttle_stock.dart';
-import '../../domain/repository/shuttle_usage_repository.dart';
+import '../../domain/entities/shuttle_usage_record.dart';
 import '../../domain/repository/shuttle_stock_repository.dart';
+import '../../domain/repository/shuttle_usage_repository.dart';
 import '../widgets/shuttle_history_dialog.dart';
 import '../widgets/shuttle_stock_dialog.dart';
 
@@ -208,7 +208,6 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       } else if (entry.target == SplitTarget.female) {
         femaleShuttles += count;
       } else {
-        // 全員対象の場合は男女で50%ずつ (ご要望通り)
         maleShuttles += count * 0.5;
         femaleShuttles += count * 0.5;
       }
@@ -520,7 +519,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                   child: _compactTextField(
                                     key: ValueKey(
                                         'price_${index}_${entry.pricePerDozens}'),
-                                    label: '単価',
+                                    label: '単価/ダース',
                                     suffix: '円',
                                     initialValue: entry.pricePerDozens > 0
                                         ? entry.pricePerDozens
