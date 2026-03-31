@@ -75,8 +75,6 @@ class GameEvaluator {
     for (var ps in availablePlayers) {
       if (ps.stats.restedLastTime) {
         score -= gain * 2;
-      } else if (ps.stats.sessionsSinceLastRest == 1) {
-        score -= gain;
       }
     }
     return score;
