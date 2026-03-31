@@ -49,9 +49,9 @@ class GamesArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final int count = session.games.length;
-    final int cross = _calculateCrossAxisCount(count);
     final double spacing = 16.0 * scale;
-    final double cardWidth = (screenWidth - (spacing * (cross + 1))) / cross;
+    final int cross = _calculateCrossAxisCount(count, spacing);
+    final double cardWidth = _calculateCardWidth(cross, spacing);
 
     return Wrap(
       spacing: spacing,
@@ -76,13 +76,26 @@ class GamesArea extends StatelessWidget {
     );
   }
 
-  int _calculateCrossAxisCount(int gameCount) {
-    if (screenWidth < 500 * scale) return 1;
-    if (gameCount == 4) return 2;
-    if (gameCount == 3) return 3;
-    final double minCardWidth = 360 * scale;
-    int cross = (screenWidth / minCardWidth).floor().clamp(1, 3);
-    return min(gameCount, cross);
+  int _calculateCrossAxisCount(int gameCount, double spacing) {
+    if (gameCount <= 1 || screenWidth <= 0) return 1;
+
+    // web で過度に拡大しないよう、最小幅は scale の影響を緩やかにする
+    final double minCardWidth =
+        (300 * pow(scale, 0.75)).clamp(280, 420).toDouble();
+    final int maxColumns = min(gameCount, 3);
+
+    for (int columns = maxColumns; columns >= 1; columns--) {
+      if (_calculateCardWidth(columns, spacing) >= minCardWidth) {
+        return columns;
+      }
+    }
+    return 1;
+  }
+
+  double _calculateCardWidth(int crossAxisCount, double spacing) {
+    final double totalSpacing = spacing * max(crossAxisCount - 1, 0);
+    final double availableWidth = max(screenWidth - totalSpacing, 0);
+    return availableWidth / crossAxisCount;
   }
 }
 
@@ -324,6 +337,9 @@ class PlayerTag extends StatelessWidget {
         ),
         child: Text(
           player.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
           style: TextStyle(
             fontSize: 24 * scale,
             fontWeight: FontWeight.w900,
