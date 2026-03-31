@@ -18,11 +18,12 @@ dependencies:
   sqflite_common_ffi: ^2.3.0
   sqlite3_flutter_libs: ^0.6.0+eol
   file_picker: ^10.3.10
-  csv: ^7.2.0
+  csv: ^8.0.0
   share_plus: ^12.0.1
   equatable: ^2.0.8
   collection: ^1.19.1
   google_fonts: ^8.0.2
+  material_symbols_icons: ^4.2928.0
 
 dev_dependencies:
   flutter_test:
