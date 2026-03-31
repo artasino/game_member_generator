@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:game_member_generator/infrastructure/sqlite/sqlite_shuttle_stock_repository.dart';
-import 'package:game_member_generator/infrastructure/sqlite/sqlite_shuttle_usage_repository.dart';
+import 'package:game_member_generator/infrastructure/persistence/app_repositories.dart';
 import 'package:game_member_generator/presentation/screens/shuttle_calculation_screen.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -12,11 +11,13 @@ import 'player_list_screen.dart';
 class MainNavigationScreen extends StatefulWidget {
   final PlayerNotifier playerNotifier;
   final SessionNotifier sessionNotifier;
+  final AppRepositories repositories;
 
   const MainNavigationScreen({
     super.key,
     required this.playerNotifier,
     required this.sessionNotifier,
+    required this.repositories,
   });
 
   @override
@@ -40,8 +41,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ShuttleCalculationScreen(
         playerNotifier: widget.playerNotifier,
         sessionNotifier: widget.sessionNotifier,
-        shuttleRepository: SqliteShuttleUsageRepository(),
-        stockRepository: SqliteShuttleStockRepository(),
+        shuttleRepository: widget.repositories.shuttleUsageRepository,
+        stockRepository: widget.repositories.shuttleStockRepository,
       )
     ];
   }

@@ -9,6 +9,7 @@ import 'domain/algorithm/game_evaluator.dart';
 import 'domain/entities/gender.dart';
 import 'domain/entities/player.dart';
 import 'domain/services/match_making_service.dart';
+import 'infrastructure/persistence/app_repositories.dart';
 import 'infrastructure/persistence/repository_provider.dart';
 import 'presentation/notifiers/player_notifier.dart';
 import 'presentation/notifiers/session_notifier.dart';
@@ -22,31 +23,29 @@ void main() async {
 
   // プラットフォームごとの永続化リポジトリを準備
   final repositories = await createRepositories();
-  final playerRepo = repositories.playerRepository;
-  final sessionRepo = repositories.sessionRepository;
-  final courtSettingsRepo = repositories.courtSettingsRepository;
 
-  // 3. サービスとNotifierの準備
+  // サービスとNotifierの準備
   final GameEvaluator gameEvaluator = GameEvaluator();
   final CourtAssignmentAlgorithm courtAssignmentAlgorithm =
       StochasticCourtAssignmentAlgorithm(gameEvaluator: gameEvaluator);
   final algorithm = BalancedMatchAlgorithm(
       gameEvaluator: gameEvaluator,
-      courtAssignmentAlgorithm: courtAssignmentAlgorithm); // Balancedに変更
-  final matchService = MatchMakingService(algorithm, playerRepo);
+      courtAssignmentAlgorithm: courtAssignmentAlgorithm);
+  final matchService =
+      MatchMakingService(algorithm, repositories.playerRepository);
 
-  final playerNotifier = PlayerNotifier(playerRepo);
+  final playerNotifier = PlayerNotifier(repositories.playerRepository);
   final sessionNotifier = SessionNotifier(
-    sessionRepository: sessionRepo,
-    courtSettingsRepository: courtSettingsRepo,
+    sessionRepository: repositories.sessionRepository,
+    courtSettingsRepository: repositories.courtSettingsRepository,
     matchMakingService: matchService,
   );
 
-  // Notifier同士を接続（Playerの変更をSessionに通知するため）
+  // Notifier同士を接続
   playerNotifier.setSessionNotifier(sessionNotifier);
 
-  // 4. 初回起動時のみサンプルデータを投入するロジック
-  final players = await playerRepo.getAll();
+  // 初回起動時のみサンプルデータを投入するロジック
+  final players = await repositories.playerRepository.getAll();
   if (players.isEmpty) {
     for (int i = 1; i <= 2; i++) {
       await playerNotifier.addPlayer(Player(
@@ -59,17 +58,20 @@ void main() async {
   runApp(MyApp(
     playerNotifier: playerNotifier,
     sessionNotifier: sessionNotifier,
+    repositories: repositories,
   ));
 }
 
 class MyApp extends StatelessWidget {
   final PlayerNotifier playerNotifier;
   final SessionNotifier sessionNotifier;
+  final AppRepositories repositories;
 
   const MyApp({
     super.key,
     required this.playerNotifier,
     required this.sessionNotifier,
+    required this.repositories,
   });
 
   @override
@@ -80,7 +82,6 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
-        // ボタンのスタイルを一元管理
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -111,6 +112,7 @@ class MyApp extends StatelessWidget {
       home: MainNavigationScreen(
         playerNotifier: playerNotifier,
         sessionNotifier: sessionNotifier,
+        repositories: repositories,
       ),
     );
   }

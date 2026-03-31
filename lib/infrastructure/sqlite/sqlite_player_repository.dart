@@ -1,38 +1,36 @@
 import 'package:sqflite/sqflite.dart';
+
 import '../../domain/entities/player.dart';
 import '../../domain/repository/player_repository/player_repository.dart';
 import 'database_helper.dart';
 
 class SqlitePlayerRepository implements PlayerRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  static const String _tableName = 'players';
 
   @override
   Future<List<Player>> getAll() async {
     final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query('players');
-    return List.generate(maps.length, (i) {
-      return Player.fromJson(maps[i]);
-    });
+    final List<Map<String, dynamic>> maps = await db.query(_tableName);
+    return maps.map((map) => Player.fromJson(map)).toList();
   }
 
   @override
   Future<List<Player>> getActive() async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      'players',
+      _tableName,
       where: 'isActive = ?',
       whereArgs: [1],
     );
-    return List.generate(maps.length, (i) {
-      return Player.fromJson(maps[i]);
-    });
+    return maps.map((map) => Player.fromJson(map)).toList();
   }
 
   @override
   Future<void> add(Player player) async {
     final db = await _dbHelper.database;
     await db.insert(
-      'players',
+      _tableName,
       player.toJson(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -42,7 +40,7 @@ class SqlitePlayerRepository implements PlayerRepository {
   Future<void> update(Player player) async {
     final db = await _dbHelper.database;
     await db.update(
-      'players',
+      _tableName,
       player.toJson(),
       where: 'id = ?',
       whereArgs: [player.id],
@@ -53,7 +51,7 @@ class SqlitePlayerRepository implements PlayerRepository {
   Future<void> remove(String id) async {
     final db = await _dbHelper.database;
     await db.delete(
-      'players',
+      _tableName,
       where: 'id = ?',
       whereArgs: [id],
     );

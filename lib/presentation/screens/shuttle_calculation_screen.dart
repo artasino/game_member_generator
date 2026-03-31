@@ -6,15 +6,15 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
-import '../../domain/entities/shuttle_usage_record.dart';
 import '../../domain/entities/shuttle_stock.dart';
-import '../../domain/repository/shuttle_usage_repository.dart';
+import '../../domain/entities/shuttle_usage_record.dart';
 import '../../domain/repository/shuttle_stock_repository.dart';
+import '../../domain/repository/shuttle_usage_repository.dart';
 import '../widgets/shuttle_history_dialog.dart';
 import '../widgets/shuttle_stock_dialog.dart';
 
 enum ExpenseType {
-  shuttle('シャトル', Symbols.badminton, Colors.orange),
+  shuttle('シャトル/ボール', Symbols.badminton, Colors.orange),
   court('場所代', Icons.stadium, Colors.blue),
   other('その他', Icons.more_horiz, Colors.teal);
 
@@ -81,13 +81,7 @@ class ShuttleCalculationScreen extends StatefulWidget {
 }
 
 class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
-  final List<ExpenseEntry> _entries = [
-    ExpenseEntry(
-        name: 'シャトル',
-        type: ExpenseType.shuttle,
-        pricePerDozens: 0,
-        shuttleCount: 0)
-  ];
+  final List<ExpenseEntry> _entries = [];
 
   bool _useGenderSplit = false; // true: 男女ごとに計算, false: 全体化
 
@@ -208,7 +202,6 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       } else if (entry.target == SplitTarget.female) {
         femaleShuttles += count;
       } else {
-        // 全員対象の場合は男女で50%ずつ (ご要望通り)
         maleShuttles += count * 0.5;
         femaleShuttles += count * 0.5;
       }
@@ -274,7 +267,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                 setState(() {
                   _entries.clear();
                   _entries.add(ExpenseEntry(
-                      name: 'シャトル',
+                      name: 'シャトル/ボール',
                       type: ExpenseType.shuttle,
                       pricePerDozens: 0,
                       shuttleCount: 0));
@@ -286,7 +279,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   value: 'stock',
                   child: ListTile(
                       leading: Icon(Icons.inventory_2_outlined),
-                      title: Text('シャトル在庫管理'),
+                      title: Text('シャトル/ボール在庫管理'),
                       contentPadding: EdgeInsets.zero)),
               const PopupMenuItem(
                   value: 'history',
@@ -520,7 +513,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                   child: _compactTextField(
                                     key: ValueKey(
                                         'price_${index}_${entry.pricePerDozens}'),
-                                    label: '単価',
+                                    label: '単価/ダース',
                                     suffix: '円',
                                     initialValue: entry.pricePerDozens > 0
                                         ? entry.pricePerDozens
