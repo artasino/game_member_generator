@@ -511,8 +511,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                 Expanded(
                                   flex: 3,
                                   child: _compactTextField(
-                                    key: ValueKey(
-                                        'price_${index}_${entry.pricePerDozens}'),
+                                    key: ValueKey('price_$index'),
                                     label: '単価/ダース',
                                     suffix: '円',
                                     initialValue: entry.pricePerDozens > 0
@@ -527,8 +526,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                 Expanded(
                                   flex: 2,
                                   child: _compactTextField(
-                                    key: ValueKey(
-                                        'count_${index}_${entry.shuttleCount}'),
+                                    key: ValueKey('count_$index'),
                                     label: '数',
                                     suffix: '個',
                                     initialValue: entry.shuttleCount > 0
@@ -555,7 +553,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                           ],
                         )
                       : _compactTextField(
-                          key: ValueKey('amount_${index}_${entry.amount}'),
+                          key: ValueKey('amount_$index'),
                           label: '金額',
                           suffix: '円',
                           initialValue: entry.amount > 0
