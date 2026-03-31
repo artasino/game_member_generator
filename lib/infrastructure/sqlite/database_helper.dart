@@ -28,7 +28,7 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'game_member_generator.db');
     return await openDatabase(
       path,
-      version: 4, // バージョンを 4 に上げました
+      version: 5, // バージョンを 5 に上げました (シャトル記録用)
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE players(
@@ -53,6 +53,14 @@ class DatabaseHelper {
             value TEXT
           )
         ''');
+        await db.execute('''
+          CREATE TABLE shuttle_usage(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            total_shuttles INTEGER,
+            match_counts TEXT
+          )
+        ''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -65,14 +73,22 @@ class DatabaseHelper {
           await db.delete('sessions', where: 'id = ?', whereArgs: [-1]);
         }
         if (oldVersion < 3) {
-          // playersテーブルに isMustRest カラムを追加
           await db.execute(
               'ALTER TABLE players ADD COLUMN isMustRest INTEGER DEFAULT 0');
         }
         if (oldVersion < 4) {
-          // playersテーブルに excludedPartnerId カラムを追加
           await db
               .execute('ALTER TABLE players ADD COLUMN excludedPartnerId TEXT');
+        }
+        if (oldVersion < 5) {
+          await db.execute('''
+            CREATE TABLE shuttle_usage(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              date TEXT,
+              total_shuttles INTEGER,
+              match_counts TEXT
+            )
+          ''');
         }
       },
     );

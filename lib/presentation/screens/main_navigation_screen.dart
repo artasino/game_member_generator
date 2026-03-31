@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:game_member_generator/infrastructure/sqlite/sqlite_shuttle_usage_repository.dart';
 import 'package:game_member_generator/presentation/screens/shuttle_calculation_screen.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -35,7 +36,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         sessionNotifier: widget.sessionNotifier,
       ),
       MatchHistoryScreen(notifier: widget.sessionNotifier),
-      ShuttleCalculationScreen(playerNotifier: widget.playerNotifier)
+      ShuttleCalculationScreen(
+        playerNotifier: widget.playerNotifier,
+        sessionNotifier: widget.sessionNotifier,
+        shuttleRepository: SqliteShuttleUsageRepository(),
+      )
     ];
   }
 

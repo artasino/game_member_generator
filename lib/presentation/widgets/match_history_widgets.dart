@@ -210,7 +210,7 @@ class _VSDivider extends StatelessWidget {
               style: TextStyle(
                   fontSize: 18 * scale,
                   fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.outline.withOpacity(0.4))),
+                  color: theme.colorScheme.outline.withValues(alpha: 0.4))),
           Container(
               width: 2,
               height: 60 * scale,
@@ -298,12 +298,12 @@ class PlayerTag extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
-              : genderColor.withOpacity(0.1),
+              : genderColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12 * scale),
           border: Border.all(
               color: isSelected
                   ? theme.colorScheme.primary
-                  : genderColor.withOpacity(0.4),
+                  : genderColor.withValues(alpha: 0.4),
               width: isSelected ? 3 : 1.5),
         ),
         child: Text(player.name,
@@ -418,12 +418,12 @@ class RestingChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
-              : color.withOpacity(0.1),
+              : color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
               color: isSelected
                   ? theme.colorScheme.primary
-                  : color.withOpacity(0.3)),
+                  : color.withValues(alpha: 0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -482,7 +482,6 @@ class MatchHistoryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     if (isSwapping) {
       return Row(children: [
         const Icon(Icons.swap_horiz, color: Colors.white, size: 28),
@@ -783,9 +782,9 @@ class _CompactBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.5))),
+          border: Border.all(color: color.withValues(alpha: 0.5))),
       child: Text(label,
           style: TextStyle(
               color: color, fontSize: 13, fontWeight: FontWeight.bold)),
