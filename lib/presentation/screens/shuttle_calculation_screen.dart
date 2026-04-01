@@ -848,6 +848,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   }
 
   Widget _buildAddButtonMenu() {
+    final maxMenuWidth = MediaQuery.sizeOf(context).width - 24;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -855,14 +857,14 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
         borderRadius: BorderRadius.circular(30),
         boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: ExpenseType.values
-            .map((t) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: _typeAddButton(t),
-                ))
-            .toList(),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxMenuWidth),
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 4,
+          runSpacing: 4,
+          children: ExpenseType.values.map(_typeAddButton).toList(),
+        ),
       ),
     );
   }
