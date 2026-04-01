@@ -197,6 +197,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   }
 
   Widget _buildPlayerList(List<PlayerWithStats> filteredPool, ThemeData theme) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final bool useSingleColumn = screenWidth < 900;
+
     final activeMales = filteredPool
         .where((p) => p.player.isActive && p.player.gender == Gender.male)
         .toList()
@@ -217,11 +220,19 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     final femaleLabels = groupedFemales.keys.toList()
       ..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final contentWidth =
+            constraints.maxWidth.clamp(0.0, 1100.0).toDouble();
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: contentWidth,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
           if (activeMales.isNotEmpty || activeFemales.isNotEmpty) ...[
             AppSectionHeader(
               title: '本日の参加メンバ',
@@ -229,42 +240,65 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   '計${activeMales.length + activeFemales.length}名 (男${activeMales.length} 女${activeFemales.length})',
             ),
             const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (activeMales.isNotEmpty) ...[
-                        GenderLabel(
-                          label: '男性 ${activeMales.length}名',
-                          color: Colors.blue,
+                  useSingleColumn
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (activeMales.isNotEmpty) ...[
+                              GenderLabel(
+                                label: '男性 ${activeMales.length}名',
+                                color: Colors.blue,
+                              ),
+                              const SizedBox(height: 8),
+                              _buildWrap(activeMales, showStats: true),
+                              const SizedBox(height: 16),
+                            ],
+                            if (activeFemales.isNotEmpty) ...[
+                              GenderLabel(
+                                label: '女性 ${activeFemales.length}名',
+                                color: Colors.pink,
+                              ),
+                              const SizedBox(height: 8),
+                              _buildWrap(activeFemales, showStats: true),
+                            ],
+                          ],
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (activeMales.isNotEmpty) ...[
+                                    GenderLabel(
+                                      label: '男性 ${activeMales.length}名',
+                                      color: Colors.blue,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _buildWrap(activeMales, showStats: true),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (activeFemales.isNotEmpty) ...[
+                                    GenderLabel(
+                                      label: '女性 ${activeFemales.length}名',
+                                      color: Colors.pink,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _buildWrap(activeFemales, showStats: true),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        _buildWrap(activeMales, showStats: true),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (activeFemales.isNotEmpty) ...[
-                        GenderLabel(
-                          label: '女性 ${activeFemales.length}名',
-                          color: Colors.pink,
-                        ),
-                        const SizedBox(height: 8),
-                        _buildWrap(activeFemales, showStats: true),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12.0),
               child: Divider(),
@@ -281,21 +315,37 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               ),
             )
           ] else ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _buildGroupedList(groupedMales, maleLabels, theme),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildGroupedList(groupedFemales, femaleLabels, theme),
-                ),
-              ],
-            ),
+                    useSingleColumn
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildGroupedList(groupedMales, maleLabels, theme),
+                              const SizedBox(height: 8),
+                              _buildGroupedList(
+                                  groupedFemales, femaleLabels, theme),
+                            ],
+                          )
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child:
+                                    _buildGroupedList(groupedMales, maleLabels, theme),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildGroupedList(
+                                    groupedFemales, femaleLabels, theme),
+                              ),
+                            ],
+                          ),
           ],
-        ],
-      ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
