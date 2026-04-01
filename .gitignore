@@ -30,9 +30,11 @@
 .pub-cache/
 .pub/
 /build/
+.firebase/
+android/local.properties
+ios/Flutter/Generated.xcconfig
 
 # Web related
-lib/generated_plugin_registrant.dart
 
 # Symbolication related
 app.*.symbols
