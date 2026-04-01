@@ -5,10 +5,7 @@ import 'manual_screen.dart';
 class OtherScreen extends StatelessWidget {
   const OtherScreen({super.key});
 
-  static const String _gitTagVersion = String.fromEnvironment(
-    'APP_GIT_TAG',
-    defaultValue: 'unknown',
-  );
+  static const String _gitTagVersion = 'v2.0.0';
 
   @override
   Widget build(BuildContext context) {
