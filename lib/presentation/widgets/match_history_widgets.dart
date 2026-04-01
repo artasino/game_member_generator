@@ -296,7 +296,7 @@ class _VSDivider extends StatelessWidget {
             style: TextStyle(
               fontSize: 18 * scale,
               fontWeight: FontWeight.w900,
-              color: theme.colorScheme.outline.withOpacity(0.4),
+              color: theme.colorScheme.outline.withValues(alpha: 0.4),
             ),
           ),
           Container(
@@ -388,12 +388,12 @@ class PlayerTag extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
-              : genderColor.withOpacity(0.1),
+              : genderColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12 * scale),
           border: Border.all(
             color: isSelected
                 ? theme.colorScheme.primary
-                : genderColor.withOpacity(0.4),
+                : genderColor.withValues(alpha: 0.4),
             width: isSelected ? 3 : 1.5,
           ),
         ),
@@ -509,6 +509,10 @@ class RestingContainer extends StatelessWidget {
                           .firstWhere((ps) => ps.player.id == p.id)
                           .stats
                           .consecutiveRests,
+                      isRestingByConstraint: p.excludedPartnerId != null &&
+                          session.games.any((g) =>
+                              g.teamA.containsPlayer(p.excludedPartnerId!) ||
+                              g.teamB.containsPlayer(p.excludedPartnerId!)),
                       onTap: () => onPlayerTap(p),
                       onLongPress: () => onPlayerLongPress(p),
                       scale: scale,
@@ -525,6 +529,7 @@ class RestingChip extends StatelessWidget {
   final Player player;
   final bool isSelected;
   final int consecutiveRests;
+  final bool isRestingByConstraint;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final double scale;
@@ -534,6 +539,7 @@ class RestingChip extends StatelessWidget {
     required this.player,
     required this.isSelected,
     required this.consecutiveRests,
+    this.isRestingByConstraint = false,
     required this.onTap,
     required this.onLongPress,
     required this.scale,
@@ -551,17 +557,20 @@ class RestingChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
-              : color.withOpacity(0.1),
+              : color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
               color: isSelected
                   ? theme.colorScheme.primary
-                  : color.withOpacity(0.3)),
+                  : color.withValues(alpha: 0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (consecutiveRests >= 2) ...[
+            if (isRestingByConstraint) ...[
+              const Icon(Icons.child_care, size: 14, color: Colors.orange),
+              const SizedBox(width: 4),
+            ] else if (consecutiveRests >= 2) ...[
               Icon(Icons.bedtime, size: 14, color: color),
               const SizedBox(width: 4),
             ],
@@ -1114,9 +1123,9 @@ class _CompactBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(label,
           style: TextStyle(
