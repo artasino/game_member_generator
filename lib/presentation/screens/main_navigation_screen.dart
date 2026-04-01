@@ -7,6 +7,7 @@ import '../notifiers/player_notifier.dart';
 import '../notifiers/session_notifier.dart';
 import 'match_history_screen.dart';
 import 'player_list_screen.dart';
+import 'manual_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final PlayerNotifier playerNotifier;
@@ -43,7 +44,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         sessionNotifier: widget.sessionNotifier,
         shuttleRepository: widget.repositories.shuttleUsageRepository,
         stockRepository: widget.repositories.shuttleStockRepository,
-      )
+      ),
+      const ManualScreen(),
     ];
   }
 
@@ -56,6 +58,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Colors.grey.shade600,
         onTap: (index) => setState(() => _selectedIndex = index),
         items: const [
           BottomNavigationBarItem(
@@ -69,6 +75,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.money),
             label: '費用計算',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.help_outline),
+            label: '使い方',
           ),
         ],
       ),
