@@ -1060,54 +1060,120 @@ class _MatchTypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Text('形式を選択', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          alignment: WrapAlignment.center,
-          children: MatchType.values
-              .map((type) => _buildAddChip(context, type))
-              .toList(),
-        ),
-        const SizedBox(height: 20),
-        if (selectedTypes.isNotEmpty)
+    return LayoutBuilder(builder: (context, constraints) {
+      const spacing = 12.0;
+      final cardWidth = (constraints.maxWidth - spacing * 2) / 3;
+
+      return Column(
+        children: [
+          const Text('形式を選択', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: spacing,
+            runSpacing: spacing,
             alignment: WrapAlignment.center,
-            children: selectedTypes
-                .asMap()
-                .entries
-                .map((e) => _buildSelectedChip(context, e.key, e.value))
+            children: MatchType.values
+                .map((type) => SizedBox(
+                      width: cardWidth,
+                      child: _buildAddCard(context, type),
+                    ))
                 .toList(),
           ),
-      ],
+          const SizedBox(height: 20),
+          if (selectedTypes.isNotEmpty)
+            Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              alignment: WrapAlignment.center,
+              children: selectedTypes
+                  .asMap()
+                  .entries
+                  .map((e) => SizedBox(
+                        width: cardWidth,
+                        child: _buildSelectedCard(context, e.key, e.value),
+                      ))
+                  .toList(),
+            ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildAddCard(BuildContext context, MatchType type) {
+    final color = _getMatchTypeColor(context, type);
+    final enabled = checkRequirement(type);
+
+    return SizedBox(
+      height: 56,
+      child: Card(
+        margin: EdgeInsets.zero,
+        elevation: 0,
+        color: enabled ? color.withValues(alpha: 0.08) : Colors.grey.shade100,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: enabled ? color : Colors.grey.shade300),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: enabled ? () => onAdd(type) : null,
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, size: 16, color: enabled ? color : Colors.grey),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    type.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: enabled ? color : Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildAddChip(BuildContext context, MatchType type) {
-    return ActionChip(
-      label: Text(type.displayName,
-          style: const TextStyle(fontWeight: FontWeight.bold)),
-      onPressed: checkRequirement(type) ? () => onAdd(type) : null,
-      avatar:
-          Icon(Icons.add, size: 18, color: _getMatchTypeColor(context, type)),
-      side: BorderSide(color: _getMatchTypeColor(context, type)),
-    );
-  }
+  Widget _buildSelectedCard(BuildContext context, int index, MatchType type) {
+    final color = _getMatchTypeColor(context, type);
 
-  Widget _buildSelectedChip(BuildContext context, int index, MatchType type) {
-    return InputChip(
-      label: Text(type.displayName,
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold)),
-      onDeleted: () => onRemove(index),
-      deleteIconColor: Colors.white,
-      backgroundColor: _getMatchTypeColor(context, type),
-      side: BorderSide.none,
+    return SizedBox(
+      height: 56,
+      child: Card(
+        margin: EdgeInsets.zero,
+        elevation: 0,
+        color: color,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => onRemove(index),
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    type.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.close, color: Colors.white, size: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
