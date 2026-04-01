@@ -241,6 +241,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final bool useCompactLayout = screenWidth < 860;
     final activePlayers =
         widget.playerNotifier.players.where((p) => p.isActive).toList();
     final maleCount =
@@ -383,23 +385,36 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _buildInfoBar(maleCount, femaleCount, totalCount),
-          _buildModeSelectorHeader(),
-          _buildConsumptionSpeedBanner(
-              totalGames, typeCounts, speedTotal, speedMale, speedFemale),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
-              itemCount: _entries.length,
-              itemBuilder: (context, index) =>
-                  _buildExpenseCard(index, activePlayers),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final contentWidth =
+              constraints.maxWidth.clamp(0.0, 1100.0).toDouble();
+          return Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: contentWidth,
+              child: Column(
+                children: [
+                  _buildInfoBar(maleCount, femaleCount, totalCount),
+                  _buildModeSelectorHeader(),
+                  _buildConsumptionSpeedBanner(
+                      totalGames, typeCounts, speedTotal, speedMale, speedFemale),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+                      itemCount: _entries.length,
+                      itemBuilder: (context, index) =>
+                          _buildExpenseCard(index, activePlayers, useCompactLayout),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
-      bottomSheet: _buildSummaryPanel(totalAmount, maleShare, femaleShare),
+      bottomSheet:
+          _buildSummaryPanel(totalAmount, maleShare, femaleShare, useCompactLayout),
       floatingActionButton: _buildAddButtonMenu(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
@@ -410,13 +425,13 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 8),
       color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12,
+        runSpacing: 6,
         children: [
           _countChip("男子", m, Colors.blue),
-          const SizedBox(width: 12),
           _countChip("女子", f, Colors.pink),
-          const SizedBox(width: 12),
           _countChip("合計", t, Colors.grey.shade700),
         ],
       ),
@@ -524,7 +539,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     );
   }
 
-  Widget _buildExpenseCard(int index, List<Player> activePlayers) {
+  Widget _buildExpenseCard(
+      int index, List<Player> activePlayers, bool useCompactLayout) {
     final entry = _entries[index];
     final theme = Theme.of(context);
 
@@ -572,9 +588,90 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
             ),
             const Divider(height: 1, thickness: 0.8),
             const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
+            useCompactLayout
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      entry.type == ExpenseType.shuttle
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 3,
+                                      child: _compactTextField(
+                                        key: ValueKey('price_$index'),
+                                        label: '単価/ダース',
+                                        suffix: '円',
+                                        initialValue: entry.pricePerDozens > 0
+                                            ? entry.pricePerDozens
+                                                .toStringAsFixed(0)
+                                            : '',
+                                        onChanged: (v) => entry.pricePerDozens =
+                                            double.tryParse(v) ?? 0,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      flex: 2,
+                                      child: _compactTextField(
+                                        key: ValueKey('count_$index'),
+                                        label: '数',
+                                        suffix: '個',
+                                        initialValue: entry.shuttleCount > 0
+                                            ? entry.shuttleCount.toString()
+                                            : '',
+                                        onChanged: (v) => entry.shuttleCount =
+                                            int.tryParse(v) ?? 0,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (entry.shuttleCount > 0 &&
+                                    entry.pricePerDozens > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6, left: 4),
+                                    child: Text(
+                                      '(¥${(entry.pricePerDozens / 12).toStringAsFixed(1)}/個 × ${entry.shuttleCount}個) = ',
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                          fontStyle: FontStyle.italic),
+                                    ),
+                                  ),
+                              ],
+                            )
+                          : _compactTextField(
+                              key: ValueKey('amount_$index'),
+                              label: '金額',
+                              suffix: '円',
+                              initialValue: entry.amount > 0
+                                  ? entry.amount.toStringAsFixed(0)
+                                  : '',
+                              onChanged: (v) =>
+                                  entry.amount = double.tryParse(v) ?? 0,
+                            ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(child: _buildPayerDropdown(entry, activePlayers)),
+                          const SizedBox(width: 8),
+                          Text(
+                            '¥${entry.total.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
                 // 入力エリア (左側)
                 Expanded(
                   flex: 65,
@@ -659,8 +756,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                     ],
                   ),
                 ),
-              ],
-            ),
+                    ],
+                  ),
           ],
         ),
       ),
@@ -781,7 +878,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     );
   }
 
-  Widget _buildSummaryPanel(double total, double mShare, double fShare) {
+  Widget _buildSummaryPanel(
+      double total, double mShare, double fShare, bool useCompactLayout) {
     final theme = Theme.of(context);
     final mRound = (mShare / 100).ceil() * 100;
     final fRound = (fShare / 100).ceil() * 100;
@@ -806,46 +904,22 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              useCompactLayout
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSummaryBreakdown(theme, typeTotals),
+                        const SizedBox(height: 10),
+                        _buildSummaryTotal(theme, total),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                   // カテゴリ別内訳
                   Expanded(
                     flex: 5,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("内訳",
-                            style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.primary)),
-                        const SizedBox(height: 4),
-                        ...ExpenseType.values
-                            .where((t) => (typeTotals[t] ?? 0) > 0)
-                            .map((t) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 1),
-                                  child: Row(
-                                    children: [
-                                      Icon(t.icon,
-                                          size: 9,
-                                          color:
-                                              t.color.withValues(alpha: 0.7)),
-                                      const SizedBox(width: 4),
-                                      Expanded(
-                                          child: Text(t.label,
-                                              style: const TextStyle(
-                                                  fontSize: 10))),
-                                      Text(
-                                          "¥${typeTotals[t]!.toStringAsFixed(0)}",
-                                          style: const TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                )),
-                      ],
-                    ),
+                    child: _buildSummaryBreakdown(theme, typeTotals),
                   ),
                   Container(
                       height: 30,
@@ -855,20 +929,10 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   // 合計費用
                   Expanded(
                     flex: 4,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text("総額",
-                            style: TextStyle(
-                                fontSize: 11, fontWeight: FontWeight.bold)),
-                        Text("¥${total.toStringAsFixed(0)}",
-                            style: TextStyle(
-                                fontSize: 22, fontWeight: FontWeight.w900)),
+                    child: _buildSummaryTotal(theme, total),
+                  ),
                       ],
                     ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 12),
               if (!_useGenderSplit)
                 _resultBox("集金額 (一人あたり)", mRound, theme.colorScheme.primary,
@@ -932,6 +996,50 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
               fontSize: 11,
               fontWeight: FontWeight.bold,
               color: color.withValues(alpha: 0.8))),
+    );
+  }
+
+  Widget _buildSummaryBreakdown(
+      ThemeData theme, Map<ExpenseType, double> typeTotals) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("内訳",
+            style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary)),
+        const SizedBox(height: 4),
+        ...ExpenseType.values
+            .where((t) => (typeTotals[t] ?? 0) > 0)
+            .map((t) => Padding(
+                  padding: const EdgeInsets.only(bottom: 1),
+                  child: Row(
+                    children: [
+                      Icon(t.icon, size: 9, color: t.color.withValues(alpha: 0.7)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                          child: Text(t.label,
+                              style: const TextStyle(fontSize: 10))),
+                      Text("¥${typeTotals[t]!.toStringAsFixed(0)}",
+                          style: const TextStyle(
+                              fontSize: 10, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                )),
+      ],
+    );
+  }
+
+  Widget _buildSummaryTotal(ThemeData theme, double total) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        const Text("総額",
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+        Text("¥${total.toStringAsFixed(0)}",
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+      ],
     );
   }
 }
