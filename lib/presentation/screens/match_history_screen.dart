@@ -149,6 +149,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  // Wrap レイアウト計算用に、実際のコンテンツ描画幅を渡す
                   child: GamesArea(
                     session: session,
                     pool: scopedPool,

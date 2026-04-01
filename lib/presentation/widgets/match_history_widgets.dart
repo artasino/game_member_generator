@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/config/app_config.dart';
@@ -51,7 +52,8 @@ class GamesArea extends StatelessWidget {
     final int count = session.games.length;
     final double spacing = 16.0 * scale;
     final int cross = _calculateCrossAxisCount(count, spacing);
-    final double cardWidth = _calculateCardWidth(cross, spacing);
+    final double cardWidth =
+        _calculateCardWidth(cross, spacing).clamp(0, _maxCardWidth);
 
     return Wrap(
       spacing: spacing,
@@ -79,9 +81,7 @@ class GamesArea extends StatelessWidget {
   int _calculateCrossAxisCount(int gameCount, double spacing) {
     if (gameCount <= 1 || screenWidth <= 0) return 1;
 
-    // web で過度に拡大しないよう、最小幅は scale の影響を緩やかにする
-    final double minCardWidth =
-        (300 * pow(scale, 0.75)).clamp(280, 420).toDouble();
+    final double minCardWidth = _minCardWidth;
     final int maxColumns = min(gameCount, 3);
 
     for (int columns = maxColumns; columns >= 1; columns--) {
@@ -96,6 +96,16 @@ class GamesArea extends StatelessWidget {
     final double totalSpacing = spacing * max(crossAxisCount - 1, 0);
     final double availableWidth = max(screenWidth - totalSpacing, 0);
     return availableWidth / crossAxisCount;
+  }
+
+  double get _minCardWidth {
+    final double t = ((scale - 1.0) / 0.8).clamp(0.0, 1.0);
+    return lerpDouble(280, 380, t)!;
+  }
+
+  double get _maxCardWidth {
+    final double t = ((scale - 1.0) / 0.8).clamp(0.0, 1.0);
+    return lerpDouble(520, 620, t)!;
   }
 }
 
