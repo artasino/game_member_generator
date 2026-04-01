@@ -296,7 +296,7 @@ class _VSDivider extends StatelessWidget {
             style: TextStyle(
               fontSize: 18 * scale,
               fontWeight: FontWeight.w900,
-              color: theme.colorScheme.outline.withOpacity(0.4),
+              color: theme.colorScheme.outline.withValues(alpha: 0.4),
             ),
           ),
           Container(
@@ -388,12 +388,12 @@ class PlayerTag extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
-              : genderColor.withOpacity(0.1),
+              : genderColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12 * scale),
           border: Border.all(
             color: isSelected
                 ? theme.colorScheme.primary
-                : genderColor.withOpacity(0.4),
+                : genderColor.withValues(alpha: 0.4),
             width: isSelected ? 3 : 1.5,
           ),
         ),
@@ -557,12 +557,12 @@ class RestingChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
-              : color.withOpacity(0.1),
+              : color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
               color: isSelected
                   ? theme.colorScheme.primary
-                  : color.withOpacity(0.3)),
+                  : color.withValues(alpha: 0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1123,9 +1123,9 @@ class _CompactBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(label,
           style: TextStyle(
