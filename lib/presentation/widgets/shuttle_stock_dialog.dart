@@ -51,13 +51,12 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
             children: [
               TextField(
                 controller: nameController,
-                decoration:
-                    const InputDecoration(labelText: '名称 (例: エアロセンサ700)'),
+                decoration: const InputDecoration(labelText: '名称'),
               ),
               TextField(
                 controller: priceController,
                 decoration: const InputDecoration(
-                    labelText: '1打あたりの価格', suffixText: '円'),
+                    labelText: '1ダースあたりの価格', suffixText: '円'),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16),
@@ -149,7 +148,7 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
                   title: Text(stock.name,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(
-                      '¥${stock.pricePerDozens.toStringAsFixed(0)} / 打 | 支払: $payerName'),
+                      '¥${stock.pricePerDozens.toStringAsFixed(0)} / ダース | 支払: $payerName'),
                   onTap: widget.isSelectionMode
                       ? () => Navigator.pop(context, stock)
                       : () => _showAddEditDialog(stock: stock),
