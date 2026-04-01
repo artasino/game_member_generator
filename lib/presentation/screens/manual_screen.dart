@@ -21,9 +21,9 @@ class ManualScreen extends StatelessWidget {
             icon: Icons.group_add,
             items: [
               '「メンバ」タブで + ボタンから登録し、参加メンバをONにします。',
-              '同時出場制限を使うと、無理な連戦を避けた組み合わせにしやすくなります。',
+              '同時出場制限を設定すると、夫婦でどちらかが小さい子供を見る必要がある場合などにどちらかは必ず休みになります。',
               '検索バーで名前・よみがなをすぐに探せます。',
-              '右上メニューからCSV/JSONで保存・読み込みできます。',
+              '右上メニューからCSV/JSONで保存・読み込み、複数メンバの登録・削除ができます。',
             ],
           ),
           const SizedBox(height: 12),
@@ -31,7 +31,7 @@ class ManualScreen extends StatelessWidget {
             title: '2. 試合履歴画面で進行する',
             icon: Icons.sports_tennis,
             items: [
-              '自動で試合タイプを提案し、必要なら手動で編集できます。',
+              '自動で試合タイプを提案(男女の入る回数を平滑化)し、必要なら手動で編集できます。',
               'ペア回数の記録を見える化し、偏りの確認がしやすいです。',
               'できるだけ連続休みを避けつつ、種目バランス・ペア回数・敵になる回数を考慮して試合生成します。',
               '履歴は時系列で追えるので、進行が見失いにくいです。',
@@ -67,9 +67,8 @@ class ManualScreen extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       Chip(label: Text('まずは8〜12人を登録')),
-                      Chip(label: Text('検索で素早く切替')),
-                      Chip(label: Text('履歴で振り返り')),
-                      Chip(label: Text('費用計算は最後にまとめて')),
+                      Chip(label: Text('今日のコート数を設定')),
+                      Chip(label: Text('試合生成画面で自動で試合生成！')),
                     ],
                   ),
                 ],
@@ -121,8 +120,7 @@ class _HeroGuideCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '''メンバ登録 → 試合進行 → 費用計算の順に使うと、
-最短で迷わず運用できます。''',
+            '''メンバ登録 → 試合生成 → 試合開始！''',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onPrimary,
               height: 1.5,
