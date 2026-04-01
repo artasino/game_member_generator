@@ -137,17 +137,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   }
 
   Future<void> _selectFromStock(int index) async {
-    final activePlayers =
-        widget.playerNotifier.players.where((p) => p.isActive).toList();
-    final ShuttleStock? selected = await showDialog<ShuttleStock>(
-      context: context,
-      builder: (context) => ShuttleStockDialog(
-        repository: widget.stockRepository,
-        activePlayers: activePlayers,
-        isSelectionMode: true,
-      ),
-    );
-
+    final ShuttleStock? selected = await _pickStock();
     if (selected != null) {
       setState(() {
         _entries[index].name = selected.name;
@@ -155,6 +145,97 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
         _entries[index].payerId = selected.payerId;
       });
     }
+  }
+
+  Future<ShuttleStock?> _pickStock() async {
+    final activePlayers =
+        widget.playerNotifier.players.where((p) => p.isActive).toList();
+    return showDialog<ShuttleStock>(
+      context: context,
+      builder: (context) => ShuttleStockDialog(
+        repository: widget.stockRepository,
+        activePlayers: activePlayers,
+        isSelectionMode: true,
+      ),
+    );
+  }
+
+  Future<void> _addExpenseType(ExpenseType type) async {
+    if (type != ExpenseType.shuttle) {
+      setState(() {
+        _entries.add(ExpenseEntry(
+          name: type.label,
+          type: type,
+          pricePerDozens: 0,
+          shuttleCount: 0,
+        ));
+      });
+      return;
+    }
+
+    final bool? useStock = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('シャトル/ボール追加',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      )),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: const Text('在庫から選択'),
+                subtitle: const Text('名称・単価・支払人を自動入力'),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                onTap: () => Navigator.pop(context, true),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.edit_note_outlined),
+                title: const Text('新規で入力'),
+                subtitle: const Text('名称・単価を手動で入力'),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                onTap: () => Navigator.pop(context, false),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (useStock == null) return;
+
+    if (useStock) {
+      final selected = await _pickStock();
+      if (selected == null) return;
+      setState(() {
+        _entries.add(ExpenseEntry(
+          name: selected.name,
+          type: ExpenseType.shuttle,
+          pricePerDozens: selected.pricePerDozens,
+          shuttleCount: 0,
+          payerId: selected.payerId,
+        ));
+      });
+      return;
+    }
+
+    setState(() {
+      _entries.add(ExpenseEntry(
+        name: ExpenseType.shuttle.label,
+        type: ExpenseType.shuttle,
+        pricePerDozens: 0,
+        shuttleCount: 0,
+      ));
+    });
   }
 
   @override
@@ -254,6 +335,11 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
         foregroundColor: theme.colorScheme.onPrimary,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.inventory_2_outlined),
+            tooltip: 'シャトル/ボール在庫管理',
+            onPressed: _showStockManager,
+          ),
           IconButton(
             icon: const Icon(Icons.save),
             tooltip: '保存',
@@ -444,33 +530,25 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      elevation: 0,
+      elevation: 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.colorScheme.outlineVariant, width: 0.5),
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: theme.colorScheme.outlineVariant, width: 0.8),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 2, 4, 8),
+        padding: const EdgeInsets.fromLTRB(12, 6, 6, 10),
         child: Column(
           children: [
             Row(
               children: [
-                Icon(entry.type.icon, size: 16, color: entry.type.color),
+                Icon(entry.type.icon, size: 18, color: entry.type.color),
                 const SizedBox(width: 8),
                 Expanded(
                   child: SizedBox(
-                    height: 32,
-                    child: TextFormField(
+                    height: 36,
+                    child: _NameField(
                       key: ValueKey('name_${index}_${entry.name}'),
                       initialValue: entry.name,
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 8),
-                        border: InputBorder.none,
-                        hintText: '項目名',
-                      ),
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.bold),
                       onChanged: (v) => entry.name = v,
                     ),
                   ),
@@ -488,14 +566,12 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.close, color: Colors.grey, size: 18),
-                  onPressed: () => setState(() {
-                    if (_entries.length > 1) _entries.removeAt(index);
-                  }),
+                  onPressed: () => setState(() => _entries.removeAt(index)),
                 ),
               ],
             ),
-            const Divider(height: 1, thickness: 0.5),
-            const SizedBox(height: 6),
+            const Divider(height: 1, thickness: 0.8),
+            const SizedBox(height: 8),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -571,6 +647,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       _buildPayerDropdown(entry, activePlayers),
+                      const SizedBox(height: 4),
                       Text(
                         '¥${entry.total.toStringAsFixed(0)}',
                         style: TextStyle(
@@ -650,7 +727,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     required Function(String) onChanged,
   }) {
     return SizedBox(
-      height: 42,
+      height: 46,
       child: TextFormField(
         key: key,
         initialValue: initialValue,
@@ -659,14 +736,14 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           suffixText: suffix,
           isDense: true,
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           border: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(8))),
-          labelStyle: const TextStyle(fontSize: 9),
+          labelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
           filled: true,
           fillColor: Theme.of(context).colorScheme.surface,
         ),
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
         keyboardType: TextInputType.number,
         onChanged: (v) => setState(() => onChanged(v)),
       ),
@@ -700,14 +777,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
       padding: EdgeInsets.zero,
       visualDensity: VisualDensity.compact,
-      onPressed: () => setState(() {
-        _entries.add(ExpenseEntry(
-          name: type.label,
-          type: type,
-          pricePerDozens: 0,
-          shuttleCount: 0,
-        ));
-      }),
+      onPressed: () => _addExpenseType(type),
     );
   }
 
@@ -862,6 +932,77 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
               fontSize: 11,
               fontWeight: FontWeight.bold,
               color: color.withValues(alpha: 0.8))),
+    );
+  }
+}
+
+class _NameField extends StatefulWidget {
+  final String initialValue;
+  final ValueChanged<String> onChanged;
+
+  const _NameField({
+    super.key,
+    required this.initialValue,
+    required this.onChanged,
+  });
+
+  @override
+  State<_NameField> createState() => _NameFieldState();
+}
+
+class _NameFieldState extends State<_NameField> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+    _focusNode = FocusNode();
+    _focusNode.addListener(_handleFocusChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant _NameField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialValue != oldWidget.initialValue &&
+        widget.initialValue != _controller.text) {
+      _controller.text = widget.initialValue;
+    }
+  }
+
+  void _handleFocusChanged() {
+    if (_focusNode.hasFocus) {
+      _controller.selection =
+          TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChanged);
+    _focusNode.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _controller,
+      focusNode: _focusNode,
+      decoration: const InputDecoration(
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(vertical: 8),
+        border: InputBorder.none,
+        hintText: '項目名',
+      ),
+      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+      onChanged: widget.onChanged,
+      onTap: () {
+        _controller.selection =
+            TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
+      },
     );
   }
 }
