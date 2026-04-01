@@ -727,27 +727,29 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         autoCourtCount = s.autoCourtCount;
         autoCourtPolicy = s.autoCourtPolicy;
         isAutoRecommendMode = s.isAutoRecommendMode;
+        if (isAutoRecommendMode) {
+          _refreshAutoRecommendedTypes();
+        }
       } else {
         isAutoRecommendMode = false;
       }
       loading = false;
     });
 
-    _updateRequirement();
+    setState(_updateRequirement);
   }
 
   void _updateRequirement() {
-    final selectedTypes = isAutoRecommendMode ? _calculateAutoTypes() : types;
-    setState(() {
-      _requirementResult = widget.notifier.checkRequirements(selectedTypes);
-      if (isAutoRecommendMode) {
-        currentRecommendTypes = selectedTypes;
-      }
-    });
+    final selectedTypes = isAutoRecommendMode ? currentRecommendTypes : types;
+    _requirementResult = widget.notifier.checkRequirements(selectedTypes);
+  }
+
+  void _refreshAutoRecommendedTypes() {
+    currentRecommendTypes = _calculateAutoTypes();
   }
 
   bool _checkRequirementWithAddType(MatchType type) {
-    var selectedTypes = isAutoRecommendMode ? _calculateAutoTypes() : types;
+    var selectedTypes = isAutoRecommendMode ? currentRecommendTypes : types;
     List<MatchType> newTypes = List.from(selectedTypes);
     newTypes.add(type);
     return widget.notifier.checkRequirements(newTypes).canGenerate;
@@ -847,25 +849,29 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         _requirementResult ?? const RequirementResult(canGenerate: true);
     final theme = Theme.of(context);
     final selectedTypes = isAutoRecommendMode ? currentRecommendTypes : types;
+    final dialogWidth = min(MediaQuery.of(context).size.width * 0.92, 560.0);
 
     return AlertDialog(
       title: const Text('MATCH SETTINGS',
           style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildGenderStatsHeader(),
-            const SizedBox(height: 20),
-            const Divider(),
-            if (AppConfig.autoRecommendEnabled) _buildModeToggle(),
-            const SizedBox(height: 20),
-            if (isAutoRecommendMode)
-              _buildAutoSettingsSection()
-            else
-              _buildManualSettingsSection(context),
-            _buildRequirementMessage(res, selectedTypes, theme),
-          ],
+      content: SizedBox(
+        width: dialogWidth,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildGenderStatsHeader(),
+              const SizedBox(height: 20),
+              const Divider(),
+              if (AppConfig.autoRecommendEnabled) _buildModeToggle(),
+              const SizedBox(height: 20),
+              if (isAutoRecommendMode)
+                _buildAutoSettingsSection()
+              else
+                _buildManualSettingsSection(context),
+              _buildRequirementMessage(res, selectedTypes, theme),
+            ],
+          ),
         ),
       ),
       actions: [
@@ -934,6 +940,9 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
       selected: {isAutoRecommendMode},
       onSelectionChanged: (val) => setState(() {
         isAutoRecommendMode = val.first;
+        if (isAutoRecommendMode) {
+          _refreshAutoRecommendedTypes();
+        }
         _updateRequirement();
       }),
     );
@@ -984,12 +993,16 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
       _MatchTypeSelector(
         selectedTypes: currentRecommendTypes,
         onAdd: (type) {
-          setState(() => currentRecommendTypes.add(type));
-          _updateRequirement();
+          setState(() {
+            currentRecommendTypes.add(type);
+            _updateRequirement();
+          });
         },
         onRemove: (index) {
-          setState(() => currentRecommendTypes.removeAt(index));
-          _updateRequirement();
+          setState(() {
+            currentRecommendTypes.removeAt(index);
+            _updateRequirement();
+          });
         },
         checkRequirement: _checkRequirementWithAddType,
       ),
@@ -1000,12 +1013,16 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     return _MatchTypeSelector(
       selectedTypes: types,
       onAdd: (type) {
-        setState(() => types.add(type));
-        _updateRequirement();
+        setState(() {
+          types.add(type);
+          _updateRequirement();
+        });
       },
       onRemove: (index) {
-        setState(() => types.removeAt(index));
-        _updateRequirement();
+        setState(() {
+          types.removeAt(index);
+          _updateRequirement();
+        });
       },
       checkRequirement: _checkRequirementWithAddType,
     );
@@ -1024,6 +1041,9 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           if (v == null) return;
           setState(() {
             autoCourtCount = v;
+            if (isAutoRecommendMode) {
+              _refreshAutoRecommendedTypes();
+            }
             _updateRequirement();
           });
         },
@@ -1039,6 +1059,9 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
       selected: {autoCourtPolicy},
       onSelectionChanged: (val) => setState(() {
         autoCourtPolicy = val.first;
+        if (isAutoRecommendMode) {
+          _refreshAutoRecommendedTypes();
+        }
         _updateRequirement();
       }),
     );
