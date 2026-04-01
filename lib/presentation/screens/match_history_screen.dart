@@ -154,7 +154,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                     session: session,
                     pool: scopedPool,
                     scale: scale,
-                    screenWidth: (constraints.maxWidth - 32)
+                    screenWidth: (constraints.maxWidth -
+                            MatchHistoryLayoutTokens.contentHorizontalPadding)
                         .clamp(0, double.infinity),
                     selectedPlayer: _selectedPlayer,
                     onPlayerTap: (p) => _handleTap(session, p),
