@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/config/app_config.dart';
@@ -14,6 +15,24 @@ import '../../domain/entities/team.dart';
 import '../../domain/services/match_requirement_service.dart';
 import '../notifiers/session_notifier.dart';
 import 'common_widgets.dart';
+
+class MatchHistoryLayoutTokens {
+  const MatchHistoryLayoutTokens._();
+
+  static const int maxColumns = 3;
+  static const double contentHorizontalPadding = 32;
+  static const double minCardWidthBase = 280;
+  static const double minCardWidthLarge = 380;
+  static const double maxCardWidthBase = 520;
+  static const double maxCardWidthLarge = 620;
+  static const double twoColumnBreakpoint = 760;
+  static const double threeColumnBreakpoint = 1120;
+  static const double compactPlayerTagWidth = 180;
+  static const double tightPlayerTagWidth = 145;
+  static const int longNameWarningLength = 8;
+  static const double extremeNarrowWidth = 560;
+  static const double extremeWideWidth = 1600;
+}
 
 /// 試合形式に応じたテーマカラーを取得
 Color _getMatchTypeColor(BuildContext context, MatchType type) {
@@ -49,9 +68,11 @@ class GamesArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final int count = session.games.length;
-    final int cross = _calculateCrossAxisCount(count);
     final double spacing = 16.0 * scale;
-    final double cardWidth = (screenWidth - (spacing * (cross + 1))) / cross;
+    final int cross = _calculateCrossAxisCount(count, spacing);
+    final double cardWidth =
+        _calculateCardWidth(cross, spacing).clamp(0, _maxCardWidth);
+    _logLayoutMetrics(gameCount: count, columns: cross, cardWidth: cardWidth);
 
     return Wrap(
       spacing: spacing,
@@ -76,13 +97,67 @@ class GamesArea extends StatelessWidget {
     );
   }
 
-  int _calculateCrossAxisCount(int gameCount) {
-    if (screenWidth < 500 * scale) return 1;
-    if (gameCount == 4) return 2;
-    if (gameCount == 3) return 3;
-    final double minCardWidth = 360 * scale;
-    int cross = (screenWidth / minCardWidth).floor().clamp(1, 3);
-    return min(gameCount, cross);
+  int _calculateCrossAxisCount(int gameCount, double spacing) {
+    if (gameCount <= 1 || screenWidth <= 0) return 1;
+
+    if (screenWidth < MatchHistoryLayoutTokens.twoColumnBreakpoint) return 1;
+    if (screenWidth < MatchHistoryLayoutTokens.threeColumnBreakpoint) {
+      return min(gameCount, 2);
+    }
+
+    final double minCardWidth = _minCardWidth;
+    final int maxColumns = min(gameCount, MatchHistoryLayoutTokens.maxColumns);
+
+    for (int columns = maxColumns; columns >= 1; columns--) {
+      if (_calculateCardWidth(columns, spacing) >= minCardWidth) {
+        return columns;
+      }
+    }
+    return 1;
+  }
+
+  double _calculateCardWidth(int crossAxisCount, double spacing) {
+    final double totalSpacing = spacing * max(crossAxisCount - 1, 0);
+    final double availableWidth = max(screenWidth - totalSpacing, 0);
+    return availableWidth / crossAxisCount;
+  }
+
+  double get _minCardWidth {
+    final double t = ((scale - 1.0) / 0.8).clamp(0.0, 1.0);
+    return lerpDouble(
+      MatchHistoryLayoutTokens.minCardWidthBase,
+      MatchHistoryLayoutTokens.minCardWidthLarge,
+      t,
+    )!;
+  }
+
+  double get _maxCardWidth {
+    final double t = ((scale - 1.0) / 0.8).clamp(0.0, 1.0);
+    return lerpDouble(
+      MatchHistoryLayoutTokens.maxCardWidthBase,
+      MatchHistoryLayoutTokens.maxCardWidthLarge,
+      t,
+    )!;
+  }
+
+  void _logLayoutMetrics({
+    required int gameCount,
+    required int columns,
+    required double cardWidth,
+  }) {
+    final bool shouldLog =
+        screenWidth <= MatchHistoryLayoutTokens.extremeNarrowWidth ||
+        screenWidth >= MatchHistoryLayoutTokens.extremeWideWidth;
+    if (!shouldLog) return;
+
+    assert(() {
+      debugPrint(
+        '[GamesArea] width=${screenWidth.toStringAsFixed(1)} '
+        'games=$gameCount columns=$columns cardWidth=${cardWidth.toStringAsFixed(1)} '
+        'scale=${scale.toStringAsFixed(2)}',
+      );
+      return true;
+    }());
   }
 }
 
@@ -322,18 +397,53 @@ class PlayerTag extends StatelessWidget {
             width: isSelected ? 3 : 1.5,
           ),
         ),
-        child: Text(
-          player.name,
-          style: TextStyle(
-            fontSize: 24 * scale,
-            fontWeight: FontWeight.w900,
-            color: isSelected
-                ? theme.colorScheme.onPrimaryContainer
-                : Colors.black87,
-          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final textScale = _adaptivePlayerTextScale(constraints.maxWidth);
+            _logNameTuning(constraints.maxWidth);
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+              child: Text(
+                player.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                style: TextStyle(
+                  fontSize: 24 * scale * textScale,
+                  fontWeight: FontWeight.w900,
+                  color: isSelected
+                      ? theme.colorScheme.onPrimaryContainer
+                      : Colors.black87,
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
+  }
+
+  double _adaptivePlayerTextScale(double maxWidth) {
+    if (maxWidth <= MatchHistoryLayoutTokens.tightPlayerTagWidth) return 0.62;
+    if (maxWidth <= MatchHistoryLayoutTokens.compactPlayerTagWidth) {
+      return 0.75;
+    }
+    return 1.0;
+  }
+
+  void _logNameTuning(double tagWidth) {
+    final int nameLength = player.name.runes.length;
+    if (nameLength < MatchHistoryLayoutTokens.longNameWarningLength) {
+      return;
+    }
+    if (tagWidth > MatchHistoryLayoutTokens.compactPlayerTagWidth) return;
+    assert(() {
+      debugPrint(
+        '[PlayerTag] compact tag width=${tagWidth.toStringAsFixed(1)} '
+        'name="${player.name}" len=$nameLength',
+      );
+      return true;
+    }());
   }
 }
 
