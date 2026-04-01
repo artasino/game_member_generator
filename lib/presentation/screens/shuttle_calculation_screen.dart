@@ -336,6 +336,11 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.inventory_2_outlined),
+            tooltip: 'シャトル/ボール在庫管理',
+            onPressed: _showStockManager,
+          ),
+          IconButton(
             icon: const Icon(Icons.save),
             tooltip: '保存',
             onPressed: _saveRecord,
@@ -561,9 +566,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.close, color: Colors.grey, size: 18),
-                  onPressed: () => setState(() {
-                    if (_entries.length > 1) _entries.removeAt(index);
-                  }),
+                  onPressed: () => setState(() => _entries.removeAt(index)),
                 ),
               ],
             ),
