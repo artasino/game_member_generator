@@ -7,7 +7,7 @@ import '../notifiers/player_notifier.dart';
 import '../notifiers/session_notifier.dart';
 import 'match_history_screen.dart';
 import 'player_list_screen.dart';
-import 'manual_screen.dart';
+import 'other_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final PlayerNotifier playerNotifier;
@@ -45,7 +45,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         shuttleRepository: widget.repositories.shuttleUsageRepository,
         stockRepository: widget.repositories.shuttleStockRepository,
       ),
-      const ManualScreen(),
+      const OtherScreen(),
     ];
   }
 
@@ -78,7 +78,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.help_outline),
-            label: '使い方',
+            label: 'その他',
           ),
         ],
       ),
