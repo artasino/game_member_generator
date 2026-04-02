@@ -384,7 +384,7 @@ class PlayerTag extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         alignment: Alignment.center,
         width: double.infinity,
-        height: 60 * scale,
+        height: 50 * scale,
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
@@ -808,8 +808,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         if (score < minScore) {
           minScore = score;
           result = [
-            ...List.filled(md, MatchType.menDoubles),
-            ...List.filled(wd, MatchType.womenDoubles)
+            ...List.filled(wd, MatchType.womenDoubles),
+            ...List.filled(md, MatchType.menDoubles)
           ];
         }
       }
@@ -831,9 +831,9 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           if (score < minScore) {
             minScore = score;
             result = [
-              ...List.filled(md, MatchType.menDoubles),
               ...List.filled(wd, MatchType.womenDoubles),
-              ...List.filled(mix, MatchType.mixedDoubles)
+              ...List.filled(mix, MatchType.mixedDoubles),
+              ...List.filled(md, MatchType.menDoubles)
             ];
           }
         }
