@@ -108,82 +108,90 @@ class PlayerChip extends StatelessWidget {
               width: player.isActive ? 1.5 : 1.0,
             ),
           ),
-          child: IntrinsicWidth(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (showCheckbox) ...[
-                  Icon(
-                    player.isActive
-                        ? Icons.check_circle
-                        : Icons.radio_button_unchecked,
-                    size: 18,
-                    color: player.isActive
-                        ? genderColor
-                        : genderColor.withValues(alpha: 0.4),
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                Column(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (showCheckbox) ...[
+                Icon(
+                  player.isActive
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                  size: 18,
+                  color: player.isActive
+                      ? genderColor
+                      : genderColor.withValues(alpha: 0.4),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Flexible(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          player.name,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: player.isActive
-                                ? Colors.black87
-                                : Colors.black54,
+                        Flexible(
+                          child: Text(
+                            player.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              color: player.isActive
+                                  ? Colors.black87
+                                  : Colors.black54,
+                            ),
                           ),
                         ),
                         if (player.isMustRest) ...[
-                          const SizedBox(width: 3),
+                          const SizedBox(width: 4),
                           const Icon(Icons.coffee_outlined,
-                              size: 13, color: Colors.orange),
+                              size: 14, color: Colors.orange),
                         ],
                       ],
                     ),
                     if (showStats) ...[
                       const SizedBox(height: 6),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AppBadge(
-                            label: '出${stats.totalMatches}',
-                            color: Colors.indigo,
-                            scale: 1.0,
-                          ),
-                          const SizedBox(width: 4),
-                          AppBadge(
-                            label: '休${stats.totalRests}',
-                            color: Colors.deepOrange,
-                            scale: 1.0,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${player.gender == Gender.male ? "男" : "女"}$sameGenderCount 混$mxCount',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: player.isActive
-                                  ? Colors.black54
-                                  : Colors.grey.shade600,
-                              fontWeight: player.isActive
-                                  ? FontWeight.w900
-                                  : FontWeight.normal,
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const NeverScrollableScrollPhysics(),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AppBadge(
+                              label: '出${stats.totalMatches}',
+                              color: Colors.indigo,
+                              scale: 0.9,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            AppBadge(
+                              label: '休${stats.totalRests}',
+                              color: Colors.deepOrange,
+                              scale: 0.9,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${player.gender == Gender.male ? "男" : "女"}$sameGenderCount 混$mxCount',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                color: player.isActive
+                                    ? Colors.black54
+                                    : Colors.grey.shade600,
+                                fontWeight: player.isActive
+                                    ? FontWeight.w900
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ]
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -6,8 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'domain/algorithm/balanced_match_algorithm.dart';
 import 'domain/algorithm/court_assignment/stochastic_court_assignment_algorithm.dart';
 import 'domain/algorithm/game_evaluator.dart';
-import 'domain/entities/gender.dart';
-import 'domain/entities/player.dart';
 import 'domain/services/match_making_service.dart';
 import 'infrastructure/persistence/app_repositories.dart';
 import 'infrastructure/persistence/repository_provider.dart';
@@ -43,9 +41,6 @@ void main() async {
 
   // Notifier同士を接続
   playerNotifier.setSessionNotifier(sessionNotifier);
-
-  // 初回起動時のみサンプルデータを投入するロジック
-  final players = await repositories.playerRepository.getAll();
 
   runApp(MyApp(
     playerNotifier: playerNotifier,

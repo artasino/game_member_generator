@@ -900,7 +900,6 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
 
   Widget _buildGenderStatsHeader() {
     final pool = widget.notifier.playerStatsPool;
-    final effective = _requirementService.calculateEffectiveCounts(pool);
 
     return Column(
       children: [
@@ -913,18 +912,6 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               label: '女性: ${pool.activeFemales.length} 名',
               color: Colors.pink.shade600),
         ]),
-        if (effective.male < pool.activeMales.length ||
-            effective.female < pool.activeFemales.length)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              '※ 同時出場制限により実質 男性:${effective.male.toStringAsFixed(1)}名, 女性:${effective.female.toStringAsFixed(1)}名 として計算',
-              style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey.shade600,
-                  fontStyle: FontStyle.italic),
-            ),
-          ),
       ],
     );
   }
@@ -986,7 +973,6 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     return Column(children: [
       _buildCourtCountDropdown(),
       const SizedBox(height: 12),
-      const Text('生成ポリシー', style: TextStyle(fontWeight: FontWeight.bold)),
       const SizedBox(height: 8),
       _buildPolicySelector(),
       const SizedBox(height: 16),
