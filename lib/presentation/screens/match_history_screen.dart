@@ -207,7 +207,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                   ? Icons.play_arrow_rounded
                   : Icons.add_rounded),
               label: Text(
-                session == null ? '試合を開始' : '次の試合へ',
+                '',
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
