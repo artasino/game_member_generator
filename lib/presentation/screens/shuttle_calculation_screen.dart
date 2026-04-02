@@ -240,184 +240,194 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final bool useCompactLayout = screenWidth < 860;
-    final activePlayers =
-        widget.playerNotifier.players.where((p) => p.isActive).toList();
-    final maleCount =
-        activePlayers.where((p) => p.gender == Gender.male).length;
-    final femaleCount =
-        activePlayers.where((p) => p.gender == Gender.female).length;
-    final totalCount = maleCount + femaleCount;
+    return ListenableBuilder(
+        listenable:
+            Listenable.merge([widget.playerNotifier, widget.sessionNotifier]),
+        builder: (context, _) {
+          final theme = Theme.of(context);
+          final screenWidth = MediaQuery.sizeOf(context).width;
+          final bool useCompactLayout = screenWidth < 860;
+          final activePlayers =
+              widget.playerNotifier.players.where((p) => p.isActive).toList();
+          final maleCount =
+              activePlayers.where((p) => p.gender == Gender.male).length;
+          final femaleCount =
+              activePlayers.where((p) => p.gender == Gender.female).length;
+          final totalCount = maleCount + femaleCount;
 
-    // --- 試合数と有効試合数の計算 ---
-    final sessions = widget.sessionNotifier.sessions;
-    final Map<MatchType, int> typeCounts = {};
-    double maleEffectiveGames = 0;
-    double femaleEffectiveGames = 0;
+          // --- 試合数と有効試合数の計算 ---
+          final sessions = widget.sessionNotifier.sessions;
+          final Map<MatchType, int> typeCounts = {};
+          double maleEffectiveGames = 0;
+          double femaleEffectiveGames = 0;
 
-    for (var s in sessions) {
-      for (var g in s.games) {
-        typeCounts[g.type] = (typeCounts[g.type] ?? 0) + 1;
-        if (g.type == MatchType.menDoubles) {
-          maleEffectiveGames += 1.0;
-        } else if (g.type == MatchType.womenDoubles) {
-          femaleEffectiveGames += 1.0;
-        } else {
-          maleEffectiveGames += 0.5;
-          femaleEffectiveGames += 0.5;
-        }
-      }
-    }
-    final totalGames = sessions.fold(0, (sum, s) => sum + s.games.length);
-
-    // --- シャトル消費スピード計算 ---
-    double totalShuttles = 0;
-    double maleShuttles = 0;
-    double femaleShuttles = 0;
-
-    for (var entry in _entries.where((e) => e.type == ExpenseType.shuttle)) {
-      final count = entry.shuttleCount.toDouble();
-      totalShuttles += count;
-      if (entry.target == SplitTarget.male) {
-        maleShuttles += count;
-      } else if (entry.target == SplitTarget.female) {
-        femaleShuttles += count;
-      } else {
-        maleShuttles += count * 0.5;
-        femaleShuttles += count * 0.5;
-      }
-    }
-
-    final speedTotal = totalGames > 0 ? totalShuttles / totalGames : 0.0;
-    final speedMale =
-        maleEffectiveGames > 0 ? maleShuttles / maleEffectiveGames : 0.0;
-    final speedFemale =
-        femaleEffectiveGames > 0 ? femaleShuttles / femaleEffectiveGames : 0.0;
-
-    // --- 費用計算ロジック ---
-    double totalAmount = _entries.fold(0, (sum, item) => sum + item.total);
-    double maleShare = 0;
-    double femaleShare = 0;
-
-    if (!_useGenderSplit) {
-      final perPerson = totalCount > 0 ? totalAmount / totalCount : 0.0;
-      maleShare = perPerson;
-      femaleShare = perPerson;
-    } else {
-      for (var entry in _entries) {
-        final amount = entry.total;
-        switch (entry.target) {
-          case SplitTarget.all:
-            if (totalCount > 0) {
-              final share = amount / totalCount;
-              maleShare += share;
-              femaleShare += share;
-            }
-          case SplitTarget.male:
-            if (maleCount > 0) {
-              maleShare += amount / maleCount;
-            }
-          case SplitTarget.female:
-            if (femaleCount > 0) {
-              femaleShare += amount / femaleCount;
-            }
-        }
-      }
-    }
-
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainerLow,
-      appBar: AppBar(
-        title: const Text('EXPENSE CALC',
-            style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-        centerTitle: true,
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.onPrimary,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.inventory_2_outlined),
-            tooltip: 'シャトル/ボール在庫管理',
-            onPressed: _showStockManager,
-          ),
-          IconButton(
-            icon: const Icon(Icons.save),
-            tooltip: '保存',
-            onPressed: _saveRecord,
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'history') _showHistory();
-              if (value == 'stock') _showStockManager();
-              if (value == 'reset') {
-                setState(() {
-                  _entries.clear();
-                  _entries.add(ExpenseEntry(
-                      name: 'シャトル/ボール',
-                      type: ExpenseType.shuttle,
-                      pricePerDozens: 0,
-                      shuttleCount: 0));
-                });
+          for (var s in sessions) {
+            for (var g in s.games) {
+              typeCounts[g.type] = (typeCounts[g.type] ?? 0) + 1;
+              if (g.type == MatchType.menDoubles) {
+                maleEffectiveGames += 1.0;
+              } else if (g.type == MatchType.womenDoubles) {
+                femaleEffectiveGames += 1.0;
+              } else {
+                maleEffectiveGames += 0.5;
+                femaleEffectiveGames += 0.5;
               }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                  value: 'stock',
-                  child: ListTile(
-                      leading: Icon(Icons.inventory_2_outlined),
-                      title: Text('シャトル/ボール在庫管理'),
-                      contentPadding: EdgeInsets.zero)),
-              const PopupMenuItem(
-                  value: 'history',
-                  child: ListTile(
-                      leading: Icon(Icons.history),
-                      title: Text('履歴を表示'),
-                      contentPadding: EdgeInsets.zero)),
-              const PopupMenuItem(
-                  value: 'reset',
-                  child: ListTile(
-                      leading: Icon(Icons.refresh),
-                      title: Text('リセット'),
-                      contentPadding: EdgeInsets.zero)),
-            ],
+            }
+          }
+          final totalGames = sessions.fold(0, (sum, s) => sum + s.games.length);
+
+          // --- シャトル消費スピード計算 ---
+          double totalShuttles = 0;
+          double maleShuttles = 0;
+          double femaleShuttles = 0;
+
+          for (var entry
+              in _entries.where((e) => e.type == ExpenseType.shuttle)) {
+            final count = entry.shuttleCount.toDouble();
+            totalShuttles += count;
+            if (entry.target == SplitTarget.male) {
+              maleShuttles += count;
+            } else if (entry.target == SplitTarget.female) {
+              femaleShuttles += count;
+            } else {
+              maleShuttles += count * 0.5;
+              femaleShuttles += count * 0.5;
+            }
+          }
+
+          final speedTotal = totalGames > 0 ? totalShuttles / totalGames : 0.0;
+          final speedMale =
+              maleEffectiveGames > 0 ? maleShuttles / maleEffectiveGames : 0.0;
+          final speedFemale = femaleEffectiveGames > 0
+              ? femaleShuttles / femaleEffectiveGames
+              : 0.0;
+
+          // --- 費用計算ロジック ---
+          double totalAmount =
+              _entries.fold(0, (sum, item) => sum + item.total);
+          double maleShare = 0;
+          double femaleShare = 0;
+
+          if (!_useGenderSplit) {
+            final perPerson = totalCount > 0 ? totalAmount / totalCount : 0.0;
+            maleShare = perPerson;
+            femaleShare = perPerson;
+          } else {
+            for (var entry in _entries) {
+              final amount = entry.total;
+              switch (entry.target) {
+                case SplitTarget.all:
+                  if (totalCount > 0) {
+                    final share = amount / totalCount;
+                    maleShare += share;
+                    femaleShare += share;
+                  }
+                case SplitTarget.male:
+                  if (maleCount > 0) {
+                    maleShare += amount / maleCount;
+                  }
+                case SplitTarget.female:
+                  if (femaleCount > 0) {
+                    femaleShare += amount / femaleCount;
+                  }
+              }
+            }
+          }
+
+          return Scaffold(
+            backgroundColor: theme.colorScheme.surfaceContainerLow,
+            appBar: AppBar(
+              title: const Text('EXPENSE CALC',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+              centerTitle: true,
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              elevation: 0,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  tooltip: 'シャトル/ボール在庫管理',
+                  onPressed: _showStockManager,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.save),
+                  tooltip: '保存',
+                  onPressed: _saveRecord,
+                ),
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'history') _showHistory();
+                    if (value == 'stock') _showStockManager();
+                    if (value == 'reset') {
+                      setState(() {
+                        _entries.clear();
+                        _entries.add(ExpenseEntry(
+                            name: 'シャトル/ボール',
+                            type: ExpenseType.shuttle,
+                            pricePerDozens: 0,
+                            shuttleCount: 0));
+                      });
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                        value: 'stock',
+                        child: ListTile(
+                            leading: Icon(Icons.inventory_2_outlined),
+                            title: Text('シャトル/ボール在庫管理'),
+                            contentPadding: EdgeInsets.zero)),
+                    const PopupMenuItem(
+                        value: 'history',
+                        child: ListTile(
+                            leading: Icon(Icons.history),
+                            title: Text('履歴を表示'),
+                            contentPadding: EdgeInsets.zero)),
+                    const PopupMenuItem(
+                        value: 'reset',
+                        child: ListTile(
+                            leading: Icon(Icons.refresh),
+                            title: Text('リセット'),
+                            contentPadding: EdgeInsets.zero)),
+                  ],
+                ),
+              ],
           ),
-        ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final contentWidth =
-              constraints.maxWidth.clamp(0.0, 1100.0).toDouble();
-          return Align(
-            alignment: Alignment.topCenter,
-            child: SizedBox(
-              width: contentWidth,
-              child: Column(
-                children: [
-                  _buildInfoBar(maleCount, femaleCount, totalCount),
-                  _buildModeSelectorHeader(),
-                  _buildConsumptionSpeedBanner(
-                      totalGames, typeCounts, speedTotal, speedMale, speedFemale),
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
-                      itemCount: _entries.length,
-                      itemBuilder: (context, index) =>
-                          _buildExpenseCard(index, activePlayers, useCompactLayout),
+            body: LayoutBuilder(
+              builder: (context, constraints) {
+                final contentWidth =
+                    constraints.maxWidth.clamp(0.0, 1100.0).toDouble();
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    width: contentWidth,
+                    child: Column(
+                      children: [
+                        _buildInfoBar(maleCount, femaleCount, totalCount),
+                        _buildModeSelectorHeader(),
+                        _buildConsumptionSpeedBanner(totalGames, typeCounts,
+                            speedTotal, speedMale, speedFemale),
+                        Expanded(
+                          child: ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+                            itemCount: _entries.length,
+                            itemBuilder: (context, index) => _buildExpenseCard(
+                                index, activePlayers, useCompactLayout),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                );
+              },
             ),
+            bottomSheet: _buildSummaryPanel(
+                totalAmount, maleShare, femaleShare, useCompactLayout),
+            floatingActionButton: _buildAddButtonMenu(),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerFloat,
           );
-        },
-      ),
-      bottomSheet:
-          _buildSummaryPanel(totalAmount, maleShare, femaleShare, useCompactLayout),
-      floatingActionButton: _buildAddButtonMenu(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    );
+        });
   }
 
   Widget _buildInfoBar(int m, int f, int t) {
