@@ -490,55 +490,42 @@ class RestingContainer extends StatelessWidget {
           border: Border(
               top: BorderSide(
                   color: theme.colorScheme.outlineVariant, width: 1.5))),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Icon(Icons.bedtime_outlined,
-                    size: 16, color: theme.colorScheme.secondary),
-                const SizedBox(width: 8),
-                Text(
-                  '休憩中 (${session.restingPlayers.length}名)',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: theme.colorScheme.secondary),
-                ),
-              ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: Row(
+          children: [
+            Icon(Icons.bedtime_outlined,
+                size: 16, color: theme.colorScheme.secondary),
+            const SizedBox(width: 8),
+            Text(
+              '休憩中 (${session.restingPlayers.length}名)',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: theme.colorScheme.secondary),
             ),
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Row(
-              children: sortedResting
-                  .map((p) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: RestingChip(
-                          player: p,
-                          isSelected: selectedPlayerId == p.id,
-                          consecutiveRests: pool.all
-                              .firstWhere((ps) => ps.player.id == p.id)
-                              .stats
-                              .consecutiveRests,
-                          isRestingByConstraint: p.excludedPartnerId != null &&
-                              session.games.any((g) =>
-                                  g.teamA
-                                      .containsPlayer(p.excludedPartnerId!) ||
-                                  g.teamB.containsPlayer(p.excludedPartnerId!)),
-                          onTap: () => onPlayerTap(p),
-                          onLongPress: () => onPlayerLongPress(p),
-                          scale: scale,
-                        ),
-                      ))
-                  .toList(),
-            ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            ...sortedResting.map((p) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: RestingChip(
+                    player: p,
+                    isSelected: selectedPlayerId == p.id,
+                    consecutiveRests: pool.all
+                        .firstWhere((ps) => ps.player.id == p.id)
+                        .stats
+                        .consecutiveRests,
+                    isRestingByConstraint: p.excludedPartnerId != null &&
+                        session.games.any((g) =>
+                            g.teamA.containsPlayer(p.excludedPartnerId!) ||
+                            g.teamB.containsPlayer(p.excludedPartnerId!)),
+                    onTap: () => onPlayerTap(p),
+                    onLongPress: () => onPlayerLongPress(p),
+                    scale: scale,
+                  ),
+                )),
+          ],
+        ),
       ),
     );
   }
