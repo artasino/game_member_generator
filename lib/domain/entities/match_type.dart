@@ -8,11 +8,11 @@ extension MatchTypeX on MatchType {
   String get displayName {
     switch (this) {
       case MatchType.menDoubles:
-        return '男子W';
+        return 'MD';
       case MatchType.womenDoubles:
-        return '女子W';
+        return 'WD';
       case MatchType.mixedDoubles:
-        return '混合W';
+        return 'XD';
     }
   }
 }

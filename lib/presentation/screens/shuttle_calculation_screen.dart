@@ -14,7 +14,7 @@ import '../widgets/shuttle_history_dialog.dart';
 import '../widgets/shuttle_stock_dialog.dart';
 
 enum ExpenseType {
-  shuttle('シャトル/ボール', Symbols.badminton, Colors.orange),
+  shuttle('消耗品', Symbols.badminton, Colors.orange),
   court('場所代', Icons.stadium, Colors.blue),
   other('その他', Icons.more_horiz, Colors.teal);
 
