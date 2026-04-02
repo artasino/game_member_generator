@@ -342,26 +342,37 @@ class TeamColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildPlayerTag(team.player1),
-        SizedBox(height: 4 * scale),
-        _buildPlayerTag(team.player2),
-        if (showPairInfo && pairCount > 0) ...[
-          SizedBox(height: 4 * scale),
-          PairInfoLabel(count: pairCount, scale: scale * 0.9),
+    return LayoutBuilder(builder: (context, constraints) {
+      final availableWidth = constraints.maxWidth;
+      return Column(
+        children: [
+          IntrinsicWidth(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildPlayerTag(team.player1, availableWidth),
+                SizedBox(height: 4 * scale),
+                _buildPlayerTag(team.player2, availableWidth),
+              ],
+            ),
+          ),
+          if (showPairInfo && pairCount > 0) ...[
+            SizedBox(height: 4 * scale),
+            PairInfoLabel(count: pairCount, scale: scale * 0.9),
+          ],
         ],
-      ],
-    );
+      );
+    });
   }
 
-  Widget _buildPlayerTag(Player player) {
+  Widget _buildPlayerTag(Player player, double maxWidth) {
     return PlayerTag(
       player: player,
       isSelected: selectedPlayer?.id == player.id,
       onTap: () => onPlayerTap(player),
       onLongPress: () => onPlayerLongPress(player),
       scale: scale,
+      maxWidth: maxWidth,
     );
   }
 }
@@ -372,6 +383,7 @@ class PlayerTag extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final double scale;
+  final double maxWidth;
 
   const PlayerTag({
     super.key,
@@ -380,12 +392,16 @@ class PlayerTag extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     required this.scale,
+    required this.maxWidth,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final genderColor = GenderTheme.getColor(player.gender);
+
+    // 文字サイズを動的に調整するためのスケール計算
+    final textScale = _adaptivePlayerTextScale(maxWidth);
 
     return InkWell(
       onTap: onTap,
@@ -394,8 +410,12 @@ class PlayerTag extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         alignment: Alignment.center,
-        width: double.infinity,
-        height: MatchHistoryLayoutTokens.playerTagHeightBase * scale,
+        padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+        constraints: BoxConstraints(
+          minWidth: 80 * scale,
+          maxWidth: maxWidth,
+          minHeight: MatchHistoryLayoutTokens.playerTagHeightBase * scale,
+        ),
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
@@ -408,53 +428,29 @@ class PlayerTag extends StatelessWidget {
             width: isSelected ? 2 : 1,
           ),
         ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final textScale = _adaptivePlayerTextScale(constraints.maxWidth);
-            _logNameTuning(constraints.maxWidth);
-            return Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6 * scale),
-              child: Text(
-                player.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-                style: TextStyle(
-                  fontSize: 20 * scale * textScale,
-                  fontWeight: FontWeight.w900,
-                  color: isSelected
-                      ? theme.colorScheme.onPrimaryContainer
-                      : Colors.black87,
-                ),
-              ),
-            );
-          },
+        child: Text(
+          player.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
+          style: TextStyle(
+            fontSize: 20 * scale * textScale,
+            fontWeight: FontWeight.w900,
+            color: isSelected
+                ? theme.colorScheme.onPrimaryContainer
+                : Colors.black87,
+          ),
         ),
       ),
     );
   }
 
-  double _adaptivePlayerTextScale(double maxWidth) {
-    if (maxWidth <= MatchHistoryLayoutTokens.tightPlayerTagWidth) return 0.65;
-    if (maxWidth <= MatchHistoryLayoutTokens.compactPlayerTagWidth) {
+  double _adaptivePlayerTextScale(double width) {
+    if (width <= MatchHistoryLayoutTokens.tightPlayerTagWidth) return 0.65;
+    if (width <= MatchHistoryLayoutTokens.compactPlayerTagWidth) {
       return 0.8;
     }
     return 1.0;
-  }
-
-  void _logNameTuning(double tagWidth) {
-    final int nameLength = player.name.runes.length;
-    if (nameLength < MatchHistoryLayoutTokens.longNameWarningLength) {
-      return;
-    }
-    if (tagWidth > MatchHistoryLayoutTokens.compactPlayerTagWidth) return;
-    assert(() {
-      debugPrint(
-        '[PlayerTag] compact tag width=${tagWidth.toStringAsFixed(1)} '
-        'name="${player.name}" len=$nameLength',
-      );
-      return true;
-    }());
   }
 }
 
@@ -488,47 +484,59 @@ class RestingContainer extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-          border:
-              Border(top: BorderSide(color: theme.colorScheme.outlineVariant))),
+          color: theme.colorScheme.surface,
+          border: Border(
+              top: BorderSide(
+                  color: theme.colorScheme.outlineVariant, width: 1.5))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.bedtime_outlined,
-                  size: 16, color: theme.colorScheme.secondary),
-              const SizedBox(width: 8),
-              Text(
-                '休憩中 (${session.restingPlayers.length}名)',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.secondary),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Icon(Icons.bedtime_outlined,
+                    size: 16, color: theme.colorScheme.secondary),
+                const SizedBox(width: 8),
+                Text(
+                  '休憩中 (${session.restingPlayers.length}名)',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: theme.colorScheme.secondary),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: sortedResting
-                .map((p) => RestingChip(
-                      player: p,
-                      isSelected: selectedPlayerId == p.id,
-                      consecutiveRests: pool.all
-                          .firstWhere((ps) => ps.player.id == p.id)
-                          .stats
-                          .consecutiveRests,
-                      isRestingByConstraint: p.excludedPartnerId != null &&
-                          session.games.any((g) =>
-                              g.teamA.containsPlayer(p.excludedPartnerId!) ||
-                              g.teamB.containsPlayer(p.excludedPartnerId!)),
-                      onTap: () => onPlayerTap(p),
-                      onLongPress: () => onPlayerLongPress(p),
-                      scale: scale,
-                    ))
-                .toList(),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              children: sortedResting
+                  .map((p) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: RestingChip(
+                          player: p,
+                          isSelected: selectedPlayerId == p.id,
+                          consecutiveRests: pool.all
+                              .firstWhere((ps) => ps.player.id == p.id)
+                              .stats
+                              .consecutiveRests,
+                          isRestingByConstraint: p.excludedPartnerId != null &&
+                              session.games.any((g) =>
+                                  g.teamA
+                                      .containsPlayer(p.excludedPartnerId!) ||
+                                  g.teamB.containsPlayer(p.excludedPartnerId!)),
+                          onTap: () => onPlayerTap(p),
+                          onLongPress: () => onPlayerLongPress(p),
+                          scale: scale,
+                        ),
+                      ))
+                  .toList(),
+            ),
           ),
         ],
       ),
@@ -589,6 +597,7 @@ class RestingChip extends StatelessWidget {
               player.name,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
+                fontSize: 13,
                 color: isSelected
                     ? theme.colorScheme.onPrimaryContainer
                     : Colors.black87,
