@@ -187,6 +187,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             if (session != null) ...[
               FloatingActionButton.small(
                 heroTag: 'recalc',
+                tooltip: 'このセッションを再作成',
                 elevation: 2,
                 backgroundColor: colorScheme.secondaryContainer,
                 foregroundColor: colorScheme.onSecondaryContainer,
@@ -197,19 +198,16 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               ),
               const SizedBox(height: 12),
             ],
-            FloatingActionButton.extended(
+            FloatingActionButton(
               heroTag: 'add',
               elevation: 4,
+              tooltip: '試合を作成',
               onPressed: widget.notifier.isGenerating
                   ? null
                   : () => _showSettings(false),
-              icon: Icon(session == null
+              child: Icon(session == null
                   ? Icons.play_arrow_rounded
                   : Icons.add_rounded),
-              label: Text(
-                '',
-                style: const TextStyle(fontWeight: FontWeight.w900),
-              ),
             ),
           ],
         ),
