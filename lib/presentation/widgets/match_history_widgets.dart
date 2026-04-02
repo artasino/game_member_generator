@@ -32,6 +32,13 @@ class MatchHistoryLayoutTokens {
   static const int longNameWarningLength = 8;
   static const double extremeNarrowWidth = 560;
   static const double extremeWideWidth = 1600;
+
+  // Vertical spacing tokens for compactness
+  static const double playerTagHeightBase = 38.0;
+  static const double vsDividerHeightBase = 44.0;
+  static const double cardHeaderVerticalPadding = 4.0;
+  static const double cardBodyPadding = 8.0;
+  static const double gameCardSpacing = 12.0;
 }
 
 /// 試合形式に応じたテーマカラーを取得
@@ -59,7 +66,7 @@ class GamesArea extends StatelessWidget {
     required this.pool,
     required this.scale,
     required this.screenWidth,
-    required this.selectedPlayer,
+    this.selectedPlayer,
     required this.onPlayerTap,
     required this.onPlayerLongPress,
     this.showPairInfo = true,
@@ -68,7 +75,7 @@ class GamesArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final int count = session.games.length;
-    final double spacing = 16.0 * scale;
+    final double spacing = MatchHistoryLayoutTokens.gameCardSpacing * scale;
     final int cross = _calculateCrossAxisCount(count, spacing);
     final double cardWidth =
         _calculateCardWidth(cross, spacing).clamp(0, _maxCardWidth);
@@ -198,18 +205,19 @@ class GameCard extends StatelessWidget {
     final pairCountB = p2Stats?.stats.partnerCounts[game.teamB.player2.id] ?? 0;
 
     return Card(
-      elevation: 4,
+      elevation: 2,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16 * scale),
-        side: BorderSide(color: colorScheme.outlineVariant, width: 2),
+        borderRadius: BorderRadius.circular(12 * scale),
+        side: BorderSide(color: colorScheme.outlineVariant, width: 1.5),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildHeader(context, colorScheme),
           Padding(
-            padding: EdgeInsets.all(12 * scale),
+            padding: EdgeInsets.all(
+                MatchHistoryLayoutTokens.cardBodyPadding * scale),
             child: Row(
               children: [
                 Expanded(
@@ -245,24 +253,26 @@ class GameCard extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context, ColorScheme colorScheme) {
     return Container(
-      padding:
-          EdgeInsets.symmetric(horizontal: 14 * scale, vertical: 8 * scale),
+      padding: EdgeInsets.symmetric(
+        horizontal: 12 * scale,
+        vertical: MatchHistoryLayoutTokens.cardHeaderVerticalPadding * scale,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHigh,
         border: Border(
-            bottom: BorderSide(color: colorScheme.outlineVariant, width: 2)),
+            bottom: BorderSide(color: colorScheme.outlineVariant, width: 1.5)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           CircleAvatar(
-            radius: 16 * scale,
+            radius: 12 * scale,
             backgroundColor: colorScheme.primary,
             child: Text(
               '${index + 1}',
               style: TextStyle(
                 color: colorScheme.onPrimary,
-                fontSize: 18 * scale,
+                fontSize: 14 * scale,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -288,21 +298,22 @@ class _VSDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 10 * scale),
+      padding: EdgeInsets.symmetric(horizontal: 8 * scale),
       child: Column(
         children: [
           Text(
             'VS',
             style: TextStyle(
-              fontSize: 18 * scale,
+              fontSize: 14 * scale,
               fontWeight: FontWeight.w900,
               color: theme.colorScheme.outline.withValues(alpha: 0.4),
             ),
           ),
           Container(
-              width: 2,
-              height: 60 * scale,
-              color: theme.colorScheme.outlineVariant),
+            width: 1.5,
+            height: MatchHistoryLayoutTokens.vsDividerHeightBase * scale,
+            color: theme.colorScheme.outlineVariant,
+          ),
         ],
       ),
     );
@@ -334,11 +345,11 @@ class TeamColumn extends StatelessWidget {
     return Column(
       children: [
         _buildPlayerTag(team.player1),
-        const SizedBox(height: 8),
+        SizedBox(height: 4 * scale),
         _buildPlayerTag(team.player2),
         if (showPairInfo && pairCount > 0) ...[
-          const SizedBox(height: 6),
-          PairInfoLabel(count: pairCount, scale: scale),
+          SizedBox(height: 4 * scale),
+          PairInfoLabel(count: pairCount, scale: scale * 0.9),
         ],
       ],
     );
@@ -379,22 +390,22 @@ class PlayerTag extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       onLongPress: onLongPress,
-      borderRadius: BorderRadius.circular(12 * scale),
+      borderRadius: BorderRadius.circular(8 * scale),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         alignment: Alignment.center,
         width: double.infinity,
-        height: 60 * scale,
+        height: MatchHistoryLayoutTokens.playerTagHeightBase * scale,
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer
               : genderColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12 * scale),
+          borderRadius: BorderRadius.circular(8 * scale),
           border: Border.all(
             color: isSelected
                 ? theme.colorScheme.primary
                 : genderColor.withValues(alpha: 0.4),
-            width: isSelected ? 3 : 1.5,
+            width: isSelected ? 2 : 1,
           ),
         ),
         child: LayoutBuilder(
@@ -402,14 +413,14 @@ class PlayerTag extends StatelessWidget {
             final textScale = _adaptivePlayerTextScale(constraints.maxWidth);
             _logNameTuning(constraints.maxWidth);
             return Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+              padding: EdgeInsets.symmetric(horizontal: 6 * scale),
               child: Text(
                 player.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 softWrap: false,
                 style: TextStyle(
-                  fontSize: 24 * scale * textScale,
+                  fontSize: 20 * scale * textScale,
                   fontWeight: FontWeight.w900,
                   color: isSelected
                       ? theme.colorScheme.onPrimaryContainer
@@ -424,9 +435,9 @@ class PlayerTag extends StatelessWidget {
   }
 
   double _adaptivePlayerTextScale(double maxWidth) {
-    if (maxWidth <= MatchHistoryLayoutTokens.tightPlayerTagWidth) return 0.62;
+    if (maxWidth <= MatchHistoryLayoutTokens.tightPlayerTagWidth) return 0.65;
     if (maxWidth <= MatchHistoryLayoutTokens.compactPlayerTagWidth) {
-      return 0.75;
+      return 0.8;
     }
     return 1.0;
   }
@@ -808,8 +819,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         if (score < minScore) {
           minScore = score;
           result = [
-            ...List.filled(md, MatchType.menDoubles),
-            ...List.filled(wd, MatchType.womenDoubles)
+            ...List.filled(wd, MatchType.womenDoubles),
+            ...List.filled(md, MatchType.menDoubles)
           ];
         }
       }
@@ -831,9 +842,9 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           if (score < minScore) {
             minScore = score;
             result = [
-              ...List.filled(md, MatchType.menDoubles),
               ...List.filled(wd, MatchType.womenDoubles),
-              ...List.filled(mix, MatchType.mixedDoubles)
+              ...List.filled(mix, MatchType.mixedDoubles),
+              ...List.filled(md, MatchType.menDoubles)
             ];
           }
         }

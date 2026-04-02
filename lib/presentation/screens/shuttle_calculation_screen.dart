@@ -160,6 +160,44 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     );
   }
 
+  void _showAddExpenseTypeSelector() {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text('費用種別を選択',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        )),
+              ),
+              ...ExpenseType.values.map((type) {
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: type.color.withOpacity(0.1),
+                    child: Icon(type.icon, color: type.color),
+                  ),
+                  title: Text(type.label,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _addExpenseType(type);
+                  },
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _addExpenseType(ExpenseType type) async {
     if (type != ExpenseType.shuttle) {
       setState(() {
@@ -392,7 +430,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   ],
                 ),
               ],
-          ),
+            ),
             body: LayoutBuilder(
               builder: (context, constraints) {
                 final contentWidth =
@@ -423,9 +461,11 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
             ),
             bottomSheet: _buildSummaryPanel(
                 totalAmount, maleShare, femaleShare, useCompactLayout),
-            floatingActionButton: _buildAddButtonMenu(),
-            floatingActionButtonLocation:
-                FloatingActionButtonLocation.centerFloat,
+            floatingActionButton: FloatingActionButton(
+              onPressed: _showAddExpenseTypeSelector,
+              tooltip: '費用を追加',
+              child: const Icon(Icons.add),
+            ),
           );
         });
   }
@@ -641,7 +681,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                 if (entry.shuttleCount > 0 &&
                                     entry.pricePerDozens > 0)
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 6, left: 4),
+                                    padding:
+                                        const EdgeInsets.only(top: 6, left: 4),
                                     child: Text(
                                       '(¥${(entry.pricePerDozens / 12).toStringAsFixed(1)}/個 × ${entry.shuttleCount}個) = ',
                                       style: TextStyle(
@@ -665,7 +706,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Expanded(child: _buildPayerDropdown(entry, activePlayers)),
+                          Expanded(
+                              child: _buildPayerDropdown(entry, activePlayers)),
                           const SizedBox(width: 8),
                           Text(
                             '¥${entry.total.toStringAsFixed(0)}',
@@ -682,90 +724,92 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                // 入力エリア (左側)
-                Expanded(
-                  flex: 65,
-                  child: entry.type == ExpenseType.shuttle
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: _compactTextField(
-                                    key: ValueKey('price_$index'),
-                                    label: '単価/ダース',
-                                    suffix: '円',
-                                    initialValue: entry.pricePerDozens > 0
-                                        ? entry.pricePerDozens
-                                            .toStringAsFixed(0)
-                                        : '',
-                                    onChanged: (v) => entry.pricePerDozens =
-                                        double.tryParse(v) ?? 0,
+                      // 入力エリア (左側)
+                      Expanded(
+                        flex: 65,
+                        child: entry.type == ExpenseType.shuttle
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 3,
+                                        child: _compactTextField(
+                                          key: ValueKey('price_$index'),
+                                          label: '単価/ダース',
+                                          suffix: '円',
+                                          initialValue: entry.pricePerDozens > 0
+                                              ? entry.pricePerDozens
+                                                  .toStringAsFixed(0)
+                                              : '',
+                                          onChanged: (v) =>
+                                              entry.pricePerDozens =
+                                                  double.tryParse(v) ?? 0,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        flex: 2,
+                                        child: _compactTextField(
+                                          key: ValueKey('count_$index'),
+                                          label: '数',
+                                          suffix: '個',
+                                          initialValue: entry.shuttleCount > 0
+                                              ? entry.shuttleCount.toString()
+                                              : '',
+                                          onChanged: (v) => entry.shuttleCount =
+                                              int.tryParse(v) ?? 0,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  flex: 2,
-                                  child: _compactTextField(
-                                    key: ValueKey('count_$index'),
-                                    label: '数',
-                                    suffix: '個',
-                                    initialValue: entry.shuttleCount > 0
-                                        ? entry.shuttleCount.toString()
-                                        : '',
-                                    onChanged: (v) => entry.shuttleCount =
-                                        int.tryParse(v) ?? 0,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (entry.shuttleCount > 0 &&
-                                entry.pricePerDozens > 0)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6, left: 4),
-                                child: Text(
-                                  '(¥${(entry.pricePerDozens / 12).toStringAsFixed(1)}/個 × ${entry.shuttleCount}個) = ',
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey.shade600,
-                                      fontStyle: FontStyle.italic),
-                                ),
+                                  if (entry.shuttleCount > 0 &&
+                                      entry.pricePerDozens > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 6, left: 4),
+                                      child: Text(
+                                        '(¥${(entry.pricePerDozens / 12).toStringAsFixed(1)}/個 × ${entry.shuttleCount}個) = ',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.grey.shade600,
+                                            fontStyle: FontStyle.italic),
+                                      ),
+                                    ),
+                                ],
+                              )
+                            : _compactTextField(
+                                key: ValueKey('amount_$index'),
+                                label: '金額',
+                                suffix: '円',
+                                initialValue: entry.amount > 0
+                                    ? entry.amount.toStringAsFixed(0)
+                                    : '',
+                                onChanged: (v) =>
+                                    entry.amount = double.tryParse(v) ?? 0,
                               ),
+                      ),
+                      const SizedBox(width: 8),
+                      // 支払人・小計エリア (右側)
+                      Expanded(
+                        flex: 35,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            _buildPayerDropdown(entry, activePlayers),
+                            const SizedBox(height: 4),
+                            Text(
+                              '¥${entry.total.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
                           ],
-                        )
-                      : _compactTextField(
-                          key: ValueKey('amount_$index'),
-                          label: '金額',
-                          suffix: '円',
-                          initialValue: entry.amount > 0
-                              ? entry.amount.toStringAsFixed(0)
-                              : '',
-                          onChanged: (v) =>
-                              entry.amount = double.tryParse(v) ?? 0,
-                        ),
-                ),
-                const SizedBox(width: 8),
-                // 支払人・小計エリア (右側)
-                Expanded(
-                  flex: 35,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _buildPayerDropdown(entry, activePlayers),
-                      const SizedBox(height: 4),
-                      Text(
-                        '¥${entry.total.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: theme.colorScheme.primary,
                         ),
                       ),
-                    ],
-                  ),
-                ),
                     ],
                   ),
           ],
@@ -857,37 +901,6 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     );
   }
 
-  Widget _buildAddButtonMenu() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: ExpenseType.values
-            .map((t) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: _typeAddButton(t),
-                ))
-            .toList(),
-      ),
-    );
-  }
-
-  Widget _typeAddButton(ExpenseType type) {
-    return ActionChip(
-      avatar: Icon(type.icon, size: 14, color: type.color),
-      label: Text(type.label,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-      padding: EdgeInsets.zero,
-      visualDensity: VisualDensity.compact,
-      onPressed: () => _addExpenseType(type),
-    );
-  }
-
   Widget _buildSummaryPanel(
       double total, double mShare, double fShare, bool useCompactLayout) {
     final theme = Theme.of(context);
@@ -926,21 +939,21 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   : Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                  // カテゴリ別内訳
-                  Expanded(
-                    flex: 5,
-                    child: _buildSummaryBreakdown(theme, typeTotals),
-                  ),
-                  Container(
-                      height: 30,
-                      width: 1,
-                      color: theme.colorScheme.outlineVariant,
-                      margin: const EdgeInsets.symmetric(horizontal: 16)),
-                  // 合計費用
-                  Expanded(
-                    flex: 4,
-                    child: _buildSummaryTotal(theme, total),
-                  ),
+                        // カテゴリ別内訳
+                        Expanded(
+                          flex: 5,
+                          child: _buildSummaryBreakdown(theme, typeTotals),
+                        ),
+                        Container(
+                            height: 30,
+                            width: 1,
+                            color: theme.colorScheme.outlineVariant,
+                            margin: const EdgeInsets.symmetric(horizontal: 16)),
+                        // 合計費用
+                        Expanded(
+                          flex: 4,
+                          child: _buildSummaryTotal(theme, total),
+                        ),
                       ],
                     ),
               const SizedBox(height: 12),
@@ -1026,8 +1039,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   padding: const EdgeInsets.only(bottom: 1),
                   child: Row(
                     children: [
-                      Icon(t.icon, size: 9, color: t.color.withValues(alpha: 0.7)),
-                      const SizedBox(width: 4),
+                  Icon(t.icon, size: 9, color: t.color.withValues(alpha: 0.7)),
+                  const SizedBox(width: 4),
                       Expanded(
                           child: Text(t.label,
                               style: const TextStyle(fontSize: 10))),
