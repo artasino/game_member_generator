@@ -459,8 +459,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                 );
               },
             ),
-            bottomSheet: _buildSummaryPanel(
-                totalAmount, maleShare, femaleShare, useCompactLayout),
+            bottomSheet: _buildSummaryPanel(totalAmount, maleShare, femaleShare,
+                useCompactLayout, activePlayers),
             floatingActionButton: FloatingActionButton(
               onPressed: _showAddExpenseTypeSelector,
               tooltip: '費用を追加',
@@ -901,8 +901,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     );
   }
 
-  Widget _buildSummaryPanel(
-      double total, double mShare, double fShare, bool useCompactLayout) {
+  Widget _buildSummaryPanel(double total, double mShare, double fShare,
+      bool useCompactLayout, List<Player> activePlayers) {
     final theme = Theme.of(context);
     final mRound = (mShare / 100).ceil() * 100;
     final fRound = (fShare / 100).ceil() * 100;
@@ -911,6 +911,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     for (var entry in _entries) {
       typeTotals[entry.type] = (typeTotals[entry.type] ?? 0) + entry.total;
     }
+    final payerTotals = _buildPayerTotals(activePlayers);
 
     return Container(
       decoration: BoxDecoration(
@@ -933,6 +934,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                       children: [
                         _buildSummaryBreakdown(theme, typeTotals),
                         const SizedBox(height: 10),
+                        _buildPayerSummary(theme, payerTotals),
+                        const SizedBox(height: 10),
                         _buildSummaryTotal(theme, total),
                       ],
                     )
@@ -942,7 +945,14 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                         // カテゴリ別内訳
                         Expanded(
                           flex: 5,
-                          child: _buildSummaryBreakdown(theme, typeTotals),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSummaryBreakdown(theme, typeTotals),
+                              const SizedBox(height: 10),
+                              _buildPayerSummary(theme, payerTotals),
+                            ],
+                          ),
                         ),
                         Container(
                             height: 30,
@@ -1062,6 +1072,58 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
         Text("¥${total.toStringAsFixed(0)}",
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+      ],
+    );
+  }
+
+  Map<String, double> _buildPayerTotals(List<Player> activePlayers) {
+    final nameById = {for (final p in activePlayers) p.id: p.name};
+    final Map<String, double> payerTotals = {};
+
+    for (final entry in _entries) {
+      final payerName = nameById[entry.payerId] ?? 'なし';
+      payerTotals[payerName] = (payerTotals[payerName] ?? 0) + entry.total;
+    }
+
+    return Map.fromEntries(
+      payerTotals.entries.toList()
+        ..sort((a, b) {
+          if (a.key == 'なし') return 1;
+          if (b.key == 'なし') return -1;
+          return a.key.compareTo(b.key);
+        }),
+    );
+  }
+
+  Widget _buildPayerSummary(ThemeData theme, Map<String, double> payerTotals) {
+    if (payerTotals.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("支払人別",
+            style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary)),
+        const SizedBox(height: 4),
+        ...payerTotals.entries
+            .where((entry) => entry.value > 0)
+            .map((entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 1),
+                  child: Row(
+                    children: [
+                      Expanded(
+                          child: Text(entry.key,
+                              style: const TextStyle(fontSize: 10))),
+                      Text("¥${entry.value.toStringAsFixed(0)}",
+                          style: const TextStyle(
+                              fontSize: 10, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                )),
       ],
     );
   }
