@@ -373,7 +373,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         OutlinedButton.icon(
           onPressed: () => _showBulkParticipationTypeSelector(context),
           icon: const Icon(Icons.groups),
-          label: const Text('複数登録/解除'),
+          label: const Text('参加メンバ編集'),
         ),
       ],
     );
