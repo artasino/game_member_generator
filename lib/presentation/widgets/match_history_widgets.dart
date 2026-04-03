@@ -77,8 +77,10 @@ class GamesArea extends StatelessWidget {
     final int count = session.games.length;
     final double spacing = MatchHistoryLayoutTokens.gameCardSpacing * scale;
     final int cross = _calculateCrossAxisCount(count, spacing);
-    final double cardWidth =
+    final double baseCardWidth =
         _calculateCardWidth(cross, spacing).clamp(0, _maxCardWidth);
+    final double cardWidth =
+        _calculateContentAwareCardWidth(baseCardWidth).clamp(0, _maxCardWidth);
     _logLayoutMetrics(gameCount: count, columns: cross, cardWidth: cardWidth);
 
     return Wrap(
@@ -145,6 +147,29 @@ class GamesArea extends StatelessWidget {
       MatchHistoryLayoutTokens.maxCardWidthLarge,
       t,
     )!;
+  }
+
+  double _calculateContentAwareCardWidth(double baseCardWidth) {
+    final int longestNameLength = session.games
+        .expand((g) => [
+              g.teamA.player1.name,
+              g.teamA.player2.name,
+              g.teamB.player1.name,
+              g.teamB.player2.name,
+            ])
+        .map((name) => name.length)
+        .fold(0, max);
+
+    final double contentFactor =
+        (longestNameLength / MatchHistoryLayoutTokens.longNameWarningLength)
+            .clamp(0.0, 1.0);
+    final double preferredWidth = lerpDouble(
+      MatchHistoryLayoutTokens.minCardWidthBase,
+      MatchHistoryLayoutTokens.maxCardWidthBase,
+      contentFactor,
+    )!;
+
+    return ((baseCardWidth + preferredWidth) / 2).clamp(_minCardWidth, _maxCardWidth);
   }
 
   void _logLayoutMetrics({
@@ -229,26 +254,32 @@ class GameCard extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                   ),
                 Expanded(
-                  child: TeamColumn(
-                    team: game.teamA,
-                    pairCount: pairCountA,
-                    scale: scale,
-                    selectedPlayer: selectedPlayer,
-                    onPlayerTap: onPlayerTap,
-                    onPlayerLongPress: onPlayerLongPress,
-                    showPairInfo: showPairInfo && !isPortrait,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: TeamColumn(
+                      team: game.teamA,
+                      pairCount: pairCountA,
+                      scale: scale,
+                      selectedPlayer: selectedPlayer,
+                      onPlayerTap: onPlayerTap,
+                      onPlayerLongPress: onPlayerLongPress,
+                      showPairInfo: showPairInfo && !isPortrait,
+                    ),
                   ),
                 ),
                 _VSDivider(scale: scale),
                 Expanded(
-                  child: TeamColumn(
-                    team: game.teamB,
-                    pairCount: pairCountB,
-                    scale: scale,
-                    selectedPlayer: selectedPlayer,
-                    onPlayerTap: onPlayerTap,
-                    onPlayerLongPress: onPlayerLongPress,
-                    showPairInfo: showPairInfo && !isPortrait,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: TeamColumn(
+                      team: game.teamB,
+                      pairCount: pairCountB,
+                      scale: scale,
+                      selectedPlayer: selectedPlayer,
+                      onPlayerTap: onPlayerTap,
+                      onPlayerLongPress: onPlayerLongPress,
+                      showPairInfo: showPairInfo && !isPortrait,
+                    ),
                   ),
                 ),
                 if (isPortrait && showPairInfo)
@@ -337,7 +368,7 @@ class _VSDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+      padding: EdgeInsets.symmetric(horizontal: 4 * scale),
       child: Column(
         children: [
           Text(
