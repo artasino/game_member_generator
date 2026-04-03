@@ -897,7 +897,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           double score =
               pow((mg + md * 4 + mix * 2) / m - (fg + wd * 4 + mix * 2) / f, 2)
                   .toDouble();
-          if (score < minScore) {
+          if (score < minScore || (md + wd + mix) > result.length) {
             minScore = score;
             result = [
               ...List.filled(wd, MatchType.womenDoubles),
