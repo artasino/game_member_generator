@@ -949,6 +949,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     final payerTotals = _buildPayerTotals(activePlayers);
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 76),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -1059,7 +1060,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     final payerTotals = _buildPayerTotals(activePlayers);
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(0, 8, 16, 12),
+      margin: const EdgeInsets.fromLTRB(0, 8, 16, 84),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
