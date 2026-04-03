@@ -71,6 +71,20 @@ class PlayerNotifier extends ChangeNotifier {
     await updatePlayer(player.copyWith(isActive: !player.isActive));
   }
 
+  Future<int> setActiveBulk(List<String> ids, bool isActive) async {
+    final uniqueIds = ids.toSet();
+    int updated = 0;
+    for (final player in _players) {
+      if (!uniqueIds.contains(player.id) || player.isActive == isActive) {
+        continue;
+      }
+      await repository.update(player.copyWith(isActive: isActive));
+      updated++;
+    }
+    await _refresh();
+    return updated;
+  }
+
   Future<void> removePlayer(String id) async {
     await repository.remove(id);
     await _refresh();

@@ -234,14 +234,11 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-          if (activeMales.isNotEmpty || activeFemales.isNotEmpty) ...[
-            AppSectionHeader(
-              title: '本日の参加メンバ',
-              subtitle:
-                  '計${activeMales.length + activeFemales.length}名 (男${activeMales.length} 女${activeFemales.length})',
-            ),
-            const SizedBox(height: 12),
-                  useSingleColumn
+                  _buildTodayMemberHeader(
+                      activeMales.length, activeFemales.length),
+                  const SizedBox(height: 12),
+                  if (activeMales.isNotEmpty || activeFemales.isNotEmpty) ...[
+                    useSingleColumn
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -300,22 +297,22 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                             ),
                           ],
                         ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12.0),
-              child: Divider(),
-            ),
-          ],
-          const AppSectionHeader(title: '全メンバ', subtitle: '五十音順'),
-          const SizedBox(height: 16),
-          if (maleLabels.isEmpty && femaleLabels.isEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: Center(
-                child: Text('該当するメンバが見つかりません',
-                    style: TextStyle(color: Colors.grey)),
-              ),
-            )
-          ] else ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12.0),
+                      child: Divider(),
+                    ),
+                  ],
+                  const AppSectionHeader(title: '全メンバ', subtitle: '五十音順'),
+                  const SizedBox(height: 16),
+                  if (maleLabels.isEmpty && femaleLabels.isEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32),
+                      child: Center(
+                        child: Text('該当するメンバが見つかりません',
+                            style: TextStyle(color: Colors.grey)),
+                      ),
+                    )
+                  ] else ...[
                     useSingleColumn
                         ? Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,7 +337,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                               ),
                             ],
                           ),
-          ],
+                  ],
                 ],
               ),
             ),
@@ -360,6 +357,26 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       grouped.putIfAbsent(label, () => []).add(p);
     }
     return grouped;
+  }
+
+  Widget _buildTodayMemberHeader(int activeMalesCount, int activeFemalesCount) {
+    final totalCount = activeMalesCount + activeFemalesCount;
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 12,
+      runSpacing: 8,
+      children: [
+        AppSectionHeader(
+          title: '本日の参加メンバ',
+          subtitle: '計$totalCount名 (男$activeMalesCount 女$activeFemalesCount)',
+        ),
+        OutlinedButton.icon(
+          onPressed: () => _showBulkParticipationTypeSelector(context),
+          icon: const Icon(Icons.groups),
+          label: const Text('参加メンバ編集'),
+        ),
+      ],
+    );
   }
 
   Widget _buildGroupedList(Map<String, List<PlayerWithStats>> grouped,
@@ -1193,6 +1210,164 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               ],
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showBulkParticipationDialog(BuildContext context,
+      {required bool isToActivate}) {
+    final queryController = TextEditingController();
+    final selectedIds = <String>{};
+    String query = '';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final candidates = widget.notifier.players.where((p) {
+              if (p.isActive == isToActivate) return false;
+              if (query.isEmpty) return true;
+              return p.name.contains(query) || p.yomigana.contains(query);
+            }).toList()
+              ..sort((a, b) => a.yomigana.compareTo(b.yomigana));
+
+            return AlertDialog(
+              title: Text(isToActivate ? '参加メンバに複数登録' : '参加メンバを複数解除',
+                  style: const TextStyle(fontWeight: FontWeight.w900)),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: queryController,
+                      decoration: const InputDecoration(
+                        hintText: '名前・よみがなで検索',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (v) => setState(() => query = v.trim()),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${isToActivate ? '登録対象' : '解除対象'}: ${selectedIds.length}名',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Flexible(
+                      child: candidates.isEmpty
+                          ? Center(
+                              child: Text(
+                                isToActivate
+                                    ? '登録可能なメンバがいません'
+                                    : '解除可能なメンバがいません',
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: candidates.length,
+                              itemBuilder: (context, index) {
+                                final p = candidates[index];
+                                final checked = selectedIds.contains(p.id);
+                                return CheckboxListTile(
+                                  dense: true,
+                                  value: checked,
+                                  title: Text(p.name),
+                                  subtitle: Text(p.yomigana),
+                                  onChanged: (v) {
+                                    setState(() {
+                                      if (v == true) {
+                                        selectedIds.add(p.id);
+                                      } else {
+                                        selectedIds.remove(p.id);
+                                      }
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                AppActionButton(
+                  label: 'キャンセル',
+                  onPressed: () => Navigator.pop(context),
+                  isPrimary: false,
+                ),
+                AppActionButton(
+                  label: isToActivate ? '登録' : '解除',
+                  onPressed: selectedIds.isEmpty
+                      ? null
+                      : () async {
+                          final updated = await widget.notifier
+                              .setActiveBulk(selectedIds.toList(), isToActivate);
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(isToActivate
+                                  ? '$updated名を参加メンバに登録しました'
+                                  : '$updated名を参加メンバから解除しました'),
+                            ),
+                          );
+                        },
+                  isPrimary: true,
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showBulkParticipationTypeSelector(BuildContext parentContext) {
+    showDialog(
+      context: parentContext,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('参加メンバを一括設定',
+              style: TextStyle(fontWeight: FontWeight.w900)),
+          contentPadding: const EdgeInsets.only(top: 8),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.group_add),
+                title: const Text('複数登録'),
+                subtitle: const Text('選択したメンバを参加にします'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showBulkParticipationDialog(parentContext, isToActivate: true);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.group_remove),
+                title: const Text('複数解除'),
+                subtitle: const Text('選択したメンバを不参加にします'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showBulkParticipationDialog(parentContext, isToActivate: false);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            AppActionButton(
+              label: '閉じる',
+              isPrimary: false,
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
         );
       },
     );
