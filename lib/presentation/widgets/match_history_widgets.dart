@@ -888,7 +888,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     for (int mix = 0; mix <= 1; mix++) {
       for (int md = 0; md <= maxM; md++) {
         for (int wd = 0; wd <= maxF; wd++) {
-          if (md + wd + mix != autoCourtCount) {
+          if (md + wd + mix > autoCourtCount) {
             continue;
           }
           if (md * 4 + mix * 2 > m || wd * 4 + mix * 2 > f) {
@@ -897,7 +897,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           double score =
               pow((mg + md * 4 + mix * 2) / m - (fg + wd * 4 + mix * 2) / f, 2)
                   .toDouble();
-          if (score < minScore) {
+          if (score < minScore || (md + wd + mix) > result.length) {
             minScore = score;
             result = [
               ...List.filled(wd, MatchType.womenDoubles),
