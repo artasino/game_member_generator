@@ -1071,10 +1071,6 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildSummaryBreakdown(theme, typeTotals),
-          const SizedBox(height: 10),
-          _buildPayerSummary(theme, payerTotals),
-          const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
             child: SizedBox(
@@ -1082,8 +1078,6 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  _buildSummaryTotal(theme, total, alignEnd: true),
-                  const SizedBox(height: 10),
                   if (!_useGenderSplit)
                     _resultBox(
                         "集金額 (一人あたり)", mRound, theme.colorScheme.primary,
@@ -1100,10 +1094,16 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                 "女子集金", fRound, Colors.pink.shade800)),
                       ],
                     ),
+                  const SizedBox(height: 10),
+                  _buildSummaryTotal(theme, total, alignEnd: true),
                 ],
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          _buildSummaryBreakdown(theme, typeTotals),
+          const SizedBox(height: 10),
+          _buildPayerSummary(theme, payerTotals),
         ],
       ),
     );
