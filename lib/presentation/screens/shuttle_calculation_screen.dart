@@ -84,6 +84,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   final List<ExpenseEntry> _entries = [];
 
   bool _useGenderSplit = false; // true: 男女ごとに計算, false: 全体化
+  bool _showCompactDetails = false;
 
   Future<void> _saveRecord() async {
     final sessions = widget.sessionNotifier.sessions;
@@ -463,7 +464,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                     width: contentWidth,
                     child: showSideSummary
                         ? Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: inputArea(
@@ -966,11 +967,33 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSummaryBreakdown(theme, typeTotals),
-                        const SizedBox(height: 10),
-                        _buildPayerSummary(theme, payerTotals),
-                        const SizedBox(height: 10),
-                        _buildSummaryTotal(theme, total),
+                        Row(
+                          children: [
+                            Expanded(child: _buildSummaryTotal(theme, total)),
+                            TextButton.icon(
+                              onPressed: () => setState(() {
+                                _showCompactDetails = !_showCompactDetails;
+                              }),
+                              icon: Icon(
+                                _showCompactDetails
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                size: 16,
+                              ),
+                              label: Text(
+                                _showCompactDetails ? '内訳を隠す' : '内訳を見る',
+                                style: const TextStyle(
+                                    fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_showCompactDetails) ...[
+                          const SizedBox(height: 8),
+                          _buildSummaryBreakdown(theme, typeTotals),
+                          const SizedBox(height: 10),
+                          _buildPayerSummary(theme, payerTotals),
+                        ],
                       ],
                     )
                   : Row(
@@ -1045,31 +1068,43 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 2))
         ],
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildSummaryBreakdown(theme, typeTotals),
-            const SizedBox(height: 10),
-            _buildPayerSummary(theme, payerTotals),
-            const SizedBox(height: 10),
-            _buildSummaryTotal(theme, total),
-            const SizedBox(height: 12),
-            if (!_useGenderSplit)
-              _resultBox("集金額 (一人あたり)", mRound, theme.colorScheme.primary,
-                  isLarge: true)
-            else
-              Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildSummaryBreakdown(theme, typeTotals),
+          const SizedBox(height: 10),
+          _buildPayerSummary(theme, payerTotals),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(
+              width: 230,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Expanded(
-                      child: _resultBox("男子集金", mRound, Colors.blue.shade800)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                      child: _resultBox("女子集金", fRound, Colors.pink.shade800)),
+                  _buildSummaryTotal(theme, total, alignEnd: true),
+                  const SizedBox(height: 10),
+                  if (!_useGenderSplit)
+                    _resultBox(
+                        "集金額 (一人あたり)", mRound, theme.colorScheme.primary,
+                        isLarge: true)
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                            child: _resultBox(
+                                "男子集金", mRound, Colors.blue.shade800)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: _resultBox(
+                                "女子集金", fRound, Colors.pink.shade800)),
+                      ],
+                    ),
                 ],
               ),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1149,9 +1184,11 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     );
   }
 
-  Widget _buildSummaryTotal(ThemeData theme, double total) {
+  Widget _buildSummaryTotal(ThemeData theme, double total,
+      {bool alignEnd = true}) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment:
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
         const Text("総額",
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
