@@ -90,7 +90,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       p.player.yomigana.contains(_searchQuery))
                   .toList();
 
-          return _buildPlayerList(filteredPool, theme);
+          return _buildPlayerList(filteredPool, pool.all, theme);
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -197,7 +197,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     );
   }
 
-  Widget _buildPlayerList(List<PlayerWithStats> filteredPool, ThemeData theme) {
+  Widget _buildPlayerList(
+      List<PlayerWithStats> filteredPool, List<PlayerWithStats> allPool, ThemeData theme) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final bool useSingleColumn = screenWidth < 900;
 
@@ -234,78 +235,82 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-          if (activeMales.isNotEmpty || activeFemales.isNotEmpty) ...[
-            AppSectionHeader(
-              title: '本日の参加メンバ',
-              subtitle:
-                  '計${activeMales.length + activeFemales.length}名 (男${activeMales.length} 女${activeFemales.length})',
-            ),
-            const SizedBox(height: 12),
-                  useSingleColumn
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (activeMales.isNotEmpty) ...[
-                              GenderLabel(
-                                label: '男性 ${activeMales.length}名',
-                                color: Colors.blue,
-                              ),
-                              const SizedBox(height: 8),
-                              _buildWrap(activeMales, showStats: true),
-                              const SizedBox(height: 16),
+                  const AppSectionHeader(title: '本日の参加メンバ'),
+                  const SizedBox(height: 8),
+                  _buildBulkParticipationActions(
+                    allPool,
+                    summaryText:
+                        '計${activeMales.length + activeFemales.length}名 (男${activeMales.length} 女${activeFemales.length})',
+                  ),
+                  const SizedBox(height: 12),
+                  if (activeMales.isNotEmpty || activeFemales.isNotEmpty)
+                    useSingleColumn
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (activeMales.isNotEmpty) ...[
+                                GenderLabel(
+                                  label: '男性 ${activeMales.length}名',
+                                  color: Colors.blue,
+                                ),
+                                const SizedBox(height: 8),
+                                _buildWrap(activeMales, showStats: true),
+                                const SizedBox(height: 16),
+                              ],
+                              if (activeFemales.isNotEmpty) ...[
+                                GenderLabel(
+                                  label: '女性 ${activeFemales.length}名',
+                                  color: Colors.pink,
+                                ),
+                                const SizedBox(height: 8),
+                                _buildWrap(activeFemales, showStats: true),
+                              ],
                             ],
-                            if (activeFemales.isNotEmpty) ...[
-                              GenderLabel(
-                                label: '女性 ${activeFemales.length}名',
-                                color: Colors.pink,
+                          )
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (activeMales.isNotEmpty) ...[
+                                      GenderLabel(
+                                        label: '男性 ${activeMales.length}名',
+                                        color: Colors.blue,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildWrap(activeMales, showStats: true),
+                                    ],
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 8),
-                              _buildWrap(activeFemales, showStats: true),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (activeFemales.isNotEmpty) ...[
+                                      GenderLabel(
+                                        label: '女性 ${activeFemales.length}名',
+                                        color: Colors.pink,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildWrap(activeFemales, showStats: true),
+                                    ],
+                                  ],
+                                ),
+                              ),
                             ],
-                          ],
-                        )
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (activeMales.isNotEmpty) ...[
-                                    GenderLabel(
-                                      label: '男性 ${activeMales.length}名',
-                                      color: Colors.blue,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildWrap(activeMales, showStats: true),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (activeFemales.isNotEmpty) ...[
-                                    GenderLabel(
-                                      label: '女性 ${activeFemales.length}名',
-                                      color: Colors.pink,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildWrap(activeFemales, showStats: true),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12.0),
-              child: Divider(),
-            ),
-          ],
-          const AppSectionHeader(title: '全メンバ', subtitle: '五十音順'),
+                          )
+                  else
+                    const Text('参加メンバはいません',
+                        style: TextStyle(color: Colors.grey)),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12.0),
+                    child: Divider(),
+                  ),
+                  const AppSectionHeader(title: '全メンバ', subtitle: '五十音順'),
           const SizedBox(height: 16),
           if (maleLabels.isEmpty && femaleLabels.isEmpty) ...[
             const Padding(
@@ -523,6 +528,89 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 if (context.mounted) Navigator.pop(context);
               },
               isPrimary: true,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildBulkParticipationActions(List<PlayerWithStats> allPool,
+      {required String summaryText}) {
+    final allPlayers = allPool.map((p) => p.player).toList();
+    final hasInactive = allPlayers.any((p) => !p.isActive);
+    final hasActive = allPlayers.any((p) => p.isActive);
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          summaryText,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Colors.grey.shade600,
+              ),
+        ),
+        OutlinedButton.icon(
+          onPressed: hasInactive
+              ? () => _showBulkParticipationDialog(allPlayers, true)
+              : null,
+          icon: const Icon(Icons.group_add),
+          label: const Text('一括登録'),
+        ),
+        OutlinedButton.icon(
+          onPressed:
+              hasActive ? () => _showBulkParticipationDialog(allPlayers, false) : null,
+          icon: const Icon(Icons.group_off),
+          label: const Text('一括解除'),
+        ),
+      ],
+    );
+  }
+
+  void _showBulkParticipationDialog(List<Player> allPlayers, bool activate) {
+    final targetPlayers = allPlayers
+        .where((p) => p.isActive != activate)
+        .toList(growable: false);
+    if (targetPlayers.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            activate ? '参加メンバを一括登録' : '参加メンバを一括解除',
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+          content: Text(
+            activate
+                ? '${targetPlayers.length}名を今日の参加メンバに登録しますか？'
+                : '${targetPlayers.length}名を今日の参加メンバから解除しますか？',
+          ),
+          actions: [
+            AppActionButton(
+              label: 'キャンセル',
+              onPressed: () => Navigator.pop(context),
+              isPrimary: false,
+            ),
+            AppActionButton(
+              label: 'OK',
+              onPressed: () async {
+                final updated = await widget.notifier
+                    .setPlayersActiveBulk(targetPlayers, activate);
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      activate
+                          ? '$updated名を参加メンバに登録しました'
+                          : '$updated名を参加メンバから解除しました',
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         );
