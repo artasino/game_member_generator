@@ -433,34 +433,63 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
             ),
             body: LayoutBuilder(
               builder: (context, constraints) {
-                final contentWidth =
-                    constraints.maxWidth.clamp(0.0, 1100.0).toDouble();
+                final bool showSideSummary = !useCompactLayout;
+                final contentWidth = constraints.maxWidth
+                    .clamp(0.0, showSideSummary ? 1320.0 : 1100.0)
+                    .toDouble();
+
+                Widget inputArea({required EdgeInsets listPadding}) {
+                  return Column(
+                    children: [
+                      _buildInfoBar(maleCount, femaleCount, totalCount),
+                      _buildModeSelectorHeader(),
+                      _buildConsumptionSpeedBanner(totalGames, typeCounts,
+                          speedTotal, speedMale, speedFemale),
+                      Expanded(
+                        child: ListView.builder(
+                          padding: listPadding,
+                          itemCount: _entries.length,
+                          itemBuilder: (context, index) => _buildExpenseCard(
+                              index, activePlayers, useCompactLayout),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
                 return Align(
                   alignment: Alignment.topCenter,
                   child: SizedBox(
                     width: contentWidth,
-                    child: Column(
-                      children: [
-                        _buildInfoBar(maleCount, femaleCount, totalCount),
-                        _buildModeSelectorHeader(),
-                        _buildConsumptionSpeedBanner(totalGames, typeCounts,
-                            speedTotal, speedMale, speedFemale),
-                        Expanded(
-                          child: ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
-                            itemCount: _entries.length,
-                            itemBuilder: (context, index) => _buildExpenseCard(
-                                index, activePlayers, useCompactLayout),
+                    child: showSideSummary
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: inputArea(
+                                  listPadding:
+                                      const EdgeInsets.fromLTRB(16, 4, 12, 16),
+                                ),
+                              ),
+                              SizedBox(
+                                width: 360,
+                                child: _buildSideSummaryPanel(totalAmount,
+                                    maleShare, femaleShare, activePlayers),
+                              ),
+                            ],
+                          )
+                        : inputArea(
+                            listPadding:
+                                const EdgeInsets.fromLTRB(16, 4, 16, 120),
                           ),
-                        ),
-                      ],
-                    ),
                   ),
                 );
               },
             ),
-            bottomSheet: _buildSummaryPanel(totalAmount, maleShare, femaleShare,
-                useCompactLayout, activePlayers),
+            bottomSheet: useCompactLayout
+                ? _buildSummaryPanel(totalAmount, maleShare, femaleShare,
+                    useCompactLayout, activePlayers)
+                : null,
             floatingActionButton: FloatingActionButton(
               onPressed: _showAddExpenseTypeSelector,
               tooltip: '費用を追加',
@@ -984,6 +1013,57 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSideSummaryPanel(double total, double mShare, double fShare,
+      List<Player> activePlayers) {
+    final theme = Theme.of(context);
+    final mRound = (mShare / 100).ceil() * 100;
+    final fRound = (fShare / 100).ceil() * 100;
+
+    final Map<ExpenseType, double> typeTotals = {};
+    for (var entry in _entries) {
+      typeTotals[entry.type] = (typeTotals[entry.type] ?? 0) + entry.total;
+    }
+    final payerTotals = _buildPayerTotals(activePlayers);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(0, 8, 16, 12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 2))
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildSummaryBreakdown(theme, typeTotals),
+            const SizedBox(height: 10),
+            _buildPayerSummary(theme, payerTotals),
+            const SizedBox(height: 10),
+            _buildSummaryTotal(theme, total),
+            const SizedBox(height: 12),
+            if (!_useGenderSplit)
+              _resultBox("集金額 (一人あたり)", mRound, theme.colorScheme.primary,
+                  isLarge: true)
+            else
+              Row(
+                children: [
+                  Expanded(
+                      child: _resultBox("男子集金", mRound, Colors.blue.shade800)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: _resultBox("女子集金", fRound, Colors.pink.shade800)),
+                ],
+              ),
+          ],
         ),
       ),
     );
