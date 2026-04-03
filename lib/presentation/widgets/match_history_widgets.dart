@@ -154,7 +154,7 @@ class GamesArea extends StatelessWidget {
   }) {
     final bool shouldLog =
         screenWidth <= MatchHistoryLayoutTokens.extremeNarrowWidth ||
-        screenWidth >= MatchHistoryLayoutTokens.extremeWideWidth;
+            screenWidth >= MatchHistoryLayoutTokens.extremeWideWidth;
     if (!shouldLog) return;
 
     assert(() {
@@ -862,9 +862,11 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     List<MatchType> result = [];
     for (int md = 0; md <= maxM; md++) {
       for (int wd = 0; wd <= maxF; wd++) {
-        if (md + wd != autoCourtCount) continue;
+        if (md + wd > autoCourtCount) {
+          continue;
+        }
         double score = pow((mg + md * 4) / m - (fg + wd * 4) / f, 2).toDouble();
-        if (score < minScore) {
+        if (score < minScore || (md + wd) > result.length) {
           minScore = score;
           result = [
             ...List.filled(wd, MatchType.womenDoubles),
@@ -880,10 +882,18 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
       double m, double f, int mg, int fg, int maxM, int maxF, int maxMix) {
     double minScore = double.infinity;
     List<MatchType> result = [];
-    for (int mix = 0; mix <= maxMix; mix++) {
+    if (maxMix == 0) {
+      return _recommendGenderSeparated(m, f, mg, fg, maxM, maxF);
+    }
+    for (int mix = 0; mix <= 1; mix++) {
       for (int md = 0; md <= maxM; md++) {
         for (int wd = 0; wd <= maxF; wd++) {
-          if (md + wd + mix != autoCourtCount) continue;
+          if (md + wd + mix != autoCourtCount) {
+            continue;
+          }
+          if (md * 4 + mix * 2 > m || wd * 4 + mix * 2 > f) {
+            continue;
+          }
           double score =
               pow((mg + md * 4 + mix * 2) / m - (fg + wd * 4 + mix * 2) / f, 2)
                   .toDouble();
