@@ -32,11 +32,14 @@ class SharedPreferencesCourtSettingsRepository
         .toList();
     final autoCourtCount = (map['autoCourtCount'] as int?) ?? 2;
     final autoCourtPolicyIndex = (map['autoCourtPolicy'] as int?) ?? 1;
+    final isAutoRecommendMode =
+        (map['isAutoRecommendMode'] as bool?) ?? false;
 
     return CourtSettings(
       types.isEmpty ? [MatchType.menDoubles] : types,
       autoCourtCount: autoCourtCount,
       autoCourtPolicy: AutoCourtPolicy.values[autoCourtPolicyIndex],
+      isAutoRecommendMode: isAutoRecommendMode,
     );
   }
 
@@ -47,6 +50,7 @@ class SharedPreferencesCourtSettingsRepository
       'matchTypes': settings.matchTypes.map((t) => t.index).toList(),
       'autoCourtCount': settings.autoCourtCount,
       'autoCourtPolicy': settings.autoCourtPolicy.index,
+      'isAutoRecommendMode': settings.isAutoRecommendMode,
     };
     await prefs.setString(_settingsKey, jsonEncode(payload));
   }
