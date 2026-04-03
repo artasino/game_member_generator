@@ -196,6 +196,8 @@ class GameCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final bool isPortrait =
+        MediaQuery.of(context).orientation == Orientation.portrait;
 
     final p1Stats =
         pool.all.where((p) => p.player.id == game.teamA.player1.id).firstOrNull;
@@ -220,6 +222,12 @@ class GameCard extends StatelessWidget {
                 MatchHistoryLayoutTokens.cardBodyPadding * scale),
             child: Row(
               children: [
+                if (isPortrait && showPairInfo)
+                  _SidePairInfo(
+                    count: pairCountA,
+                    scale: scale,
+                    alignment: Alignment.centerLeft,
+                  ),
                 Expanded(
                   child: TeamColumn(
                     team: game.teamA,
@@ -228,7 +236,7 @@ class GameCard extends StatelessWidget {
                     selectedPlayer: selectedPlayer,
                     onPlayerTap: onPlayerTap,
                     onPlayerLongPress: onPlayerLongPress,
-                    showPairInfo: showPairInfo,
+                    showPairInfo: showPairInfo && !isPortrait,
                   ),
                 ),
                 _VSDivider(scale: scale),
@@ -240,9 +248,15 @@ class GameCard extends StatelessWidget {
                     selectedPlayer: selectedPlayer,
                     onPlayerTap: onPlayerTap,
                     onPlayerLongPress: onPlayerLongPress,
-                    showPairInfo: showPairInfo,
+                    showPairInfo: showPairInfo && !isPortrait,
                   ),
                 ),
+                if (isPortrait && showPairInfo)
+                  _SidePairInfo(
+                    count: pairCountB,
+                    scale: scale,
+                    alignment: Alignment.centerRight,
+                  ),
               ],
             ),
           ),
@@ -284,6 +298,38 @@ class GameCard extends StatelessWidget {
             scale: scale,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SidePairInfo extends StatelessWidget {
+  final int count;
+  final double scale;
+  final Alignment alignment;
+
+  const _SidePairInfo({
+    required this.count,
+    required this.scale,
+    required this.alignment,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 22 * scale,
+      child: Align(
+        alignment: alignment,
+        child: count > 0
+            ? FittedBox(
+                fit: BoxFit.scaleDown,
+                child: PairInfoLabel(
+                  count: count,
+                  scale: scale * 0.85,
+                  showIcon: false,
+                ),
+              )
+            : const SizedBox.shrink(),
       ),
     );
   }
@@ -600,15 +646,21 @@ class RestingChip extends StatelessWidget {
 class PairInfoLabel extends StatelessWidget {
   final int count;
   final double scale;
+  final bool showIcon;
 
-  const PairInfoLabel({super.key, required this.count, required this.scale});
+  const PairInfoLabel({
+    super.key,
+    required this.count,
+    required this.scale,
+    this.showIcon = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     return AppBadge(
       label: '$count',
       color: count > 1 ? Colors.orange.shade700 : Colors.grey,
-      icon: Icons.people_alt_outlined,
+      icon: showIcon ? Icons.people_alt_outlined : null,
       scale: scale,
     );
   }
