@@ -371,15 +371,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           subtitle: '計$totalCount名 (男$activeMalesCount 女$activeFemalesCount)',
         ),
         OutlinedButton.icon(
-          onPressed: () => _showBulkParticipationDialog(context, isToActivate: true),
-          icon: const Icon(Icons.group_add),
-          label: const Text('複数登録'),
-        ),
-        OutlinedButton.icon(
-          onPressed: () =>
-              _showBulkParticipationDialog(context, isToActivate: false),
-          icon: const Icon(Icons.group_remove),
-          label: const Text('複数解除'),
+          onPressed: () => _showBulkParticipationTypeSelector(context),
+          icon: const Icon(Icons.groups),
+          label: const Text('複数登録/解除'),
         ),
       ],
     );
@@ -1331,6 +1325,49 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               ],
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showBulkParticipationTypeSelector(BuildContext parentContext) {
+    showDialog(
+      context: parentContext,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('参加メンバを一括設定',
+              style: TextStyle(fontWeight: FontWeight.w900)),
+          contentPadding: const EdgeInsets.only(top: 8),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.group_add),
+                title: const Text('複数登録'),
+                subtitle: const Text('選択したメンバを参加にします'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showBulkParticipationDialog(parentContext, isToActivate: true);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.group_remove),
+                title: const Text('複数解除'),
+                subtitle: const Text('選択したメンバを不参加にします'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showBulkParticipationDialog(parentContext, isToActivate: false);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            AppActionButton(
+              label: '閉じる',
+              isPrimary: false,
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
         );
       },
     );
