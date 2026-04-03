@@ -478,18 +478,23 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                               ),
                             ],
                           )
-                        : inputArea(
-                            listPadding:
-                                const EdgeInsets.fromLTRB(16, 4, 16, 120),
+                        : Column(
+                            children: [
+                              Expanded(
+                                child: inputArea(
+                                  listPadding:
+                                      const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                                ),
+                              ),
+                              _buildSummaryPanel(totalAmount, maleShare,
+                                  femaleShare, useCompactLayout, activePlayers),
+                            ],
                           ),
                   ),
                 );
               },
             ),
-            bottomSheet: useCompactLayout
-                ? _buildSummaryPanel(totalAmount, maleShare, femaleShare,
-                    useCompactLayout, activePlayers)
-                : null,
+            bottomSheet: null,
             floatingActionButton: FloatingActionButton(
               onPressed: _showAddExpenseTypeSelector,
               tooltip: '費用を追加',
