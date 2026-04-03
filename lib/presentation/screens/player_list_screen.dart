@@ -55,6 +55,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
             : const Text('メンバ一覧'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
+        centerTitle: true,
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
