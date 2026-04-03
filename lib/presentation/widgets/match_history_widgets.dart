@@ -888,7 +888,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     for (int mix = 0; mix <= 1; mix++) {
       for (int md = 0; md <= maxM; md++) {
         for (int wd = 0; wd <= maxF; wd++) {
-          if (md + wd + mix != autoCourtCount) {
+          if (md + wd + mix > autoCourtCount) {
             continue;
           }
           if (md * 4 + mix * 2 > m || wd * 4 + mix * 2 > f) {
