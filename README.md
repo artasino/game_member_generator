@@ -67,3 +67,36 @@
 2. 使用したシャトル数やコート代を入力して、1人あたりの金額を確認！
 
 ---
+---
+
+## 🌐 Firebase Hosting で「更新があれば取得、なければオフラインでも動く」設定
+
+Web版を Firebase Hosting に上げたとき、以下を両立するための推奨設定です。
+
+- 新しいバージョンがあれば次回アクセス時に取得する
+- 新しいバージョンがなければオフラインでも既存バージョンで動く
+
+### 1) ビルドは `offline-first`（オフライン動作を維持）
+
+オフラインで使えるように、Service Worker は無効化せず `offline-first` を使います。
+
+```bash
+flutter build web --release --pwa-strategy=offline-first
+```
+
+### 2) Firebase Hosting のキャッシュ制御
+
+このリポジトリの `firebase.json` では以下を設定しています。
+
+- `index.html` / `flutter_bootstrap.js` / `flutter_service_worker.js` は **no-cache**（更新確認しやすくする）
+- ハッシュ付き静的アセット（JS/CSS/画像など）は **長期キャッシュ**（高速表示）
+
+この組み合わせで、通常時は Service Worker のキャッシュによりオフライン動作しつつ、オンライン時は更新を検知しやすくなります。
+
+### 3) デプロイ
+
+```bash
+firebase deploy --only hosting
+```
+
+> 補足: さらに更新反映を早めたい場合は、`web/index.html` に Service Worker の更新通知UI（「新バージョンがあります。再読み込みしますか？」）を追加すると運用しやすくなります。
