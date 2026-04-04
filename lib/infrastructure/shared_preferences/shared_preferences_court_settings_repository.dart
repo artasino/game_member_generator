@@ -5,16 +5,23 @@ import 'package:game_member_generator/domain/entities/match_type.dart';
 import 'package:game_member_generator/domain/repository/court_settings_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'shared_preferences_key_migrator.dart';
+
 class SharedPreferencesCourtSettingsRepository
     implements CourtSettingsRepository {
-  static const String _settingsKey = 'court_match_types';
+  static const String _settingsKey = 'gmg.court_match_types.v1';
+  static const List<String> _legacySettingsKeys = ['court_match_types'];
 
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();
 
   @override
   Future<CourtSettings> get() async {
     final prefs = await _prefs;
-    final jsonString = prefs.getString(_settingsKey);
+    final jsonString = await SharedPreferencesKeyMigrator.readStringWithMigration(
+      prefs,
+      currentKey: _settingsKey,
+      legacyKeys: _legacySettingsKeys,
+    );
     if (jsonString == null || jsonString.isEmpty) {
       return CourtSettings([MatchType.menDoubles]);
     }

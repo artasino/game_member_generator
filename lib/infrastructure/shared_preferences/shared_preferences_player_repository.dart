@@ -4,8 +4,11 @@ import 'package:game_member_generator/domain/entities/player.dart';
 import 'package:game_member_generator/domain/repository/player_repository/player_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'shared_preferences_key_migrator.dart';
+
 class SharedPreferencesPlayerRepository implements PlayerRepository {
-  static const String _playersKey = 'players';
+  static const String _playersKey = 'gmg.players.v1';
+  static const List<String> _legacyPlayersKeys = ['players'];
 
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();
 
@@ -30,7 +33,11 @@ class SharedPreferencesPlayerRepository implements PlayerRepository {
   @override
   Future<List<Player>> getAll() async {
     final prefs = await _prefs;
-    final jsonString = prefs.getString(_playersKey);
+    final jsonString = await SharedPreferencesKeyMigrator.readStringWithMigration(
+      prefs,
+      currentKey: _playersKey,
+      legacyKeys: _legacyPlayersKeys,
+    );
     if (jsonString == null || jsonString.isEmpty) return [];
 
     final data = jsonDecode(jsonString) as List<dynamic>;
