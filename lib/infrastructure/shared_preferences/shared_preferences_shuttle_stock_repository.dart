@@ -4,10 +4,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/entities/shuttle_stock.dart';
 import '../../domain/repository/shuttle_stock_repository.dart';
+import 'shared_preferences_key_migrator.dart';
 
 class SharedPreferencesShuttleStockRepository
     implements ShuttleStockRepository {
-  static const String _key = 'shuttle_stocks';
+  static const String _key = 'gmg.shuttle_stocks.v1';
+  static const List<String> _legacyKeys = ['shuttle_stocks'];
 
   @override
   Future<void> save(ShuttleStock stock) async {
@@ -31,7 +33,11 @@ class SharedPreferencesShuttleStockRepository
   @override
   Future<List<ShuttleStock>> getAll() async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_key);
+    final jsonString = await SharedPreferencesKeyMigrator.readStringWithMigration(
+      prefs,
+      currentKey: _key,
+      legacyKeys: _legacyKeys,
+    );
     if (jsonString == null) return [];
     final List<dynamic> decoded = jsonDecode(jsonString);
     return decoded
