@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Game Member Generator">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="game_member_generator">
+  <link rel="manifest" href="manifest.json">
+
+  <title>Game Member Generator</title>
+  <style>
+    #sw-update-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      z-index: 9999;
+      max-width: 92vw;
+      background: rgba(32, 33, 36, 0.96);
+      color: #fff;
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
+      font-size: 14px;
+      line-height: 1.4;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #sw-update-toast button {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #sw-reload-btn {
+      background: #4fc3f7;
+      color: #111;
+    }
+
+    #sw-later-btn {
+      background: transparent;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div id="sw-update-toast" role="status" aria-live="polite">
+    <span>新しいバージョンがあります。更新しますか？</span>
+    <button id="sw-reload-btn" type="button">更新する</button>
+    <button id="sw-later-btn" type="button">あとで</button>
+  </div>
+
+  <script>
+    (() => {
+      if (!('serviceWorker' in navigator)) return;
+
+      let hasControllerChanged = false;
+      let waitingWorker = null;
+
+      const toast = document.getElementById('sw-update-toast');
+      const reloadBtn = document.getElementById('sw-reload-btn');
+      const laterBtn = document.getElementById('sw-later-btn');
+
+      const showToast = () => {
+        if (!toast) return;
+        toast.style.display = 'flex';
+      };
+
+      const hideToast = () => {
+        if (!toast) return;
+        toast.style.display = 'none';
+      };
+
+      const bindWaitingWorker = (registration) => {
+        if (!registration || !registration.waiting) return;
+        waitingWorker = registration.waiting;
+        showToast();
+      };
+
+      const trackInstallingWorker = (registration) => {
+        if (!registration || !registration.installing) return;
+
+        registration.installing.addEventListener('statechange', () => {
+          if (
+            registration.waiting &&
+            navigator.serviceWorker.controller
+          ) {
+            bindWaitingWorker(registration);
+          }
+        });
+      };
+
+      reloadBtn?.addEventListener('click', () => {
+        if (waitingWorker) {
+          waitingWorker.postMessage('skipWaiting');
+        }
+        hideToast();
+      });
+
+      laterBtn?.addEventListener('click', () => {
+        hideToast();
+      });
+
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (hasControllerChanged) return;
+        hasControllerChanged = true;
+        window.location.reload();
+      });
+
+      window.addEventListener('load', async () => {
+        try {
+          const registration = await navigator.serviceWorker.getRegistration();
+          if (!registration) return;
+
+          bindWaitingWorker(registration);
+          trackInstallingWorker(registration);
+          registration.addEventListener('updatefound', () => {
+            trackInstallingWorker(registration);
+          });
+
+          setInterval(() => registration.update(), 60 * 1000);
+        } catch (_) {
+          // ignore service worker update UI errors
+        }
+      });
+    })();
+  </script>
+
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

@@ -107,4 +107,4 @@ flutter build web --release --pwa-strategy=offline-first
 firebase deploy --only hosting
 ```
 
-> 補足: さらに更新反映を早めたい場合は、`web/index.html` に Service Worker の更新通知UI（「新バージョンがあります。再読み込みしますか？」）を追加すると運用しやすくなります。
+> 補足: `web/index.html` に Service Worker の更新通知UIを実装済みです。新バージョン検知時に「更新する / あとで」を表示し、「更新する」で再読み込みできます。
