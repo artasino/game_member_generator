@@ -16,7 +16,11 @@ class SharedPreferencesKeyMigrator {
       final legacyValue = prefs.getString(legacyKey);
       if (legacyValue == null || legacyValue.isEmpty) continue;
 
+      // 新しいキーへデータを移行
       await prefs.setString(currentKey, legacyValue);
+      // 移行が完了したら、古いキーは削除して二重持ちを防止する
+      await prefs.remove(legacyKey);
+
       return legacyValue;
     }
 
