@@ -71,14 +71,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       });
     } else {
       setState(() {
-        _entries = [
-          ExpenseEntry(
-            name: 'シャトル/ボール',
-            type: ExpenseType.shuttle,
-            pricePerDozens: 0,
-            shuttleCount: 0,
-          )
-        ];
+        _entries = [];
       });
     }
   }
@@ -985,7 +978,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
               EdgeInsets.symmetric(horizontal: 10, vertical: isSmall ? 8 : 12),
           border: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(8))),
-          labelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+          labelStyle:
+              const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
           filled: true,
           fillColor: Theme.of(context).colorScheme.surface,
         ),
@@ -1310,23 +1304,22 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.primary)),
         const SizedBox(height: 4),
-        ...ExpenseType.values
-            .where((t) => (typeTotals[t] ?? 0) > 0)
-            .map((t) => Padding(
-                  padding: const EdgeInsets.only(bottom: 1),
-                  child: Row(
-                    children: [
+        ...ExpenseType.values.where((t) => (typeTotals[t] ?? 0) > 0).map((t) =>
+            Padding(
+              padding: const EdgeInsets.only(bottom: 1),
+              child: Row(
+                children: [
                   Icon(t.icon, size: 9, color: t.color.withValues(alpha: 0.7)),
                   const SizedBox(width: 4),
                   Expanded(
-                          child: Text(t.label,
-                              style: const TextStyle(fontSize: 10))),
-                      Text("¥${typeTotals[t]!.toStringAsFixed(0)}",
-                          style: const TextStyle(
-                              fontSize: 10, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                )),
+                      child:
+                          Text(t.label, style: const TextStyle(fontSize: 10))),
+                  Text("¥${typeTotals[t]!.toStringAsFixed(0)}",
+                      style: const TextStyle(
+                          fontSize: 10, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            )),
       ],
     );
   }
