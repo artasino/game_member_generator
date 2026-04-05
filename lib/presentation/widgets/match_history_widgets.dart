@@ -2,7 +2,6 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:game_member_generator/config/app_config.dart';
 
 import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/game.dart';
@@ -932,7 +931,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               _buildGenderStatsHeader(),
               const SizedBox(height: 20),
               const Divider(),
-              if (AppConfig.autoRecommendEnabled) _buildModeToggle(),
+              _buildModeToggle(),
               const SizedBox(height: 20),
               if (isAutoRecommendMode)
                 _buildAutoSettingsSection()

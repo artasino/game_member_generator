@@ -6,8 +6,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../notifiers/player_notifier.dart';
 import '../notifiers/session_notifier.dart';
 import 'match_history_screen.dart';
-import 'player_list_screen.dart';
 import 'other_screen.dart';
+import 'player_list_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final PlayerNotifier playerNotifier;
@@ -44,6 +44,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         sessionNotifier: widget.sessionNotifier,
         shuttleRepository: widget.repositories.shuttleUsageRepository,
         stockRepository: widget.repositories.shuttleStockRepository,
+        expenseRepository: widget.repositories.expenseRepository,
       ),
       const OtherScreen(),
     ];

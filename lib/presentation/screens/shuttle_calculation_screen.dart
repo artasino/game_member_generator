@@ -1,72 +1,27 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/presentation/notifiers/player_notifier.dart';
 import 'package:game_member_generator/presentation/notifiers/session_notifier.dart';
-import 'package:material_symbols_icons/symbols.dart';
 
+import '../../domain/entities/expense_item.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/shuttle_stock.dart';
 import '../../domain/entities/shuttle_usage_record.dart';
+import '../../domain/repository/expense_repository.dart';
 import '../../domain/repository/shuttle_stock_repository.dart';
 import '../../domain/repository/shuttle_usage_repository.dart';
 import '../widgets/shuttle_history_dialog.dart';
 import '../widgets/shuttle_stock_dialog.dart';
-
-enum ExpenseType {
-  shuttle('消耗品', Symbols.badminton, Colors.orange),
-  court('場所代', Icons.stadium, Colors.blue),
-  other('その他', Icons.more_horiz, Colors.teal);
-
-  final String label;
-  final IconData icon;
-  final Color color;
-
-  const ExpenseType(this.label, this.icon, this.color);
-}
-
-enum SplitTarget {
-  all('全員'),
-  male('男子'),
-  female('女子');
-
-  final String label;
-
-  const SplitTarget(this.label);
-}
-
-class ExpenseEntry {
-  String name;
-  ExpenseType type;
-  double amount;
-  double pricePerDozens;
-  int shuttleCount;
-  String? payerId;
-  SplitTarget target;
-
-  ExpenseEntry({
-    required this.name,
-    required this.type,
-    this.amount = 0,
-    this.pricePerDozens = 0,
-    this.shuttleCount = 0,
-    this.payerId,
-    this.target = SplitTarget.all,
-  });
-
-  double get total {
-    if (type == ExpenseType.shuttle) {
-      return (pricePerDozens / 12) * shuttleCount;
-    }
-    return amount;
-  }
-}
 
 class ShuttleCalculationScreen extends StatefulWidget {
   final PlayerNotifier playerNotifier;
   final SessionNotifier sessionNotifier;
   final ShuttleUsageRepository shuttleRepository;
   final ShuttleStockRepository stockRepository;
+  final ExpenseRepository expenseRepository;
 
   const ShuttleCalculationScreen({
     super.key,
@@ -74,6 +29,7 @@ class ShuttleCalculationScreen extends StatefulWidget {
     required this.sessionNotifier,
     required this.shuttleRepository,
     required this.stockRepository,
+    required this.expenseRepository,
   });
 
   @override
@@ -81,7 +37,7 @@ class ShuttleCalculationScreen extends StatefulWidget {
 }
 
 class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
-  final List<ExpenseEntry> _entries = [];
+  List<ExpenseEntry> _entries = [];
 
   bool _useGenderSplit = false; // true: 男女ごとに計算, false: 全体化
   bool _showCompactDetails = false;
@@ -89,6 +45,62 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   // 手動入力用の集金額
   int? _manualMaleCollection;
   int? _manualFemaleCollection;
+
+  Timer? _saveTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadState();
+  }
+
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadState() async {
+    final state = await widget.expenseRepository.get();
+    if (state != null) {
+      setState(() {
+        _entries = state.entries;
+        _useGenderSplit = state.useGenderSplit;
+        _manualMaleCollection = state.manualMaleCollection;
+        _manualFemaleCollection = state.manualFemaleCollection;
+      });
+    } else {
+      setState(() {
+        _entries = [
+          ExpenseEntry(
+            name: 'シャトル/ボール',
+            type: ExpenseType.shuttle,
+            pricePerDozens: 0,
+            shuttleCount: 0,
+          )
+        ];
+      });
+    }
+  }
+
+  void _persistState() {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 500), () {
+      final state = ExpenseCalculationState(
+        entries: _entries,
+        useGenderSplit: _useGenderSplit,
+        manualMaleCollection: _manualMaleCollection,
+        manualFemaleCollection: _manualFemaleCollection,
+      );
+      widget.expenseRepository.save(state);
+    });
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persistState();
+  }
 
   Future<void> _saveRecord() async {
     final sessions = widget.sessionNotifier.sessions;
@@ -195,7 +207,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                     _addExpenseType(type);
                   },
                 );
-              }).toList(),
+              }),
             ],
           ),
         ),
@@ -692,9 +704,12 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   child: SizedBox(
                     height: 36,
                     child: _NameField(
-                      key: ValueKey('name_${index}'),
+                      key: ValueKey('name_$index'),
                       initialValue: entry.name,
-                      onChanged: (v) => entry.name = v,
+                      onChanged: (v) {
+                        entry.name = v;
+                        _persistState();
+                      },
                     ),
                   ),
                 ),

@@ -1,4 +1,5 @@
 import 'package:game_member_generator/domain/repository/court_settings_repository.dart';
+import 'package:game_member_generator/domain/repository/expense_repository.dart';
 import 'package:game_member_generator/domain/repository/player_repository/player_repository.dart';
 import 'package:game_member_generator/domain/repository/session_repository/session_history_repository.dart';
 import 'package:game_member_generator/domain/repository/shuttle_stock_repository.dart';
@@ -10,6 +11,7 @@ class AppRepositories {
   final CourtSettingsRepository courtSettingsRepository;
   final ShuttleStockRepository shuttleStockRepository;
   final ShuttleUsageRepository shuttleUsageRepository;
+  final ExpenseRepository expenseRepository;
 
   const AppRepositories({
     required this.playerRepository,
@@ -17,5 +19,6 @@ class AppRepositories {
     required this.courtSettingsRepository,
     required this.shuttleStockRepository,
     required this.shuttleUsageRepository,
+    required this.expenseRepository,
   });
 }
