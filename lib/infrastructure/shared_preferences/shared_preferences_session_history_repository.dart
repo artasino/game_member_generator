@@ -30,6 +30,9 @@ class SharedPreferencesSessionHistoryRepository
   Future<void> clear() async {
     final prefs = await _prefs;
     await prefs.remove(_sessionsKey);
+    for (final key in _legacySessionsKeys) {
+      await prefs.remove(key);
+    }
   }
 
   @override
