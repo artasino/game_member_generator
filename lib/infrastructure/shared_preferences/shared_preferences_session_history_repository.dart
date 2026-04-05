@@ -4,9 +4,12 @@ import 'package:game_member_generator/domain/entities/session.dart';
 import 'package:game_member_generator/domain/repository/session_repository/session_history_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'shared_preferences_key_migrator.dart';
+
 class SharedPreferencesSessionHistoryRepository
     implements SessionHistoryRepository {
-  static const String _sessionsKey = 'sessions';
+  static const String _sessionsKey = 'gmg.sessions.v1';
+  static const List<String> _legacySessionsKeys = ['sessions'];
 
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();
 
@@ -32,7 +35,11 @@ class SharedPreferencesSessionHistoryRepository
   @override
   Future<List<Session>> getAll() async {
     final prefs = await _prefs;
-    final jsonString = prefs.getString(_sessionsKey);
+    final jsonString = await SharedPreferencesKeyMigrator.readStringWithMigration(
+      prefs,
+      currentKey: _sessionsKey,
+      legacyKeys: _legacySessionsKeys,
+    );
     if (jsonString == null || jsonString.isEmpty) return [];
 
     final data = jsonDecode(jsonString) as List<dynamic>;
