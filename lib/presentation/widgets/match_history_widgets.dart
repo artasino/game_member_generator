@@ -842,7 +842,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           maxFemaleDoublesNumPossible,
         );
       case AutoCourtPolicy.mix:
-        return List.filled(maxMixNumPossible, MatchType.mixedDoubles);
+        return List.filled(maxMixNumPossible, MatchType.mixedDoubles).toList();
       case AutoCourtPolicy.balance:
         return _recommendBalanced(
           effective.male,
@@ -969,16 +969,35 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
 
   Widget _buildGenderStatsHeader() {
     final pool = widget.notifier.playerStatsPool;
+    final selectedTypes = isAutoRecommendMode ? currentRecommendTypes : types;
+
+    final maleMatchCount = selectedTypes.requiredPlayerCount(isMale: true);
+    final femaleMatchCount = selectedTypes.requiredPlayerCount(isMale: false);
+
+    final maleAvg = pool.activeMales.length > 0
+        ? (pool.activeMales.all
+                    .fold<int>(0, (sum, p) => sum + p.stats.totalMatches) +
+                maleMatchCount) /
+            pool.activeMales.length
+        : 0.0;
+    final femaleAvg = pool.activeFemales.length > 0
+        ? (pool.activeFemales.all
+                    .fold<int>(0, (sum, p) => sum + p.stats.totalMatches) +
+                femaleMatchCount) /
+            pool.activeFemales.length
+        : 0.0;
 
     return Column(
       children: [
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           _CompactBadge(
-              label: '男性: ${pool.activeMales.length} 名',
+              label:
+                  '男性: ${pool.activeMales.length} 名 (平均 ${maleAvg.toStringAsFixed(1)}回)',
               color: Colors.blue.shade700),
           const SizedBox(width: 12),
           _CompactBadge(
-              label: '女性: ${pool.activeFemales.length} 名',
+              label:
+                  '女性: ${pool.activeFemales.length} 名 (平均 ${femaleAvg.toStringAsFixed(1)}回)',
               color: Colors.pink.shade600),
         ]),
       ],

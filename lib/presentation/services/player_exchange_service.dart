@@ -73,7 +73,7 @@ class PlayerExchangeService {
 
     if (!kIsWeb &&
         (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
-      final String? outputFile = await FilePicker.platform.saveFile(
+      final String? outputFile = await FilePicker.saveFile(
         dialogTitle: '保存先を選択してください',
         fileName: fileName,
         type: FileType.custom,
@@ -104,7 +104,7 @@ class PlayerExchangeService {
   /// ファイルからインポート
   Future<List<Player>?> importFromFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json', 'csv'],
       );

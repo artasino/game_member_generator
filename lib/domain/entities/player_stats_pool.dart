@@ -37,6 +37,13 @@ class PlayerStatsPool {
   /// アクティブな女性のみのプールを返す
   PlayerStatsPool get activeFemales => active.females;
 
+  /// 全プレイヤーの平均試合数を返す
+  double get averageMatches {
+    if (_players.isEmpty) return 0;
+    final total = _players.fold<int>(0, (sum, p) => sum + p.stats.totalMatches);
+    return total / _players.length;
+  }
+
   /// 特定のIDリストに含まれるプレイヤーのみのプールを返す
   PlayerStatsPool filterByIds(Set<String> ids) {
     return PlayerStatsPool(
