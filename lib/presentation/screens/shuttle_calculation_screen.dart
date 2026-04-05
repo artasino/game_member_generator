@@ -1,72 +1,27 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/presentation/notifiers/player_notifier.dart';
 import 'package:game_member_generator/presentation/notifiers/session_notifier.dart';
-import 'package:material_symbols_icons/symbols.dart';
 
+import '../../domain/entities/expense_item.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/shuttle_stock.dart';
 import '../../domain/entities/shuttle_usage_record.dart';
+import '../../domain/repository/expense_repository.dart';
 import '../../domain/repository/shuttle_stock_repository.dart';
 import '../../domain/repository/shuttle_usage_repository.dart';
 import '../widgets/shuttle_history_dialog.dart';
 import '../widgets/shuttle_stock_dialog.dart';
-
-enum ExpenseType {
-  shuttle('消耗品', Symbols.badminton, Colors.orange),
-  court('場所代', Icons.stadium, Colors.blue),
-  other('その他', Icons.more_horiz, Colors.teal);
-
-  final String label;
-  final IconData icon;
-  final Color color;
-
-  const ExpenseType(this.label, this.icon, this.color);
-}
-
-enum SplitTarget {
-  all('全員'),
-  male('男子'),
-  female('女子');
-
-  final String label;
-
-  const SplitTarget(this.label);
-}
-
-class ExpenseEntry {
-  String name;
-  ExpenseType type;
-  double amount;
-  double pricePerDozens;
-  int shuttleCount;
-  String? payerId;
-  SplitTarget target;
-
-  ExpenseEntry({
-    required this.name,
-    required this.type,
-    this.amount = 0,
-    this.pricePerDozens = 0,
-    this.shuttleCount = 0,
-    this.payerId,
-    this.target = SplitTarget.all,
-  });
-
-  double get total {
-    if (type == ExpenseType.shuttle) {
-      return (pricePerDozens / 12) * shuttleCount;
-    }
-    return amount;
-  }
-}
 
 class ShuttleCalculationScreen extends StatefulWidget {
   final PlayerNotifier playerNotifier;
   final SessionNotifier sessionNotifier;
   final ShuttleUsageRepository shuttleRepository;
   final ShuttleStockRepository stockRepository;
+  final ExpenseRepository expenseRepository;
 
   const ShuttleCalculationScreen({
     super.key,
@@ -74,6 +29,7 @@ class ShuttleCalculationScreen extends StatefulWidget {
     required this.sessionNotifier,
     required this.shuttleRepository,
     required this.stockRepository,
+    required this.expenseRepository,
   });
 
   @override
@@ -81,10 +37,70 @@ class ShuttleCalculationScreen extends StatefulWidget {
 }
 
 class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
-  final List<ExpenseEntry> _entries = [];
+  List<ExpenseEntry> _entries = [];
 
   bool _useGenderSplit = false; // true: 男女ごとに計算, false: 全体化
   bool _showCompactDetails = false;
+
+  // 手動入力用の集金額
+  int? _manualMaleCollection;
+  int? _manualFemaleCollection;
+
+  Timer? _saveTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadState();
+  }
+
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadState() async {
+    final state = await widget.expenseRepository.get();
+    if (state != null) {
+      setState(() {
+        _entries = state.entries;
+        _useGenderSplit = state.useGenderSplit;
+        _manualMaleCollection = state.manualMaleCollection;
+        _manualFemaleCollection = state.manualFemaleCollection;
+      });
+    } else {
+      setState(() {
+        _entries = [
+          ExpenseEntry(
+            name: 'シャトル/ボール',
+            type: ExpenseType.shuttle,
+            pricePerDozens: 0,
+            shuttleCount: 0,
+          )
+        ];
+      });
+    }
+  }
+
+  void _persistState() {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 500), () {
+      final state = ExpenseCalculationState(
+        entries: _entries,
+        useGenderSplit: _useGenderSplit,
+        manualMaleCollection: _manualMaleCollection,
+        manualFemaleCollection: _manualFemaleCollection,
+      );
+      widget.expenseRepository.save(state);
+    });
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persistState();
+  }
 
   Future<void> _saveRecord() async {
     final sessions = widget.sessionNotifier.sessions;
@@ -191,7 +207,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                     _addExpenseType(type);
                   },
                 );
-              }).toList(),
+              }),
             ],
           ),
         ),
@@ -373,6 +389,23 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
             }
           }
 
+          // 算定額 (1円単位切り上げ)
+          final mSuggested = maleShare.ceil();
+          final fSuggested = femaleShare.ceil();
+
+          // 手動入力の初期値設定
+          if (_manualMaleCollection == null && totalAmount > 0) {
+            _manualMaleCollection = (mSuggested / 100).ceil() * 100;
+          }
+          if (_manualFemaleCollection == null && totalAmount > 0) {
+            _manualFemaleCollection = (fSuggested / 100).ceil() * 100;
+          }
+
+          final mCol = _manualMaleCollection ?? 0;
+          final fCol = _manualFemaleCollection ?? 0;
+          final totalCollection = (mCol * maleCount) + (fCol * femaleCount);
+          final balance = totalCollection - totalAmount;
+
           return Scaffold(
             backgroundColor: theme.colorScheme.surfaceContainerLow,
             appBar: AppBar(
@@ -401,6 +434,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                     if (value == 'reset') {
                       setState(() {
                         _entries.clear();
+                        _manualMaleCollection = null;
+                        _manualFemaleCollection = null;
                         _entries.add(ExpenseEntry(
                             name: 'シャトル/ボール',
                             type: ExpenseType.shuttle,
@@ -474,8 +509,15 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                               ),
                               SizedBox(
                                 width: 360,
-                                child: _buildSideSummaryPanel(totalAmount,
-                                    maleShare, femaleShare, activePlayers),
+                                child: _buildSideSummaryPanel(
+                                    totalAmount,
+                                    mSuggested,
+                                    fSuggested,
+                                    activePlayers,
+                                    totalCollection,
+                                    balance,
+                                    maleCount,
+                                    femaleCount),
                               ),
                             ],
                           )
@@ -487,8 +529,16 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                       const EdgeInsets.fromLTRB(16, 4, 16, 12),
                                 ),
                               ),
-                              _buildSummaryPanel(totalAmount, maleShare,
-                                  femaleShare, useCompactLayout, activePlayers),
+                              _buildSummaryPanel(
+                                  totalAmount,
+                                  mSuggested,
+                                  fSuggested,
+                                  useCompactLayout,
+                                  activePlayers,
+                                  totalCollection,
+                                  balance,
+                                  maleCount,
+                                  femaleCount),
                             ],
                           ),
                   ),
@@ -543,7 +593,13 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
           ],
           selected: {_useGenderSplit},
-          onSelectionChanged: (v) => setState(() => _useGenderSplit = v.first),
+          onSelectionChanged: (v) {
+            setState(() {
+              _useGenderSplit = v.first;
+              _manualMaleCollection = null;
+              _manualFemaleCollection = null;
+            });
+          },
         ),
       ),
     );
@@ -648,9 +704,12 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   child: SizedBox(
                     height: 36,
                     child: _NameField(
-                      key: ValueKey('name_${index}_${entry.name}'),
+                      key: ValueKey('name_$index'),
                       initialValue: entry.name,
-                      onChanged: (v) => entry.name = v,
+                      onChanged: (v) {
+                        entry.name = v;
+                        _persistState();
+                      },
                     ),
                   ),
                 ),
@@ -911,9 +970,10 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     required String suffix,
     required String initialValue,
     required Function(String) onChanged,
+    bool isSmall = false,
   }) {
     return SizedBox(
-      height: 46,
+      height: isSmall ? 38 : 46,
       child: TextFormField(
         key: key,
         initialValue: initialValue,
@@ -922,25 +982,32 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           suffixText: suffix,
           isDense: true,
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+              EdgeInsets.symmetric(horizontal: 10, vertical: isSmall ? 8 : 12),
           border: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(8))),
           labelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
           filled: true,
           fillColor: Theme.of(context).colorScheme.surface,
         ),
-        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+        style:
+            TextStyle(fontSize: isSmall ? 15 : 17, fontWeight: FontWeight.w900),
         keyboardType: TextInputType.number,
         onChanged: (v) => setState(() => onChanged(v)),
       ),
     );
   }
 
-  Widget _buildSummaryPanel(double total, double mShare, double fShare,
-      bool useCompactLayout, List<Player> activePlayers) {
+  Widget _buildSummaryPanel(
+      double total,
+      int mSuggested,
+      int fSuggested,
+      bool useCompactLayout,
+      List<Player> activePlayers,
+      int totalCollection,
+      double balance,
+      int maleCount,
+      int femaleCount) {
     final theme = Theme.of(context);
-    final mRound = (mShare / 100).ceil() * 100;
-    final fRound = (fShare / 100).ceil() * 100;
 
     final Map<ExpenseType, double> typeTotals = {};
     for (var entry in _entries) {
@@ -949,7 +1016,6 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     final payerTotals = _buildPayerTotals(activePlayers);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 76),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -1026,20 +1092,23 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                     ),
               const SizedBox(height: 12),
               if (!_useGenderSplit)
-                _resultBox("集金額 (一人あたり)", mRound, theme.colorScheme.primary,
-                    isLarge: true)
+                _resultBox("均等割り算定額", mSuggested, theme.colorScheme.primary)
               else
                 Row(
                   children: [
                     Expanded(
-                        child:
-                            _resultBox("男子集金", mRound, Colors.blue.shade800)),
+                        child: _resultBox(
+                            "男子算定額", mSuggested, Colors.blue.shade800)),
                     const SizedBox(width: 12),
                     Expanded(
-                        child:
-                            _resultBox("女子集金", fRound, Colors.pink.shade800)),
+                        child: _resultBox(
+                            "女子算定額", fSuggested, Colors.pink.shade800)),
                   ],
                 ),
+              const SizedBox(height: 12),
+              _buildCollectionInputs(maleCount, femaleCount),
+              const SizedBox(height: 12),
+              _buildCollectionSummary(totalCollection, balance, theme),
             ],
           ),
         ),
@@ -1047,11 +1116,16 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     );
   }
 
-  Widget _buildSideSummaryPanel(double total, double mShare, double fShare,
-      List<Player> activePlayers) {
+  Widget _buildSideSummaryPanel(
+      double total,
+      int mSuggested,
+      int fSuggested,
+      List<Player> activePlayers,
+      int totalCollection,
+      double balance,
+      int maleCount,
+      int femaleCount) {
     final theme = Theme.of(context);
-    final mRound = (mShare / 100).ceil() * 100;
-    final fRound = (fShare / 100).ceil() * 100;
 
     final Map<ExpenseType, double> typeTotals = {};
     for (var entry in _entries) {
@@ -1060,7 +1134,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     final payerTotals = _buildPayerTotals(activePlayers);
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(0, 8, 16, 84),
+      margin: const EdgeInsets.fromLTRB(0, 8, 16, 12),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
@@ -1072,45 +1146,117 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child: SizedBox(
-              width: 230,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (!_useGenderSplit)
-                    _resultBox(
-                        "集金額 (一人あたり)", mRound, theme.colorScheme.primary,
-                        isLarge: true)
-                  else
-                    Row(
-                      children: [
-                        Expanded(
-                            child: _resultBox(
-                                "男子集金", mRound, Colors.blue.shade800)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                            child: _resultBox(
-                                "女子集金", fRound, Colors.pink.shade800)),
-                      ],
-                    ),
-                  const SizedBox(height: 10),
-                  _buildSummaryTotal(theme, total, alignEnd: true),
-                ],
-              ),
+          _buildSummaryTotal(theme, total, alignEnd: true),
+          const SizedBox(height: 16),
+          if (!_useGenderSplit)
+            _resultBox("均等割り算定額", mSuggested, theme.colorScheme.primary)
+          else
+            Row(
+              children: [
+                Expanded(
+                    child:
+                        _resultBox("男子算定額", mSuggested, Colors.blue.shade800)),
+                const SizedBox(width: 8),
+                Expanded(
+                    child:
+                        _resultBox("女子算定額", fSuggested, Colors.pink.shade800)),
+              ],
             ),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          _buildCollectionInputs(maleCount, femaleCount),
+          const SizedBox(height: 16),
+          _buildCollectionSummary(totalCollection, balance, theme),
+          const SizedBox(height: 20),
           _buildSummaryBreakdown(theme, typeTotals),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _buildPayerSummary(theme, payerTotals),
         ],
       ),
     );
   }
 
-  Widget _resultBox(String label, int value, Color color,
+  Widget _buildCollectionInputs(int maleCount, int femaleCount) {
+    return Row(
+      children: [
+        Expanded(
+          child: _compactTextField(
+            key: const ValueKey('male_col_manual'),
+            label: '男子徴収',
+            suffix: '円',
+            initialValue: _manualMaleCollection?.toString() ?? '',
+            onChanged: (v) {
+              final val = int.tryParse(v);
+              setState(() {
+                _manualMaleCollection = val;
+              });
+            },
+            isSmall: true,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _compactTextField(
+            key: const ValueKey('female_col_manual'),
+            label: '女子徴収',
+            suffix: '円',
+            initialValue: _manualFemaleCollection?.toString() ?? '',
+            onChanged: (v) {
+              final val = int.tryParse(v);
+              setState(() {
+                _manualFemaleCollection = val;
+              });
+            },
+            isSmall: true,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCollectionSummary(
+      int totalCollection, double balance, ThemeData theme) {
+    final balanceColor =
+        balance >= 0 ? Colors.green.shade700 : Colors.red.shade700;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('徴収総額',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              Text('¥$totalCollection',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w900)),
+            ],
+          ),
+          const Divider(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('収支',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              Text(
+                '${balance >= 0 ? "+" : ""}¥${balance.toStringAsFixed(0)}',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: balanceColor),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _resultBox(String label, int valueRound, Color color,
       {bool isLarge = false}) {
     return Container(
       width: double.infinity,
@@ -1127,7 +1273,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   color: color.withValues(alpha: 0.8))),
-          Text("¥$value",
+          Text("¥$valueRound",
               style: TextStyle(
                   fontSize: isLarge ? 26 : 20,
                   fontWeight: FontWeight.w900,
@@ -1172,7 +1318,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                     children: [
                   Icon(t.icon, size: 9, color: t.color.withValues(alpha: 0.7)),
                   const SizedBox(width: 4),
-                      Expanded(
+                  Expanded(
                           child: Text(t.label,
                               style: const TextStyle(fontSize: 10))),
                       Text("¥${typeTotals[t]!.toStringAsFixed(0)}",
@@ -1186,12 +1332,12 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   }
 
   Widget _buildSummaryTotal(ThemeData theme, double total,
-      {bool alignEnd = true}) {
+      {bool alignEnd = false}) {
     return Column(
       crossAxisAlignment:
           alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        const Text("総額",
+        const Text("総費用額",
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
         Text("¥${total.toStringAsFixed(0)}",
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),

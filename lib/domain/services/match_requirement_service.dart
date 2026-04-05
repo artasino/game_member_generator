@@ -118,16 +118,18 @@ class MatchRequirementService {
         // 出場優先度（shouldRestOver）に基づいて、どちらか一方を実質的な数から除外する
         if (p.shouldRestOver(partner)) {
           // pが休むべき（＝カウントに入れない）
-          if (p.player.gender == Gender.male)
+          if (p.player.gender == Gender.male) {
             m--;
-          else
+          } else {
             f--;
+          }
         } else {
           // partnerが休むべき（＝カウントに入れない）
-          if (partner.player.gender == Gender.male)
+          if (partner.player.gender == Gender.male) {
             m--;
-          else
+          } else {
             f--;
+          }
         }
         processedPairs.add(p.player.id);
         processedPairs.add(partnerId);
