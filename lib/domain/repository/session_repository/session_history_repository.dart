@@ -5,6 +5,7 @@ abstract class SessionHistoryRepository {
 
   Future<void> add(Session session);
 
-  Future<void> update(Session session); // 追加
+  Future<void> update(Session session);
+  Future<void> delete(int sessionIndex);
   Future<void> clear();
 }

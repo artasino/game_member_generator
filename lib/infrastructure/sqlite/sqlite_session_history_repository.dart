@@ -51,4 +51,14 @@ class SqliteSessionHistoryRepository implements SessionHistoryRepository {
     final db = await _dbHelper.database;
     await db.delete(_tableName);
   }
+
+  @override
+  Future<void> delete(int sessionIndex) async {
+    final db = await _dbHelper.database;
+    await db.delete(
+      _tableName,
+      where: 'id = ?',
+      whereArgs: [sessionIndex],
+    );
+  }
 }

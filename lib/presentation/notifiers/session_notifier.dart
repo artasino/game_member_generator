@@ -251,6 +251,24 @@ class SessionNotifier extends ChangeNotifier {
     await _refresh();
   }
 
+  Future<void> deleteSession(int sessionIndex) async {
+    final remaining = _sessions
+        .where((session) => session.index != sessionIndex)
+        .toList(growable: false);
+    final reindexed = remaining
+        .asMap()
+        .entries
+        .map((entry) => entry.value.copyWith(index: entry.key + 1))
+        .toList(growable: false);
+
+    await sessionRepository.clear();
+    for (final session in reindexed) {
+      await sessionRepository.add(session);
+    }
+
+    await _refresh();
+  }
+
   Future<CourtSettings> getCurrentSettings() async {
     return await courtSettingsRepository.get();
   }

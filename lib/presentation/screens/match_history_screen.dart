@@ -106,9 +106,21 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         onSelected: (value) async {
           if (value == 'clear_history') {
             await _showClearConfirm(context);
+          } else if (value == 'delete_session') {
+            final session = _currentSessionOrNull();
+            if (session != null) {
+              await _showDeleteSessionConfirm(context, session.index);
+            }
           }
         },
         itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'delete_session',
+                child: ListTile(
+                  leading: Icon(Icons.delete_forever_outlined),
+                  title: Text('このセッションを削除'),
+                ),
+              ),
               const PopupMenuItem(
                 value: 'clear_history',
                 child: ListTile(
@@ -136,6 +148,16 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           ],
         ),
       );
+
+  Session? _currentSessionOrNull() {
+    final sessions = widget.notifier.sessions;
+    if (_currentIndex == null ||
+        _currentIndex! < 0 ||
+        _currentIndex! >= sessions.length) {
+      return null;
+    }
+    return sessions[_currentIndex!];
+  }
 
   Widget _buildContent(Session session) => LayoutBuilder(
         builder: (context, constraints) {
@@ -333,6 +355,97 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                 Navigator.pop(ctx); // ダイアログを閉じる
                 await widget.notifier.clearHistory();
                 _updateIndexSafely();
+              },
+              child: const Text(
+                '完全に削除する',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Future<void> _showDeleteSessionConfirm(
+    BuildContext context,
+    int sessionIndex,
+  ) =>
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text(
+            'このセッションを削除',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          content: Text('MATCH $sessionIndex を削除します。よろしいですか？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'キャンセル',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await _showFinalDeleteSessionConfirm(context, sessionIndex);
+              },
+              child: Text(
+                '削除する',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Future<void> _showFinalDeleteSessionConfirm(
+    BuildContext context,
+    int sessionIndex,
+  ) =>
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
+          title: Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(width: 12),
+              const Text('最終確認', style: TextStyle(fontWeight: FontWeight.w900)),
+            ],
+          ),
+          content: Text(
+            'MATCH $sessionIndex を本当に削除してよろしいですか？',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'やめる',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
+              ),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await widget.notifier.deleteSession(sessionIndex);
+                _updateIndexSafely(targetIndex: _currentIndex);
               },
               child: const Text(
                 '完全に削除する',
