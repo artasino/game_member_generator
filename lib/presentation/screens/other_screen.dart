@@ -1,12 +1,94 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../constants/release_notes.dart';
 import 'manual_screen.dart';
 
-class OtherScreen extends StatelessWidget {
+class OtherScreen extends StatefulWidget {
   const OtherScreen({super.key});
 
-  static const String _gitTagVersion = 'v2.0.0';
+  @override
+  State<OtherScreen> createState() => _OtherScreenState();
+}
+
+class _OtherScreenState extends State<OtherScreen> {
+  static const String _versionFallbackText = '取得できませんでした';
+
+  String _versionText = _versionFallbackText;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() {
+        _versionText = 'v${packageInfo.version}+${packageInfo.buildNumber}';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _versionText = _versionFallbackText;
+      });
+    }
+  }
+
+  Future<void> _showReleaseNotes() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'アップデート履歴',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: releaseNotes.length,
+                    separatorBuilder: (_, __) => const Divider(height: 20),
+                    itemBuilder: (context, index) {
+                      final note = releaseNotes[index];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'v${note.version}',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          ...note.changes.map(
+                            (change) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text('• $change'),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +117,12 @@ class OtherScreen extends StatelessWidget {
             },
           ),
           const Divider(height: 0),
-          const ListTile(
-            leading: Icon(Icons.tag_outlined),
-            title: Text('バージョン'),
-            subtitle: Text(_gitTagVersion),
+          ListTile(
+            leading: const Icon(Icons.tag_outlined),
+            title: const Text('バージョン'),
+            subtitle: Text(_versionText),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _showReleaseNotes,
           ),
           const Divider(height: 0),
           ListTile(
