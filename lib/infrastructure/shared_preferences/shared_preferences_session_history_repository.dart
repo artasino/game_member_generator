@@ -58,6 +58,13 @@ class SharedPreferencesSessionHistoryRepository
     await add(session);
   }
 
+  @override
+  Future<void> delete(int sessionIndex) async {
+    final sessions = await getAll();
+    sessions.removeWhere((s) => s.index == sessionIndex);
+    await _saveAll(sessions);
+  }
+
   Future<void> _saveAll(List<Session> sessions) async {
     final prefs = await _prefs;
     final jsonString = jsonEncode(sessions.map((s) => s.toJson()).toList());

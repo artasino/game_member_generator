@@ -20,8 +20,17 @@ class InMemorySessionRepository implements SessionHistoryRepository {
   }
 
   @override
-  Future<void> update(Session session) {
-    // TODO: implement update
-    throw UnimplementedError();
+  Future<void> update(Session session) async {
+    final index = _sessions.indexWhere((s) => s.index == session.index);
+    if (index >= 0) {
+      _sessions[index] = session;
+    } else {
+      _sessions.add(session);
+    }
+  }
+
+  @override
+  Future<void> delete(int sessionIndex) async {
+    _sessions.removeWhere((s) => s.index == sessionIndex);
   }
 }
