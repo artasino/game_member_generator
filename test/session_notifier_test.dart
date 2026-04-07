@@ -32,6 +32,11 @@ class MockSessionHistoryRepository implements SessionHistoryRepository {
 
   @override
   Future<void> clear() async => sessions.clear();
+
+  @override
+  Future<void> delete(int sessionIndex) async {
+    sessions.removeWhere((s) => s.index == sessionIndex);
+  }
 }
 
 class MockCourtSettingsRepository implements CourtSettingsRepository {
