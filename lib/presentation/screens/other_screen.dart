@@ -26,16 +26,34 @@ class _OtherScreenState extends State<OtherScreen> {
   Future<void> _loadVersion() async {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
+      final normalizedVersion = packageInfo.version.trim();
+      final normalizedBuild = packageInfo.buildNumber.trim();
+      final hasVersion =
+          normalizedVersion.isNotEmpty && normalizedVersion != '0.0.0';
+
       if (!mounted) return;
       setState(() {
-        _versionText = 'v${packageInfo.version}+${packageInfo.buildNumber}';
+        if (hasVersion) {
+          _versionText = normalizedBuild.isEmpty
+              ? 'v$normalizedVersion'
+              : 'v$normalizedVersion+$normalizedBuild';
+          return;
+        }
+        _versionText = _latestReleaseVersionText;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _versionText = _versionFallbackText;
+        _versionText = _latestReleaseVersionText;
       });
     }
+  }
+
+  String get _latestReleaseVersionText {
+    if (releaseNotes.isEmpty) {
+      return _versionFallbackText;
+    }
+    return 'v${releaseNotes.first.version}';
   }
 
   Future<void> _showReleaseNotes() async {
