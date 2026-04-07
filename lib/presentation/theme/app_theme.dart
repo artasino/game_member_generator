@@ -20,7 +20,11 @@ class AppRadius {
 
 class AppTheme {
   static ThemeData light(BuildContext context) {
-    final colorScheme = ColorScheme.fromSeed(seedColor: Colors.blue);
+    final colorScheme = ColorScheme.fromSeed(seedColor: Colors.blue).copyWith(
+      primary: Colors.blue.shade700,
+      secondary: Colors.pink.shade600,
+      tertiary: Colors.orange.shade700,
+    );
 
     return ThemeData(
       colorScheme: colorScheme,
