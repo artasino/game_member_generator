@@ -946,6 +946,9 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       int totalCollection,
       double balance) {
     final theme = Theme.of(context);
+    final isPortrait =
+        MediaQuery.orientationOf(context) == Orientation.portrait;
+    final usePopupManualEditor = useCompactLayout && isPortrait;
 
     final Map<ExpenseType, double> typeTotals = {};
     for (var entry in _entries) {
@@ -975,21 +978,39 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                         Row(
                           children: [
                             Expanded(child: _buildSummaryTotal(theme, total)),
-                            TextButton.icon(
-                              onPressed: () => setState(() {
-                                _showCompactDetails = !_showCompactDetails;
-                              }),
-                              icon: Icon(
-                                _showCompactDetails
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                size: 16,
-                              ),
-                              label: Text(
-                                _showCompactDetails ? '内訳を隠す' : '内訳を見る',
-                                style: const TextStyle(
-                                    fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
+                            Row(
+                              children: [
+                                if (usePopupManualEditor)
+                                  TextButton.icon(
+                                    onPressed: () => _showManualAndBalanceSheet(
+                                        totalCollection, balance),
+                                    icon: const Icon(Icons.calculate_outlined,
+                                        size: 16),
+                                    label: const Text(
+                                      '手動/利益',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                TextButton.icon(
+                                  onPressed: () => setState(() {
+                                    _showCompactDetails = !_showCompactDetails;
+                                  }),
+                                  icon: Icon(
+                                    _showCompactDetails
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                    size: 16,
+                                  ),
+                                  label: Text(
+                                    _showCompactDetails ? '内訳を隠す' : '内訳を見る',
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -1029,13 +1050,48 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                       ],
                     ),
               const SizedBox(height: 12),
-              _buildSuggestedAndManualInputs(mSuggested, fSuggested),
-              const SizedBox(height: 12),
-              _buildCollectionSummary(totalCollection, balance, theme),
+              if (usePopupManualEditor) ...[
+                _buildSuggestedOnly(mSuggested, fSuggested),
+                const SizedBox(height: 12),
+              ] else ...[
+                _buildSuggestedAndManualInputs(mSuggested, fSuggested),
+                const SizedBox(height: 12),
+                _buildCollectionSummary(totalCollection, balance, theme),
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _showManualAndBalanceSheet(int totalCollection, double balance) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final viewInsets = MediaQuery.viewInsetsOf(context);
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + viewInsets.bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('手動徴収・利益計算',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                _buildManualInputsOnly(),
+                const SizedBox(height: 12),
+                _buildCollectionSummary(totalCollection, balance, theme),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1093,29 +1149,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           const SizedBox(width: 10),
           Expanded(
             flex: 42,
-            child: Column(
-              children: [
-                _compactTextField(
-                  key: const ValueKey('male_col_manual'),
-                  label: '男子徴収',
-                  suffix: '円',
-                  initialValue: _manualMaleCollection?.toString() ?? '',
-                  onChanged: (v) =>
-                      _manualMaleCollection = int.tryParse(v),
-                  isSmall: true,
-                ),
-                const SizedBox(height: 6),
-                _compactTextField(
-                  key: const ValueKey('female_col_manual'),
-                  label: '女子徴収',
-                  suffix: '円',
-                  initialValue: _manualFemaleCollection?.toString() ?? '',
-                  onChanged: (v) =>
-                      _manualFemaleCollection = int.tryParse(v),
-                  isSmall: true,
-                ),
-              ],
-            ),
+            child: _buildManualInputsOnly(),
           ),
         ],
       );
@@ -1141,6 +1175,44 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           fieldLabel: '女子徴収',
           initialValue: _manualFemaleCollection?.toString() ?? '',
           onChanged: (v) => _manualFemaleCollection = int.tryParse(v),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSuggestedOnly(int mSuggested, int fSuggested) {
+    if (!_useGenderSplit) {
+      return _resultBox(
+          "均等割り算定額", mSuggested, Theme.of(context).colorScheme.primary);
+    }
+    return Row(
+      children: [
+        Expanded(child: _resultBox("男子算定額", mSuggested, Colors.blue.shade800)),
+        const SizedBox(width: 10),
+        Expanded(child: _resultBox("女子算定額", fSuggested, Colors.pink.shade800)),
+      ],
+    );
+  }
+
+  Widget _buildManualInputsOnly() {
+    return Column(
+      children: [
+        _compactTextField(
+          key: const ValueKey('male_col_manual'),
+          label: '男子徴収',
+          suffix: '円',
+          initialValue: _manualMaleCollection?.toString() ?? '',
+          onChanged: (v) => _manualMaleCollection = int.tryParse(v),
+          isSmall: true,
+        ),
+        const SizedBox(height: 6),
+        _compactTextField(
+          key: const ValueKey('female_col_manual'),
+          label: '女子徴収',
+          suffix: '円',
+          initialValue: _manualFemaleCollection?.toString() ?? '',
+          onChanged: (v) => _manualFemaleCollection = int.tryParse(v),
+          isSmall: true,
         ),
       ],
     );
