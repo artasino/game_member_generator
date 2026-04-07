@@ -479,8 +479,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                         child: ListView.builder(
                           padding: listPadding,
                           itemCount: _entries.length,
-                          itemBuilder: (context, index) => _buildExpenseCard(
-                              index, activePlayers, useCompactLayout),
+                          itemBuilder: (context, index) =>
+                              _buildExpenseCard(index, activePlayers),
                         ),
                       ),
                     ],
@@ -674,8 +674,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     );
   }
 
-  Widget _buildExpenseCard(
-      int index, List<Player> activePlayers, bool useCompactLayout) {
+  Widget _buildExpenseCard(int index, List<Player> activePlayers) {
     final entry = _entries[index];
     final theme = Theme.of(context);
 
@@ -726,192 +725,95 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
             ),
             const Divider(height: 1, thickness: 0.8),
             const SizedBox(height: 8),
-            useCompactLayout
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        flex: 58,
-                        child: entry.type == ExpenseType.shuttle
-                            ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 3,
-                                        child: _compactTextField(
-                                          key: ValueKey('price_$index'),
-                                          label: '単価/ダース',
-                                          suffix: '円',
-                                          initialValue: entry.pricePerDozens > 0
-                                              ? entry.pricePerDozens
-                                                  .toStringAsFixed(0)
-                                              : '',
-                                          onChanged: (v) =>
-                                              entry.pricePerDozens =
-                                                  double.tryParse(v) ?? 0,
-                                          maxLength: 5,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        flex: 2,
-                                        child: _compactTextField(
-                                          key: ValueKey('count_$index'),
-                                          label: '数',
-                                          suffix: '個',
-                                          initialValue: entry.shuttleCount > 0
-                                              ? entry.shuttleCount.toString()
-                                              : '',
-                                          onChanged: (v) =>
-                                              entry.shuttleCount =
-                                                  int.tryParse(v) ?? 0,
-                                          maxLength: 5,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  if (entry.shuttleCount > 0 &&
-                                      entry.pricePerDozens > 0)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 6),
-                                      child: Text(
-                                        '1個単価: ¥${(entry.pricePerDozens / 12).toStringAsFixed(1)}',
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.grey.shade600,
-                                            fontStyle: FontStyle.italic),
-                                      ),
-                                    ),
-                                ],
-                              )
-                            : _compactTextField(
-                                key: ValueKey('amount_$index'),
-                                label: '金額',
-                                suffix: '円',
-                                initialValue: entry.amount > 0
-                                    ? entry.amount.toStringAsFixed(0)
-                                    : '',
-                                onChanged: (v) =>
-                                    entry.amount = double.tryParse(v) ?? 0,
-                                maxLength: 5,
-                              ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 42,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  flex: 58,
+                  child: entry.type == ExpenseType.shuttle
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildPayerDropdown(entry, activePlayers),
-                            const SizedBox(height: 4),
-                            Text(
-                              '¥${entry.total.toStringAsFixed(0)}',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: theme.colorScheme.primary,
-                              ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: _compactTextField(
+                                    key: ValueKey('price_$index'),
+                                    label: '単価/ダース',
+                                    suffix: '円',
+                                    initialValue: entry.pricePerDozens > 0
+                                        ? entry.pricePerDozens
+                                            .toStringAsFixed(0)
+                                        : '',
+                                    onChanged: (v) => entry.pricePerDozens =
+                                        double.tryParse(v) ?? 0,
+                                    maxLength: 5,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  flex: 2,
+                                  child: _compactTextField(
+                                    key: ValueKey('count_$index'),
+                                    label: '数',
+                                    suffix: '個',
+                                    initialValue: entry.shuttleCount > 0
+                                        ? entry.shuttleCount.toString()
+                                        : '',
+                                    onChanged: (v) =>
+                                        entry.shuttleCount = int.tryParse(v) ?? 0,
+                                    maxLength: 5,
+                                  ),
+                                ),
+                              ],
                             ),
+                            if (entry.shuttleCount > 0 &&
+                                entry.pricePerDozens > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  '1個単価: ¥${(entry.pricePerDozens / 12).toStringAsFixed(1)}',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey.shade600,
+                                      fontStyle: FontStyle.italic),
+                                ),
+                              ),
                           ],
+                        )
+                      : _compactTextField(
+                          key: ValueKey('amount_$index'),
+                          label: '金額',
+                          suffix: '円',
+                          initialValue:
+                              entry.amount > 0 ? entry.amount.toStringAsFixed(0) : '',
+                          onChanged: (v) =>
+                              entry.amount = double.tryParse(v) ?? 0,
+                          maxLength: 5,
                         ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 42,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      // 入力エリア (左側)
-                      Expanded(
-                        flex: 65,
-                        child: entry.type == ExpenseType.shuttle
-                            ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 3,
-                                        child: _compactTextField(
-                                          key: ValueKey('price_$index'),
-                                          label: '単価/ダース',
-                                          suffix: '円',
-                                          initialValue: entry.pricePerDozens > 0
-                                              ? entry.pricePerDozens
-                                                  .toStringAsFixed(0)
-                                              : '',
-                                          onChanged: (v) =>
-                                              entry.pricePerDozens =
-                                                  double.tryParse(v) ?? 0,
-                                          maxLength: 5,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        flex: 2,
-                                        child: _compactTextField(
-                                          key: ValueKey('count_$index'),
-                                          label: '数',
-                                          suffix: '個',
-                                          initialValue: entry.shuttleCount > 0
-                                              ? entry.shuttleCount.toString()
-                                              : '',
-                                          onChanged: (v) => entry.shuttleCount =
-                                              int.tryParse(v) ?? 0,
-                                          maxLength: 5,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  if (entry.shuttleCount > 0 &&
-                                      entry.pricePerDozens > 0)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 6),
-                                      child: Text(
-                                        '1個単価: ¥${(entry.pricePerDozens / 12).toStringAsFixed(1)} （${entry.shuttleCount}個）',
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.grey.shade600,
-                                            fontStyle: FontStyle.italic),
-                                      ),
-                                    ),
-                                ],
-                              )
-                            : _compactTextField(
-                                key: ValueKey('amount_$index'),
-                                label: '金額',
-                                suffix: '円',
-                                initialValue: entry.amount > 0
-                                    ? entry.amount.toStringAsFixed(0)
-                                    : '',
-                                onChanged: (v) =>
-                                    entry.amount = double.tryParse(v) ?? 0,
-                                maxLength: 5,
-                              ),
-                      ),
-                      const SizedBox(width: 8),
-                      // 支払人・小計エリア (右側)
-                      Expanded(
-                        flex: 35,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            _buildPayerDropdown(entry, activePlayers),
-                            const SizedBox(height: 4),
-                            Text(
-                              '¥${entry.total.toStringAsFixed(0)}',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          ],
+                      _buildPayerDropdown(entry, activePlayers),
+                      const SizedBox(height: 4),
+                      Text(
+                        '¥${entry.total.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.primary,
                         ),
                       ),
                     ],
                   ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
