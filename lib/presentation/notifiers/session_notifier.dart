@@ -25,9 +25,11 @@ class SessionNotifier extends ChangeNotifier {
   final MatchRequirementService _requirementService;
 
   List<Session> _sessions = [];
+  final List<List<Session>> _undoStack = [];
 
   /// 保存されている全セッション（試合履歴）のリスト
   List<Session> get sessions => _sessions;
+  bool get canUndo => _undoStack.isNotEmpty;
 
   PlayerStatsPool _cachedPool = PlayerStatsPool([]);
   List<Player> _allPlayersCache = [];
@@ -154,6 +156,7 @@ class SessionNotifier extends ChangeNotifier {
         generated.games,
         restingPlayers: generated.restingPlayers,
       );
+      _pushUndoState();
       await sessionRepository.update(updatedSession);
 
       _sessions = originalSessions;
@@ -184,6 +187,7 @@ class SessionNotifier extends ChangeNotifier {
         restingPlayers: generated.restingPlayers,
       );
 
+      _pushUndoState();
       await sessionRepository.add(newSession);
       await _refresh();
     } finally {
@@ -239,6 +243,7 @@ class SessionNotifier extends ChangeNotifier {
   Future<void> updateSession(Session session) async {
     final index = _sessions.indexWhere((s) => s.index == session.index);
     if (index != -1) {
+      _pushUndoState();
       _sessions[index] = session;
       await sessionRepository.update(session);
       await _updateStats();
@@ -247,11 +252,15 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   Future<void> clearHistory() async {
+    if (_sessions.isEmpty) return;
+    _pushUndoState();
     await sessionRepository.clear();
     await _refresh();
   }
 
   Future<void> deleteSession(int sessionIndex) async {
+    if (_sessions.every((session) => session.index != sessionIndex)) return;
+    _pushUndoState();
     final remaining = _sessions
         .where((session) => session.index != sessionIndex)
         .toList(growable: false);
@@ -270,8 +279,33 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   Future<void> revertToPreviousState() async {
-    if (_sessions.isEmpty) return;
-    await deleteSession(_sessions.last.index);
+    if (_undoStack.isEmpty) return;
+    final previous = _undoStack.removeLast();
+    await _replaceAllSessions(previous);
+    await _refresh();
+  }
+
+  void _pushUndoState() {
+    _undoStack.add(_cloneSessions(_sessions));
+    if (_undoStack.length > 30) {
+      _undoStack.removeAt(0);
+    }
+  }
+
+  List<Session> _cloneSessions(List<Session> sessions) {
+    return sessions
+        .map((s) => s.copyWith(
+              games: List.of(s.games),
+              restingPlayers: List.of(s.restingPlayers),
+            ))
+        .toList(growable: false);
+  }
+
+  Future<void> _replaceAllSessions(List<Session> nextSessions) async {
+    await sessionRepository.clear();
+    for (final session in nextSessions) {
+      await sessionRepository.add(session);
+    }
   }
 
   Future<CourtSettings> getCurrentSettings() async {

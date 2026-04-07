@@ -102,6 +102,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   }
 
   Widget _buildPopupMenu() {
+    final canUndo = widget.notifier.canUndo;
     return PopupMenuButton<String>(
         onSelected: (value) async {
           if (value == 'clear_history') {
@@ -116,8 +117,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           }
         },
         itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'undo_last',
+                enabled: canUndo,
                 child: ListTile(
                   leading: Icon(Icons.undo_rounded),
                   title: Text('一個前の状態に戻す'),
@@ -472,7 +474,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             '一個前の状態に戻す',
             style: TextStyle(fontWeight: FontWeight.w900),
           ),
-          content: const Text('本当に戻していいですか？\n最新のMATCHが1件削除されます。'),
+          content: const Text(
+            '本当に戻していいですか？\n直前の操作（削除・生成・編集など）を取り消します。',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
