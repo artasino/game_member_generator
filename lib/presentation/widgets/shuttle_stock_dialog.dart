@@ -45,7 +45,7 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(stock == null ? 'シャトル/ボール在庫を登録' : '在庫を編集'),
+          title: Text(stock == null ? '在庫を登録' : '在庫を編集'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

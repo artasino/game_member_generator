@@ -413,7 +413,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
               actions: [
                 IconButton(
                   icon: const Icon(Icons.inventory_2_outlined),
-                  tooltip: 'シャトル/ボール在庫管理',
+                  tooltip: '在庫管理',
                   onPressed: _showStockManager,
                 ),
                 IconButton(
@@ -447,7 +447,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                         value: 'stock',
                         child: ListTile(
                             leading: Icon(Icons.inventory_2_outlined),
-                            title: Text('シャトル/ボール在庫管理'),
+                            title: Text('在庫管理'),
                             contentPadding: EdgeInsets.zero)),
                     const PopupMenuItem(
                         value: 'speed',
