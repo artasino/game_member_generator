@@ -269,6 +269,11 @@ class SessionNotifier extends ChangeNotifier {
     await _refresh();
   }
 
+  Future<void> revertToPreviousState() async {
+    if (_sessions.isEmpty) return;
+    await deleteSession(_sessions.last.index);
+  }
+
   Future<CourtSettings> getCurrentSettings() async {
     return await courtSettingsRepository.get();
   }

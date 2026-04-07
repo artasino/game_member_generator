@@ -111,9 +111,18 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             if (session != null) {
               await _showDeleteSessionConfirm(context, session.index);
             }
+          } else if (value == 'undo_last') {
+            await _showUndoLastConfirm(context);
           }
         },
         itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'undo_last',
+                child: ListTile(
+                  leading: Icon(Icons.undo_rounded),
+                  title: Text('一個前の状態に戻す'),
+                ),
+              ),
               const PopupMenuItem(
                 value: 'delete_session',
                 child: ListTile(
@@ -450,6 +459,41 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               child: const Text(
                 '完全に削除する',
                 style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Future<void> _showUndoLastConfirm(BuildContext context) => showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text(
+            '一個前の状態に戻す',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          content: const Text('本当に戻していいですか？\n最新のMATCHが1件削除されます。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'キャンセル',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await widget.notifier.revertToPreviousState();
+                _updateIndexSafely();
+              },
+              child: Text(
+                '戻す',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
               ),
             ),
           ],
