@@ -1002,6 +1002,9 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       int maleCount,
       int femaleCount) {
     final theme = Theme.of(context);
+    final isPortrait =
+        MediaQuery.orientationOf(context) == Orientation.portrait;
+    final usePopupCollectionEditor = useCompactLayout && isPortrait;
 
     final Map<ExpenseType, double> typeTotals = {};
     for (var entry in _entries) {
@@ -1100,9 +1103,14 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   ],
                 ),
               const SizedBox(height: 12),
-              _buildCollectionInputs(maleCount, femaleCount),
-              const SizedBox(height: 12),
-              _buildCollectionSummary(totalCollection, balance, theme),
+              if (usePopupCollectionEditor)
+                _buildCollectionEditorLauncher(
+                    maleCount, femaleCount, totalCollection, balance, theme)
+              else ...[
+                _buildCollectionInputs(maleCount, femaleCount),
+                const SizedBox(height: 12),
+                _buildCollectionSummary(totalCollection, balance, theme),
+              ],
             ],
           ),
         ),
@@ -1204,6 +1212,67 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCollectionEditorLauncher(int maleCount, int femaleCount,
+      int totalCollection, double balance, ThemeData theme) {
+    final balanceColor =
+        balance >= 0 ? Colors.green.shade700 : Colors.red.shade700;
+    return OutlinedButton.icon(
+      onPressed: () => _showCollectionEditorSheet(
+          maleCount, femaleCount, totalCollection, balance),
+      icon: const Icon(Icons.tune),
+      label: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('徴収額・収支を編集'),
+          Text(
+            '${balance >= 0 ? "+" : ""}¥${balance.toStringAsFixed(0)}',
+            style: TextStyle(
+              color: balanceColor,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(44),
+        foregroundColor: theme.colorScheme.onPrimaryContainer,
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Future<void> _showCollectionEditorSheet(
+      int maleCount, int femaleCount, int totalCollection, double balance) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final viewInsets = MediaQuery.viewInsetsOf(context);
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + viewInsets.bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('徴収額・収支',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                _buildCollectionInputs(maleCount, femaleCount),
+                const SizedBox(height: 12),
+                _buildCollectionSummary(totalCollection, balance, theme),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
