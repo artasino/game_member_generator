@@ -83,6 +83,11 @@ class PlayerChip extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final genderColor = GenderTheme.getColor(context, player.gender);
+    final tokens = _PlayerChipTokens.resolve(
+      colorScheme: colorScheme,
+      genderColor: genderColor,
+      isActive: player.isActive,
+    );
 
     final sameGenderCount = player.gender == Gender.male
         ? (stats.typeCounts[MatchType.menDoubles] ?? 0)
@@ -96,99 +101,62 @@ class PlayerChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadius.lg),
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
-        opacity: player.isActive ? 1.0 : 0.6,
+        opacity: tokens.opacity,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md - 2, vertical: AppSpacing.sm),
+          padding: EdgeInsets.fromLTRB(
+            showCheckbox ? AppSpacing.sm : AppSpacing.md - 2,
+            AppSpacing.sm,
+            AppSpacing.md - 2,
+            AppSpacing.sm,
+          ),
           decoration: BoxDecoration(
-            color: player.isActive
-                ? genderColor.withValues(alpha: 0.12)
-                : genderColor.withValues(alpha: 0.04),
+            color: tokens.backgroundColor,
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
-              color: player.isActive
-                  ? genderColor.withValues(alpha: 0.5)
-                  : genderColor.withValues(alpha: 0.2),
-              width: player.isActive ? 1.5 : 1.0,
+              color: tokens.borderColor,
+              width: tokens.borderWidth,
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (showCheckbox) ...[
-                Icon(
-                  player.isActive
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
-                  size: 18,
-                  color: player.isActive
-                      ? genderColor
-                      : genderColor.withValues(alpha: 0.4),
+                SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: Center(
+                    child: Icon(
+                      tokens.checkboxIcon,
+                      size: 18,
+                      color: tokens.checkboxIconColor,
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppSpacing.sm),
               ],
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            player.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              color: player.isActive
-                                  ? colorScheme.onSurface
-                                  : colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                        if (player.isMustRest) ...[
-                          const SizedBox(width: 4),
-                          Icon(Icons.coffee_outlined,
-                              size: 14, color: colorScheme.tertiary),
-                        ],
-                      ],
+                    _PlayerChipHeader(
+                      name: player.name,
+                      isMustRest: player.isMustRest,
+                      nameColor: tokens.nameColor,
+                      mustRestColor: colorScheme.tertiary,
                     ),
                     if (showStats) ...[
-                      const SizedBox(height: 6),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: const NeverScrollableScrollPhysics(),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AppBadge(
-                              label: '出${stats.totalMatches}',
-                              color: colorScheme.primary,
-                              scale: 0.9,
-                            ),
-                            const SizedBox(width: 4),
-                            AppBadge(
-                              label: '休${stats.totalRests}',
-                              color: colorScheme.error,
-                              scale: 0.9,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${player.gender == Gender.male ? "男" : "女"}$sameGenderCount 混$mxCount',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                color: player.isActive
-                                    ? colorScheme.onSurfaceVariant
-                                    : colorScheme.outline,
-                                fontWeight: player.isActive
-                                    ? FontWeight.w900
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ],
-                        ),
+                      const SizedBox(height: AppSpacing.xs + 1),
+                      _PlayerChipStats(
+                        totalMatches: stats.totalMatches,
+                        totalRests: stats.totalRests,
+                        sameGenderCount: sameGenderCount,
+                        mixedCount: mxCount,
+                        genderLabel: player.gender == Gender.male ? '男' : '女',
+                        badgePrimaryColor:
+                            colorScheme.primary.withValues(alpha: 0.82),
+                        badgeErrorColor: colorScheme.error.withValues(alpha: 0.82),
+                        textColor: tokens.statsTextColor,
                       ),
                     ]
                   ],
@@ -198,6 +166,163 @@ class PlayerChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PlayerChipHeader extends StatelessWidget {
+  final String name;
+  final bool isMustRest;
+  final Color nameColor;
+  final Color mustRestColor;
+
+  const _PlayerChipHeader({
+    required this.name,
+    required this.isMustRest,
+    required this.nameColor,
+    required this.mustRestColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 16,
+                height: 1.2,
+                fontWeight: FontWeight.w900,
+                color: nameColor,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+          if (isMustRest) ...[
+            const SizedBox(width: 6),
+            Icon(Icons.coffee_outlined, size: 14, color: mustRestColor),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PlayerChipStats extends StatelessWidget {
+  final int totalMatches;
+  final int totalRests;
+  final int sameGenderCount;
+  final int mixedCount;
+  final String genderLabel;
+  final Color badgePrimaryColor;
+  final Color badgeErrorColor;
+  final Color textColor;
+
+  const _PlayerChipStats({
+    required this.totalMatches,
+    required this.totalRests,
+    required this.sameGenderCount,
+    required this.mixedCount,
+    required this.genderLabel,
+    required this.badgePrimaryColor,
+    required this.badgeErrorColor,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTextStyle.merge(
+      style: TextStyle(color: textColor),
+      child: Opacity(
+        opacity: 0.86,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppBadge(
+                label: '出$totalMatches',
+                color: badgePrimaryColor,
+                scale: 0.88,
+              ),
+              const SizedBox(width: 4),
+              AppBadge(
+                label: '休$totalRests',
+                color: badgeErrorColor,
+                scale: 0.88,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '$genderLabel$sameGenderCount 混$mixedCount',
+                style: TextStyle(
+                  fontSize: 9.5,
+                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlayerChipTokens {
+  final double opacity;
+  final Color backgroundColor;
+  final Color borderColor;
+  final double borderWidth;
+  final IconData checkboxIcon;
+  final Color checkboxIconColor;
+  final Color nameColor;
+  final Color statsTextColor;
+
+  const _PlayerChipTokens({
+    required this.opacity,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.borderWidth,
+    required this.checkboxIcon,
+    required this.checkboxIconColor,
+    required this.nameColor,
+    required this.statsTextColor,
+  });
+
+  factory _PlayerChipTokens.resolve({
+    required ColorScheme colorScheme,
+    required Color genderColor,
+    required bool isActive,
+  }) {
+    if (isActive) {
+      return _PlayerChipTokens(
+        opacity: 1,
+        backgroundColor: genderColor.withValues(alpha: 0.14),
+        borderColor: genderColor.withValues(alpha: 0.55),
+        borderWidth: 1.5,
+        checkboxIcon: Icons.check_circle,
+        checkboxIconColor: genderColor,
+        nameColor: colorScheme.onSurface,
+        statsTextColor: colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
+      );
+    }
+
+    return _PlayerChipTokens(
+      opacity: 0.62,
+      backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.52),
+      borderColor: colorScheme.outlineVariant.withValues(alpha: 0.8),
+      borderWidth: 1.0,
+      checkboxIcon: Icons.radio_button_unchecked,
+      checkboxIconColor: colorScheme.outline,
+      nameColor: colorScheme.onSurfaceVariant,
+      statsTextColor: colorScheme.outline,
     );
   }
 }
