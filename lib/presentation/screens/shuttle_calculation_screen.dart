@@ -403,7 +403,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           return Scaffold(
             backgroundColor: theme.colorScheme.surfaceContainerLow,
             appBar: AppBar(
-              title: const Text('EXPENSE CALC',
+              title: const Text('費用計算',
                   style: TextStyle(
                       fontWeight: FontWeight.w900, letterSpacing: 1.5)),
               centerTitle: true,
@@ -413,7 +413,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
               actions: [
                 IconButton(
                   icon: const Icon(Icons.inventory_2_outlined),
-                  tooltip: 'シャトル/ボール在庫管理',
+                  tooltip: '在庫管理',
                   onPressed: _showStockManager,
                 ),
                 IconButton(
@@ -447,7 +447,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                         value: 'stock',
                         child: ListTile(
                             leading: Icon(Icons.inventory_2_outlined),
-                            title: Text('シャトル/ボール在庫管理'),
+                            title: Text('在庫管理'),
                             contentPadding: EdgeInsets.zero)),
                     const PopupMenuItem(
                         value: 'speed',
