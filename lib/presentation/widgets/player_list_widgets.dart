@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player_with_stats.dart';
+import '../theme/app_theme.dart';
 import 'common_widgets.dart';
 
 export 'common_widgets.dart';
@@ -42,7 +43,7 @@ class GenderLabel extends StatelessWidget {
           height: 14,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(AppRadius.xs),
           ),
         ),
         const SizedBox(width: 8),
@@ -79,7 +80,9 @@ class PlayerChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final player = playerWithStats.player;
     final stats = playerWithStats.stats;
-    final genderColor = GenderTheme.getColor(player.gender);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final genderColor = GenderTheme.getColor(context, player.gender);
 
     final sameGenderCount = player.gender == Gender.male
         ? (stats.typeCounts[MatchType.menDoubles] ?? 0)
@@ -90,17 +93,17 @@ class PlayerChip extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       onDoubleTap: onLongPress,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
         opacity: player.isActive ? 1.0 : 0.6,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md - 2, vertical: AppSpacing.sm),
           decoration: BoxDecoration(
             color: player.isActive
                 ? genderColor.withValues(alpha: 0.12)
                 : genderColor.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
               color: player.isActive
                   ? genderColor.withValues(alpha: 0.5)
@@ -140,15 +143,15 @@ class PlayerChip extends StatelessWidget {
                               fontSize: 15,
                               fontWeight: FontWeight.w900,
                               color: player.isActive
-                                  ? Colors.black87
-                                  : Colors.black54,
+                                  ? colorScheme.onSurface
+                                  : colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
                         if (player.isMustRest) ...[
                           const SizedBox(width: 4),
-                          const Icon(Icons.coffee_outlined,
-                              size: 14, color: Colors.orange),
+                          Icon(Icons.coffee_outlined,
+                              size: 14, color: colorScheme.tertiary),
                         ],
                       ],
                     ),
@@ -162,13 +165,13 @@ class PlayerChip extends StatelessWidget {
                           children: [
                             AppBadge(
                               label: '出${stats.totalMatches}',
-                              color: Colors.indigo,
+                              color: colorScheme.primary,
                               scale: 0.9,
                             ),
                             const SizedBox(width: 4),
                             AppBadge(
                               label: '休${stats.totalRests}',
-                              color: Colors.deepOrange,
+                              color: colorScheme.error,
                               scale: 0.9,
                             ),
                             const SizedBox(width: 6),
@@ -177,8 +180,8 @@ class PlayerChip extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 9.5,
                                 color: player.isActive
-                                    ? Colors.black54
-                                    : Colors.grey.shade600,
+                                    ? colorScheme.onSurfaceVariant
+                                    : colorScheme.outline,
                                 fontWeight: player.isActive
                                     ? FontWeight.w900
                                     : FontWeight.normal,

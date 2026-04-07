@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/config/app_config.dart';
 import 'package:game_member_generator/domain/algorithm/court_assignment/court_assignment_algorithm.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'domain/algorithm/balanced_match_algorithm.dart';
 import 'domain/algorithm/court_assignment/stochastic_court_assignment_algorithm.dart';
@@ -12,6 +11,7 @@ import 'infrastructure/persistence/repository_provider.dart';
 import 'presentation/notifiers/player_notifier.dart';
 import 'presentation/notifiers/session_notifier.dart';
 import 'presentation/screens/main_navigation_screen.dart';
+import 'presentation/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,36 +66,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Game Member Generator',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        textTheme: GoogleFonts.notoSansJpTextTheme(
-          Theme.of(context).textTheme,
-        ).copyWith(
-          displayMedium: GoogleFonts.notoSansJp(
-            fontWeight: FontWeight.w900,
-            letterSpacing: 2.0,
-            color: const Color(0xFF2C3E50),
-          ),
-          labelLarge: GoogleFonts.kanit(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+      theme: AppTheme.light(context),
       home: MainNavigationScreen(
         playerNotifier: playerNotifier,
         sessionNotifier: sessionNotifier,

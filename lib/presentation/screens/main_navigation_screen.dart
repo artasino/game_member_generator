@@ -57,27 +57,23 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         index: _selectedIndex,
         children: _screens,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Colors.grey.shade600,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        items: const [
-          BottomNavigationBarItem(
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        destinations: const [
+          NavigationDestination(
             icon: Icon(Icons.people),
             label: 'メンバ',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Symbols.badminton),
             label: '試合履歴',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.money),
             label: '費用計算',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.help_outline),
             label: 'その他',
           ),

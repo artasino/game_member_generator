@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/gender.dart';
+import '../theme/app_theme.dart';
 
 /// アプリ全体で統一されたセクションヘッダー
 class AppSectionHeader extends StatelessWidget {
@@ -25,7 +26,7 @@ class AppSectionHeader extends StatelessWidget {
           Text(
             subtitle!,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: Colors.grey.shade600,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
       ],
@@ -56,7 +57,7 @@ class AppBadge extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 2 * scale),
       decoration: BoxDecoration(
         color: isFilled ? color : color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8 * scale),
+        borderRadius: BorderRadius.circular(AppRadius.sm * scale),
         border: isFilled
             ? null
             : Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
@@ -66,7 +67,10 @@ class AppBadge extends StatelessWidget {
         children: [
           if (icon != null) ...[
             Icon(icon,
-                size: 12 * scale, color: isFilled ? Colors.white : color),
+                size: 12 * scale,
+                color: isFilled
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : color),
             SizedBox(width: 4 * scale),
           ],
           Text(
@@ -74,7 +78,8 @@ class AppBadge extends StatelessWidget {
             style: TextStyle(
               fontSize: 10 * scale,
               fontWeight: FontWeight.w900,
-              color: isFilled ? Colors.white : color,
+              color:
+                  isFilled ? Theme.of(context).colorScheme.onPrimary : color,
             ),
           ),
         ],
@@ -85,8 +90,10 @@ class AppBadge extends StatelessWidget {
 
 /// 性別に応じた色やスタイルを提供するユーティリティ
 class GenderTheme {
-  static Color getColor(Gender gender) =>
-      gender == Gender.male ? Colors.blue.shade700 : Colors.pink.shade600;
+  static Color getColor(BuildContext context, Gender gender) {
+    final scheme = Theme.of(context).colorScheme;
+    return gender == Gender.male ? scheme.primary : scheme.secondary;
+  }
 
   static IconData getIcon(Gender gender) =>
       gender == Gender.male ? Icons.male : Icons.female;

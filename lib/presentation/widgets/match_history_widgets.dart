@@ -443,7 +443,7 @@ class PlayerTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final genderColor = GenderTheme.getColor(player.gender);
+    final genderColor = GenderTheme.getColor(context, player.gender);
 
     // 文字サイズを動的に調整するためのスケール計算
     final textScale = _adaptivePlayerTextScale(maxWidth);
@@ -599,7 +599,7 @@ class RestingChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = GenderTheme.getColor(player.gender);
+    final color = GenderTheme.getColor(context, player.gender);
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,

@@ -5,6 +5,7 @@ import '../../domain/entities/player.dart';
 import '../../domain/entities/player_with_stats.dart';
 import '../notifiers/player_notifier.dart';
 import '../notifiers/session_notifier.dart';
+import '../theme/app_theme.dart';
 import '../widgets/player_list_widgets.dart';
 
 class PlayerListScreen extends StatefulWidget {
@@ -42,12 +43,12 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: '名前・よみがなで検索...',
                   border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.white70),
+                  hintStyle: TextStyle(color: theme.colorScheme.onPrimary.withValues(alpha: 0.7)),
                 ),
-                style: const TextStyle(color: Colors.white, fontSize: 18),
+                style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 18),
                 onChanged: (value) {
                   setState(() => _searchQuery = value.trim());
                 },
@@ -185,13 +186,15 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   }
 
   Widget _buildEmptyState() {
-    return const Center(
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.people_outline, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
-          Text('メンバを登録してください', style: TextStyle(color: Colors.grey)),
+          Icon(Icons.people_outline, size: 64, color: colorScheme.outline),
+          const SizedBox(height: AppSpacing.lg),
+          Text('メンバを登録してください',
+              style: TextStyle(color: colorScheme.outline)),
         ],
       ),
     );
@@ -230,7 +233,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           child: SizedBox(
             width: contentWidth,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.fabBottomOffset + AppSpacing.sm),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -245,7 +248,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                             if (activeMales.isNotEmpty) ...[
                               GenderLabel(
                                 label: '男性 ${activeMales.length}名',
-                                color: Colors.blue,
+                                color: theme.colorScheme.primary,
                               ),
                               const SizedBox(height: 8),
                               _buildWrap(activeMales, showStats: true),
@@ -254,7 +257,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                             if (activeFemales.isNotEmpty) ...[
                               GenderLabel(
                                 label: '女性 ${activeFemales.length}名',
-                                color: Colors.pink,
+                                color: theme.colorScheme.secondary,
                               ),
                               const SizedBox(height: 8),
                               _buildWrap(activeFemales, showStats: true),
@@ -271,7 +274,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                   if (activeMales.isNotEmpty) ...[
                                     GenderLabel(
                                       label: '男性 ${activeMales.length}名',
-                                      color: Colors.blue,
+                                      color: theme.colorScheme.primary,
                                     ),
                                     const SizedBox(height: 8),
                                     _buildWrap(activeMales, showStats: true),
@@ -287,7 +290,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                   if (activeFemales.isNotEmpty) ...[
                                     GenderLabel(
                                       label: '女性 ${activeFemales.length}名',
-                                      color: Colors.pink,
+                                      color: theme.colorScheme.secondary,
                                     ),
                                     const SizedBox(height: 8),
                                     _buildWrap(activeFemales, showStats: true),
@@ -298,18 +301,18 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           ],
                         ),
                     const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                       child: Divider(),
                     ),
                   ],
                   const AppSectionHeader(title: '全メンバ', subtitle: '五十音順'),
                   const SizedBox(height: 16),
                   if (maleLabels.isEmpty && femaleLabels.isEmpty) ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 32),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl + AppSpacing.sm),
                       child: Center(
                         child: Text('該当するメンバが見つかりません',
-                            style: TextStyle(color: Colors.grey)),
+                            style: TextStyle(color: theme.colorScheme.outline)),
                       ),
                     )
                   ] else ...[
@@ -388,7 +391,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              padding: const EdgeInsets.only(left: AppSpacing.xs, bottom: AppSpacing.sm),
               child: Text(
                 label,
                 style: TextStyle(
@@ -572,7 +575,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                     TextField(
                       controller: nameController,
                       autofocus: !isEdit,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: '名前',
                         hintText: '例: 山田 太郎',
                         border: OutlineInputBorder(),
@@ -581,7 +584,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                     const SizedBox(height: 16),
                     TextField(
                       controller: yomiganaController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'よみがな',
                         hintText: '例: やまだ たろう',
                         border: OutlineInputBorder(),
@@ -630,8 +633,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                             ? Icons.link
                             : Icons.link_off,
                         color: currentExcludedPartnerId != null
-                            ? Colors.blue
-                            : Colors.grey,
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.outline,
                       ),
                       title: Text(
                         currentExcludedPartnerId != null
@@ -668,7 +671,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       onChanged: (v) {
                         setState(() => isMustRest = v);
                       },
-                      activeThumbColor: Colors.orange,
+                      activeThumbColor: Theme.of(context).colorScheme.tertiary,
                     ),
                   ],
                 ),
@@ -687,7 +690,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       Navigator.pop(context);
                     },
                     isPrimary: false,
-                    color: Colors.red,
+                    color: Theme.of(context).colorScheme.error,
                   ),
                 ],
                 AppActionButton(
@@ -757,7 +760,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.sheetTop)),
       ),
       builder: (context) {
         return StatefulBuilder(builder: (context, setSheetState) {
@@ -796,12 +799,12 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(AppRadius.xs),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(AppSpacing.lg),
                     child: Column(
                       children: [
                         Text(
@@ -818,10 +821,10 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                             hintText: 'ペア候補を検索...',
                             prefixIcon: const Icon(Icons.search),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
                             ),
                             contentPadding:
-                                const EdgeInsets.symmetric(horizontal: 16),
+                                const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                           ),
                           onChanged: (v) {
                             setSheetState(() => selectorQuery = v.trim());
@@ -833,9 +836,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   const Divider(height: 1),
                   if (currentPartnerId != null && selectorQuery.isEmpty) ...[
                     ListTile(
-                      leading: const Icon(Icons.link_off, color: Colors.red),
-                      title: const Text('現在のペア設定を解除する',
-                          style: TextStyle(color: Colors.red)),
+                      leading: Icon(Icons.link_off, color: Theme.of(context).colorScheme.error),
+                      title: Text('現在のペア設定を解除する',
+                          style: TextStyle(color: Theme.of(context).colorScheme.error)),
                       onTap: () {
                         onSelected(null);
                         Navigator.pop(context);
@@ -845,9 +848,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   ],
                   Expanded(
                     child: candidates.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Text('候補者が見つかりません',
-                                style: TextStyle(color: Colors.grey)))
+                                style: TextStyle(color: Theme.of(context).colorScheme.outline)))
                         : ListView.builder(
                             controller: scrollController,
                             itemCount: candidates.length,
@@ -860,24 +863,24 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                 leading: CircleAvatar(
                                   backgroundColor:
                                       candidate.gender == Gender.male
-                                          ? Colors.blue.withAlpha(26)
-                                          : Colors.pink.withAlpha(26),
+                                          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                                          : Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
                                   child: Icon(
                                     candidate.gender == Gender.male
                                         ? Icons.male
                                         : Icons.female,
                                     size: 16,
                                     color: candidate.gender == Gender.male
-                                        ? Colors.blue
-                                        : Colors.pink,
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context).colorScheme.secondary,
                                   ),
                                 ),
                                 title: Text(candidate.name),
                                 subtitle: Text(candidate.yomigana,
                                     style: const TextStyle(fontSize: 11)),
                                 trailing: isCurrentPartner
-                                    ? const Icon(Icons.check_circle,
-                                        color: Colors.blue)
+                                    ? Icon(Icons.check_circle,
+                                        color: Theme.of(context).colorScheme.primary)
                                     : null,
                                 onTap: () {
                                   onSelected(candidate.id);
@@ -922,10 +925,10 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: Container(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(AppSpacing.md - 2),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
                           child: Column(
                             children: [
@@ -937,8 +940,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                   const Spacer(),
                                   if (rows.length > 1)
                                     IconButton(
-                                      icon: const Icon(Icons.close,
-                                          color: Colors.red),
+                                      icon: Icon(Icons.close,
+                                          color: Theme.of(context).colorScheme.error),
                                       onPressed: () {
                                         setState(() {
                                           rows.removeAt(index).dispose();
@@ -950,7 +953,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                               ),
                               TextField(
                                 controller: row.nameController,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText: '名前',
                                   hintText: '例: 山田 太郎',
                                   border: OutlineInputBorder(),
@@ -959,7 +962,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                               const SizedBox(height: 8),
                               TextField(
                                 controller: row.yomiganaController,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText: 'よみがな',
                                   hintText: '例: やまだ たろう',
                                   border: OutlineInputBorder(),
@@ -1012,7 +1015,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           style: TextStyle(fontSize: 14)),
                       value: isMustRest,
                       onChanged: (v) => setState(() => isMustRest = v),
-                      activeThumbColor: Colors.orange,
+                      activeThumbColor: Theme.of(context).colorScheme.tertiary,
                     ),
                   ],
                 ),
@@ -1136,7 +1139,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   children: [
                     TextField(
                       controller: queryController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: '名前・よみがなで検索',
                         prefixIcon: Icon(Icons.search),
                         border: OutlineInputBorder(),
@@ -1154,9 +1157,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                     const SizedBox(height: 8),
                     Flexible(
                       child: candidates.isEmpty
-                          ? const Center(
+                          ? Center(
                               child: Text('対象メンバが見つかりません',
-                                  style: TextStyle(color: Colors.grey)),
+                                  style: TextStyle(color: Theme.of(context).colorScheme.outline)),
                             )
                           : ListView.builder(
                               shrinkWrap: true,
@@ -1193,7 +1196,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 ),
                 AppActionButton(
                   label: '削除',
-                  color: Colors.red,
+                  color: Theme.of(context).colorScheme.error,
                   isPrimary: false,
                   onPressed: selectedIds.isEmpty
                       ? null
@@ -1244,7 +1247,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   children: [
                     TextField(
                       controller: queryController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: '名前・よみがなで検索',
                         prefixIcon: Icon(Icons.search),
                         border: OutlineInputBorder(),
@@ -1267,7 +1270,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                 isToActivate
                                     ? '登録可能なメンバがいません'
                                     : '解除可能なメンバがいません',
-                                style: const TextStyle(color: Colors.grey),
+                                style: TextStyle(color: Theme.of(context).colorScheme.outline),
                               ),
                             )
                           : ListView.builder(

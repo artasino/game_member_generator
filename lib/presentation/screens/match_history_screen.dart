@@ -4,6 +4,7 @@ import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/session.dart';
 import '../notifiers/session_notifier.dart';
+import '../theme/app_theme.dart';
 import '../widgets/match_history_widgets.dart';
 
 extension LayoutScale on BoxConstraints {
@@ -74,7 +75,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             centerTitle: true,
             toolbarHeight: 56,
             backgroundColor:
-                isSwapping ? Colors.orange.shade700 : colorScheme.primary,
+                isSwapping ? colorScheme.tertiary : colorScheme.primary,
             foregroundColor:
                 isSwapping ? colorScheme.onPrimary : colorScheme.onPrimary,
             title: MatchHistoryHeader(
@@ -181,7 +182,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg),
                   child: GamesArea(
                     session: session,
                     pool: scopedPool,
@@ -212,7 +213,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
       );
 
   Widget _buildFABs(Session? session, ColorScheme colorScheme) => Padding(
-        padding: const EdgeInsets.only(bottom: 80),
+        padding: const EdgeInsets.only(bottom: AppSpacing.fabBottomOffset),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -285,9 +286,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   void _showError(String m) => showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.error_outline, color: Colors.red),
+              Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
               SizedBox(width: 12),
               Text('エラー', style: TextStyle(fontWeight: FontWeight.w900))
             ],
@@ -351,9 +352,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('やめる',
+              child: Text('やめる',
                   style: TextStyle(
-                      color: Colors.black,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w900,
                       fontSize: 18)),
             ),
@@ -439,10 +440,10 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text(
+              child: Text(
                 'やめる',
                 style: TextStyle(
-                  color: Colors.black,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w900,
                   fontSize: 18,
                 ),
