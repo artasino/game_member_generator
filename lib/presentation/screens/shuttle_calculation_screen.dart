@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:game_member_generator/presentation/notifiers/player_notifier.dart';
 import 'package:game_member_generator/presentation/notifiers/session_notifier.dart';
 
@@ -475,12 +476,28 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                       _buildConsumptionSpeedBanner(totalGames, typeCounts,
                           speedTotal, speedMale, speedFemale),
                       Expanded(
-                        child: ListView.builder(
-                          padding: listPadding,
-                          itemCount: _entries.length,
-                          itemBuilder: (context, index) => _buildExpenseCard(
-                              index, activePlayers, useCompactLayout),
-                        ),
+                        child: useCompactLayout
+                            ? GridView.builder(
+                                padding: listPadding,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  mainAxisSpacing: 8,
+                                  crossAxisSpacing: 8,
+                                  childAspectRatio: 0.94,
+                                ),
+                                itemCount: _entries.length,
+                                itemBuilder: (context, index) =>
+                                    _buildExpenseCard(
+                                        index, activePlayers, useCompactLayout),
+                              )
+                            : ListView.builder(
+                                padding: listPadding,
+                                itemCount: _entries.length,
+                                itemBuilder: (context, index) =>
+                                    _buildExpenseCard(index, activePlayers,
+                                        useCompactLayout),
+                              ),
                       ),
                     ],
                   );
@@ -679,7 +696,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     final theme = Theme.of(context);
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 2),
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
@@ -747,6 +764,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                             : '',
                                         onChanged: (v) => entry.pricePerDozens =
                                             double.tryParse(v) ?? 0,
+                                        maxLength: 5,
                                       ),
                                     ),
                                     const SizedBox(width: 6),
@@ -761,6 +779,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                             : '',
                                         onChanged: (v) => entry.shuttleCount =
                                             int.tryParse(v) ?? 0,
+                                        maxLength: 5,
                                       ),
                                     ),
                                   ],
@@ -768,10 +787,9 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                 if (entry.shuttleCount > 0 &&
                                     entry.pricePerDozens > 0)
                                   Padding(
-                                    padding:
-                                        const EdgeInsets.only(top: 6, left: 4),
+                                    padding: const EdgeInsets.only(top: 6),
                                     child: Text(
-                                      '(¥${(entry.pricePerDozens / 12).toStringAsFixed(1)}/個 × ${entry.shuttleCount}個) = ',
+                                      '1個単価: ¥${(entry.pricePerDozens / 12).toStringAsFixed(1)} （${entry.shuttleCount}個）',
                                       style: TextStyle(
                                           fontSize: 10,
                                           color: Colors.grey.shade600,
@@ -789,6 +807,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                   : '',
                               onChanged: (v) =>
                                   entry.amount = double.tryParse(v) ?? 0,
+                              maxLength: 5,
                             ),
                       const SizedBox(height: 8),
                       Row(
@@ -833,6 +852,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                           onChanged: (v) =>
                                               entry.pricePerDozens =
                                                   double.tryParse(v) ?? 0,
+                                          maxLength: 5,
                                         ),
                                       ),
                                       const SizedBox(width: 6),
@@ -847,6 +867,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                               : '',
                                           onChanged: (v) => entry.shuttleCount =
                                               int.tryParse(v) ?? 0,
+                                          maxLength: 5,
                                         ),
                                       ),
                                     ],
@@ -854,10 +875,9 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                   if (entry.shuttleCount > 0 &&
                                       entry.pricePerDozens > 0)
                                     Padding(
-                                      padding: const EdgeInsets.only(
-                                          top: 6, left: 4),
+                                      padding: const EdgeInsets.only(top: 6),
                                       child: Text(
-                                        '(¥${(entry.pricePerDozens / 12).toStringAsFixed(1)}/個 × ${entry.shuttleCount}個) = ',
+                                        '1個単価: ¥${(entry.pricePerDozens / 12).toStringAsFixed(1)} （${entry.shuttleCount}個）',
                                         style: TextStyle(
                                             fontSize: 10,
                                             color: Colors.grey.shade600,
@@ -875,6 +895,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                     : '',
                                 onChanged: (v) =>
                                     entry.amount = double.tryParse(v) ?? 0,
+                                maxLength: 5,
                               ),
                       ),
                       const SizedBox(width: 8),
@@ -964,6 +985,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     required String initialValue,
     required Function(String) onChanged,
     bool isSmall = false,
+    int maxLength = 5,
   }) {
     return SizedBox(
       height: isSmall ? 38 : 46,
@@ -986,6 +1008,10 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
         style:
             TextStyle(fontSize: isSmall ? 15 : 17, fontWeight: FontWeight.w900),
         keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(maxLength),
+        ],
         onChanged: (v) => setState(() => onChanged(v)),
       ),
     );
