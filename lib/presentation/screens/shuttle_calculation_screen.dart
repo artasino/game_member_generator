@@ -403,7 +403,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           return Scaffold(
             backgroundColor: theme.colorScheme.surfaceContainerLow,
             appBar: AppBar(
-              title: const Text('EXPENSE CALC',
+              title: const Text('費用計算',
                   style: TextStyle(
                       fontWeight: FontWeight.w900, letterSpacing: 1.5)),
               centerTitle: true,
