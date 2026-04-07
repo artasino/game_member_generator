@@ -425,6 +425,10 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   onSelected: (value) {
                     if (value == 'history') _showHistory();
                     if (value == 'stock') _showStockManager();
+                    if (value == 'speed') {
+                      _showConsumptionSpeedDialog(totalGames, typeCounts,
+                          speedTotal, speedMale, speedFemale);
+                    }
                     if (value == 'reset') {
                       setState(() {
                         _entries.clear();
@@ -444,6 +448,12 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                         child: ListTile(
                             leading: Icon(Icons.inventory_2_outlined),
                             title: Text('シャトル/ボール在庫管理'),
+                            contentPadding: EdgeInsets.zero)),
+                    const PopupMenuItem(
+                        value: 'speed',
+                        child: ListTile(
+                            leading: Icon(Icons.speed),
+                            title: Text('消費スピード'),
                             contentPadding: EdgeInsets.zero)),
                     const PopupMenuItem(
                         value: 'history',
@@ -473,8 +483,6 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                     children: [
                       _buildInfoBar(maleCount, femaleCount, totalCount),
                       _buildModeSelectorHeader(),
-                      _buildConsumptionSpeedBanner(totalGames, typeCounts,
-                          speedTotal, speedMale, speedFemale),
                       Expanded(
                         child: ListView.builder(
                           padding: listPadding,
@@ -509,9 +517,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                     fSuggested,
                                     activePlayers,
                                     totalCollection,
-                                    balance,
-                                    maleCount,
-                                    femaleCount),
+                                    balance),
                               ),
                             ],
                           )
@@ -530,9 +536,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                                   useCompactLayout,
                                   activePlayers,
                                   totalCollection,
-                                  balance,
-                                  maleCount,
-                                  femaleCount),
+                                  balance),
                             ],
                           ),
                   ),
@@ -668,6 +672,28 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                   ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showConsumptionSpeedDialog(int games, Map<MatchType, int> typeCounts,
+      double total, double male, double female) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('消費スピード'),
+        contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        content: SizedBox(
+          width: 460,
+          child:
+              _buildConsumptionSpeedBanner(games, typeCounts, total, male, female),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('閉じる'),
           ),
         ],
       ),
@@ -918,13 +944,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       bool useCompactLayout,
       List<Player> activePlayers,
       int totalCollection,
-      double balance,
-      int maleCount,
-      int femaleCount) {
+      double balance) {
     final theme = Theme.of(context);
-    final isPortrait =
-        MediaQuery.orientationOf(context) == Orientation.portrait;
-    final usePopupCollectionEditor = useCompactLayout && isPortrait;
 
     final Map<ExpenseType, double> typeTotals = {};
     for (var entry in _entries) {
@@ -1008,29 +1029,9 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                       ],
                     ),
               const SizedBox(height: 12),
-              if (!_useGenderSplit)
-                _resultBox("均等割り算定額", mSuggested, theme.colorScheme.primary)
-              else
-                Row(
-                  children: [
-                    Expanded(
-                        child: _resultBox(
-                            "男子算定額", mSuggested, Colors.blue.shade800)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: _resultBox(
-                            "女子算定額", fSuggested, Colors.pink.shade800)),
-                  ],
-                ),
+              _buildSuggestedAndManualInputs(mSuggested, fSuggested),
               const SizedBox(height: 12),
-              if (usePopupCollectionEditor)
-                _buildCollectionEditorLauncher(
-                    maleCount, femaleCount, totalCollection, balance, theme)
-              else ...[
-                _buildCollectionInputs(maleCount, femaleCount),
-                const SizedBox(height: 12),
-                _buildCollectionSummary(totalCollection, balance, theme),
-              ],
+              _buildCollectionSummary(totalCollection, balance, theme),
             ],
           ),
         ),
@@ -1044,9 +1045,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       int fSuggested,
       List<Player> activePlayers,
       int totalCollection,
-      double balance,
-      int maleCount,
-      int femaleCount) {
+      double balance) {
     final theme = Theme.of(context);
 
     final Map<ExpenseType, double> typeTotals = {};
@@ -1070,22 +1069,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
         children: [
           _buildSummaryTotal(theme, total, alignEnd: true),
           const SizedBox(height: 16),
-          if (!_useGenderSplit)
-            _resultBox("均等割り算定額", mSuggested, theme.colorScheme.primary)
-          else
-            Row(
-              children: [
-                Expanded(
-                    child:
-                        _resultBox("男子算定額", mSuggested, Colors.blue.shade800)),
-                const SizedBox(width: 8),
-                Expanded(
-                    child:
-                        _resultBox("女子算定額", fSuggested, Colors.pink.shade800)),
-              ],
-            ),
-          const SizedBox(height: 16),
-          _buildCollectionInputs(maleCount, femaleCount),
+          _buildSuggestedAndManualInputs(mSuggested, fSuggested),
           const SizedBox(height: 16),
           _buildCollectionSummary(totalCollection, balance, theme),
           const SizedBox(height: 20),
@@ -1097,102 +1081,96 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     );
   }
 
-  Widget _buildCollectionInputs(int maleCount, int femaleCount) {
-    return Row(
+  Widget _buildSuggestedAndManualInputs(int mSuggested, int fSuggested) {
+    if (!_useGenderSplit) {
+      return Row(
+        children: [
+          Expanded(
+            flex: 58,
+            child: _resultBox(
+                "均等割り算定額", mSuggested, Theme.of(context).colorScheme.primary),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 42,
+            child: Column(
+              children: [
+                _compactTextField(
+                  key: const ValueKey('male_col_manual'),
+                  label: '男子徴収',
+                  suffix: '円',
+                  initialValue: _manualMaleCollection?.toString() ?? '',
+                  onChanged: (v) =>
+                      _manualMaleCollection = int.tryParse(v),
+                  isSmall: true,
+                ),
+                const SizedBox(height: 6),
+                _compactTextField(
+                  key: const ValueKey('female_col_manual'),
+                  label: '女子徴収',
+                  suffix: '円',
+                  initialValue: _manualFemaleCollection?.toString() ?? '',
+                  onChanged: (v) =>
+                      _manualFemaleCollection = int.tryParse(v),
+                  isSmall: true,
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
       children: [
-        Expanded(
-          child: _compactTextField(
-            key: const ValueKey('male_col_manual'),
-            label: '男子徴収',
-            suffix: '円',
-            initialValue: _manualMaleCollection?.toString() ?? '',
-            onChanged: (v) {
-              final val = int.tryParse(v);
-              setState(() {
-                _manualMaleCollection = val;
-              });
-            },
-            isSmall: true,
-          ),
+        _buildSuggestedManualRow(
+          label: '男子算定額',
+          suggested: mSuggested,
+          color: Colors.blue.shade800,
+          fieldKey: const ValueKey('male_col_manual'),
+          fieldLabel: '男子徴収',
+          initialValue: _manualMaleCollection?.toString() ?? '',
+          onChanged: (v) => _manualMaleCollection = int.tryParse(v),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _compactTextField(
-            key: const ValueKey('female_col_manual'),
-            label: '女子徴収',
-            suffix: '円',
-            initialValue: _manualFemaleCollection?.toString() ?? '',
-            onChanged: (v) {
-              final val = int.tryParse(v);
-              setState(() {
-                _manualFemaleCollection = val;
-              });
-            },
-            isSmall: true,
-          ),
+        const SizedBox(height: 8),
+        _buildSuggestedManualRow(
+          label: '女子算定額',
+          suggested: fSuggested,
+          color: Colors.pink.shade800,
+          fieldKey: const ValueKey('female_col_manual'),
+          fieldLabel: '女子徴収',
+          initialValue: _manualFemaleCollection?.toString() ?? '',
+          onChanged: (v) => _manualFemaleCollection = int.tryParse(v),
         ),
       ],
     );
   }
 
-  Widget _buildCollectionEditorLauncher(int maleCount, int femaleCount,
-      int totalCollection, double balance, ThemeData theme) {
-    final balanceColor =
-        balance >= 0 ? Colors.green.shade700 : Colors.red.shade700;
-    return OutlinedButton.icon(
-      onPressed: () => _showCollectionEditorSheet(
-          maleCount, femaleCount, totalCollection, balance),
-      icon: const Icon(Icons.tune),
-      label: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text('徴収額・収支を編集'),
-          Text(
-            '${balance >= 0 ? "+" : ""}¥${balance.toStringAsFixed(0)}',
-            style: TextStyle(
-              color: balanceColor,
-              fontWeight: FontWeight.w900,
-            ),
+  Widget _buildSuggestedManualRow({
+    required String label,
+    required int suggested,
+    required Color color,
+    required Key fieldKey,
+    required String fieldLabel,
+    required String initialValue,
+    required ValueChanged<String> onChanged,
+  }) {
+    return Row(
+      children: [
+        Expanded(flex: 58, child: _resultBox(label, suggested, color)),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 42,
+          child: _compactTextField(
+            key: fieldKey,
+            label: fieldLabel,
+            suffix: '円',
+            initialValue: initialValue,
+            onChanged: onChanged,
+            isSmall: true,
           ),
-        ],
-      ),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(44),
-        foregroundColor: theme.colorScheme.onPrimaryContainer,
-        side: BorderSide(color: theme.colorScheme.outlineVariant),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  Future<void> _showCollectionEditorSheet(
-      int maleCount, int femaleCount, int totalCollection, double balance) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) {
-        final theme = Theme.of(context);
-        final viewInsets = MediaQuery.viewInsetsOf(context);
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + viewInsets.bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('徴収額・収支',
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                _buildCollectionInputs(maleCount, femaleCount),
-                const SizedBox(height: 12),
-                _buildCollectionSummary(totalCollection, balance, theme),
-              ],
-            ),
-          ),
-        );
-      },
+        ),
+      ],
     );
   }
 
