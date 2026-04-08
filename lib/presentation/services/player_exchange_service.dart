@@ -14,8 +14,13 @@ class PlayerExchangeService {
   /// クリップボードにJSONをエクスポート
   Future<void> exportToClipboard(List<Player> players) async {
     if (players.isEmpty) return;
-    final jsonString = jsonEncode(players.map((p) => p.toJson()).toList());
-    await Clipboard.setData(ClipboardData(text: jsonString));
+    try {
+      final jsonString = jsonEncode(players.map((p) => p.toJson()).toList());
+      await Clipboard.setData(ClipboardData(text: jsonString));
+    } catch (error, stackTrace) {
+      _debugLogError('exportToClipboard', error, stackTrace);
+      rethrow;
+    }
   }
 
   /// クリップボードからJSONをパース
@@ -34,74 +39,88 @@ class PlayerExchangeService {
             )
             .toList();
       }
-    } catch (_) {}
+      debugPrint(
+        '[PlayerExchangeService] importFromClipboard: decoded JSON is not a List.',
+      );
+    } catch (error, stackTrace) {
+      _debugLogError('importFromClipboard', error, stackTrace);
+    }
     return null;
   }
 
   /// ファイル(JSON/CSV)をエクスポート
   Future<void> exportToFile(List<Player> players, String format) async {
     if (players.isEmpty) return;
+    try {
+      final String extension = format == 'json' ? 'json' : 'csv';
+      final String fileName =
+          'players_${DateTime.now().millisecondsSinceEpoch}.$extension';
+      String content = '';
 
-    final String extension = format == 'json' ? 'json' : 'csv';
-    final String fileName =
-        'players_${DateTime.now().millisecondsSinceEpoch}.$extension';
-    String content = '';
-
-    if (format == 'json') {
-      content = jsonEncode(players.map((p) => p.toJson()).toList());
-    } else {
-      final List<List<dynamic>> rows = [
-        [
-          'id',
-          'name',
-          'yomigana',
-          'gender',
-          'isActive',
-          'isMustRest',
-          'excludedPartnerId'
-        ]
-      ];
-      for (var p in players) {
-        rows.add([
-          p.id,
-          p.name,
-          p.yomigana,
-          p.gender.index,
-          p.isActive ? 1 : 0,
-          p.isMustRest ? 1 : 0,
-          p.excludedPartnerId ?? '',
-        ]);
+      if (format == 'json') {
+        content = jsonEncode(players.map((p) => p.toJson()).toList());
+      } else {
+        final List<List<dynamic>> rows = [
+          [
+            'id',
+            'name',
+            'yomigana',
+            'gender',
+            'isActive',
+            'isMustRest',
+            'excludedPartnerId'
+          ]
+        ];
+        for (var p in players) {
+          rows.add([
+            p.id,
+            p.name,
+            p.yomigana,
+            p.gender.index,
+            p.isActive ? 1 : 0,
+            p.isMustRest ? 1 : 0,
+            p.excludedPartnerId ?? '',
+          ]);
+        }
+        content = CsvCodec().encode(rows);
       }
-      content = CsvCodec().encode(rows);
-    }
 
-    if (!kIsWeb &&
-        (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
-      final String? outputFile = await FilePicker.saveFile(
-        dialogTitle: '保存先を選択してください',
-        fileName: fileName,
-        type: FileType.custom,
-        allowedExtensions: [extension],
-      );
+      if (!kIsWeb &&
+          (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
+        final String? outputFile = await FilePicker.saveFile(
+          dialogTitle: '保存先を選択してください',
+          fileName: fileName,
+          type: FileType.custom,
+          allowedExtensions: [extension],
+        );
 
-      if (outputFile != null) {
+        if (outputFile == null) {
+          debugPrint(
+            '[PlayerExchangeService] exportToFile: save dialog was canceled.',
+          );
+          return;
+        }
+
         String finalPath = outputFile;
         if (!outputFile.toLowerCase().endsWith('.$extension')) {
           finalPath = '$outputFile.$extension';
         }
         await File(finalPath).writeAsString(content);
+      } else {
+        final Uint8List bytes = Uint8List.fromList(utf8.encode(content));
+        await Share.shareXFiles(
+          [
+            XFile.fromData(
+              bytes,
+              name: fileName,
+              mimeType: format == 'json' ? 'application/json' : 'text/csv',
+            ),
+          ],
+        );
       }
-    } else {
-      final Uint8List bytes = Uint8List.fromList(utf8.encode(content));
-      await Share.shareXFiles(
-        [
-          XFile.fromData(
-            bytes,
-            name: fileName,
-            mimeType: format == 'json' ? 'application/json' : 'text/csv',
-          ),
-        ],
-      );
+    } catch (error, stackTrace) {
+      _debugLogError('exportToFile', error, stackTrace);
+      rethrow;
     }
   }
 
@@ -113,15 +132,30 @@ class PlayerExchangeService {
         allowedExtensions: ['json', 'csv'],
       );
 
-      if (result == null || result.files.isEmpty) return null;
+      if (result == null || result.files.isEmpty) {
+        debugPrint(
+          '[PlayerExchangeService] importFromFile: picker canceled or no file selected.',
+        );
+        return null;
+      }
 
       final file = result.files.first;
       final extension = file.extension?.toLowerCase();
       final content = file.bytes != null
           ? utf8.decode(file.bytes!)
           : await File(file.path!).readAsString();
-      return parsePlayersForImport(content: content, extension: extension);
-    } catch (_) {}
+      final players =
+          parsePlayersForImport(content: content, extension: extension);
+      if (players == null) {
+        debugPrint(
+          '[PlayerExchangeService] importFromFile: failed to parse file.'
+          ' extension=$extension, name=${file.name}, size=${file.size}',
+        );
+      }
+      return players;
+    } catch (error, stackTrace) {
+      _debugLogError('importFromFile', error, stackTrace);
+    }
     return null;
   }
 
@@ -148,7 +182,12 @@ class PlayerExchangeService {
   List<Player>? _parseJsonPlayers(String content) {
     try {
       final decoded = jsonDecode(content);
-      if (decoded is! List) return null;
+      if (decoded is! List) {
+        debugPrint(
+          '[PlayerExchangeService] _parseJsonPlayers: decoded JSON is not a List.',
+        );
+        return null;
+      }
       return decoded
           .map(
             (item) => Player.fromJson(
@@ -156,7 +195,8 @@ class PlayerExchangeService {
             ),
           )
           .toList();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _debugLogError('_parseJsonPlayers', error, stackTrace);
       return null;
     }
   }
@@ -164,7 +204,12 @@ class PlayerExchangeService {
   List<Player>? _parseCsvPlayers(String content) {
     try {
       final List<List<dynamic>> rows = CsvCodec().decode(content);
-      if (rows.length <= 1) return null;
+      if (rows.length <= 1) {
+        debugPrint(
+          '[PlayerExchangeService] _parseCsvPlayers: CSV has no data rows.',
+        );
+        return null;
+      }
 
       return rows.sublist(1).map((row) {
         return Player(
@@ -179,7 +224,8 @@ class PlayerExchangeService {
               : null,
         );
       }).toList();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _debugLogError('_parseCsvPlayers', error, stackTrace);
       return null;
     }
   }
@@ -189,5 +235,14 @@ class PlayerExchangeService {
       return content.substring(1);
     }
     return content;
+  }
+
+  void _debugLogError(
+    String context,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    debugPrint('[PlayerExchangeService] $context error: $error');
+    debugPrint(stackTrace.toString());
   }
 }
