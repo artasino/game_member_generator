@@ -27,7 +27,11 @@ class PlayerExchangeService {
       final decoded = jsonDecode(data.text!);
       if (decoded is List) {
         return decoded
-            .map((item) => Player.fromJson(item as Map<String, dynamic>))
+            .map(
+              (item) => Player.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ),
+            )
             .toList();
       }
     } catch (_) {}
@@ -121,7 +125,11 @@ class PlayerExchangeService {
         final decoded = jsonDecode(content);
         if (decoded is List) {
           return decoded
-              .map((item) => Player.fromJson(item as Map<String, dynamic>))
+              .map(
+                (item) => Player.fromJson(
+                  Map<String, dynamic>.from(item as Map),
+                ),
+              )
               .toList();
         }
       } else if (extension == 'csv') {
