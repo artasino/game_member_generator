@@ -991,12 +991,12 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           _CompactBadge(
               label:
-                  '男性: ${pool.activeMales.length} 名 (平均 ${maleAvg.toStringAsFixed(1)}回)',
+                  '男性: ${pool.activeMales.length} 名 (${maleAvg.toStringAsFixed(1)}回/人)',
               color: Colors.blue.shade700),
           const SizedBox(width: 12),
           _CompactBadge(
               label:
-                  '女性: ${pool.activeFemales.length} 名 (平均 ${femaleAvg.toStringAsFixed(1)}回)',
+                  '女性: ${pool.activeFemales.length} 名 (${femaleAvg.toStringAsFixed(1)}回/人)',
               color: Colors.pink.shade600),
         ]),
       ],
