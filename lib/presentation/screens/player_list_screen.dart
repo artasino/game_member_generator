@@ -24,7 +24,6 @@ class PlayerListScreen extends StatefulWidget {
 
 class _PlayerListScreenState extends State<PlayerListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
   String _searchQuery = '';
 
   @override
@@ -39,39 +38,11 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: '名前・よみがなで検索...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: theme.colorScheme.onPrimary.withValues(alpha: 0.7)),
-                ),
-                style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 18),
-                onChanged: (value) {
-                  setState(() => _searchQuery = value.trim());
-                },
-              )
-            : const Text('メンバ一覧'),
+        title: const Text('メンバ一覧'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
-            onPressed: () {
-              setState(() {
-                if (_isSearching) {
-                  _isSearching = false;
-                  _searchQuery = '';
-                  _searchController.clear();
-                } else {
-                  _isSearching = true;
-                }
-              });
-            },
-          ),
           _buildPopupMenu(),
         ],
       ),
@@ -91,7 +62,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       p.player.yomigana.contains(_searchQuery))
                   .toList();
 
-          return _buildPlayerList(filteredPool, theme);
+          return _buildPlayerList(filteredPool, pool.all.length, theme);
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -200,7 +171,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     );
   }
 
-  Widget _buildPlayerList(List<PlayerWithStats> filteredPool, ThemeData theme) {
+  Widget _buildPlayerList(
+      List<PlayerWithStats> filteredPool, int totalCount, ThemeData theme) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final bool useSingleColumn = screenWidth < 900;
 
@@ -237,6 +209,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _buildSearchField(theme),
+                  const SizedBox(height: 16),
                   _buildTodayMemberHeader(
                       activeMales.length, activeFemales.length),
                   const SizedBox(height: 12),
@@ -305,7 +279,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       child: Divider(),
                     ),
                   ],
-                  const AppSectionHeader(title: '全メンバ', subtitle: '五十音順'),
+                  _buildAllMembersHeader(filteredPool.length, totalCount),
                   const SizedBox(height: 16),
                   if (maleLabels.isEmpty && femaleLabels.isEmpty) ...[
                     Padding(
@@ -347,6 +321,54 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSearchField(ThemeData theme) {
+    return TextField(
+      controller: _searchController,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.search),
+        hintText: '名前・よみがなで検索...',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.md),
+        ),
+        suffixIcon: _searchQuery.isEmpty
+            ? null
+            : IconButton(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                },
+                icon: const Icon(Icons.close),
+                tooltip: '検索をクリア',
+              ),
+        filled: true,
+        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+      ),
+      onChanged: (value) {
+        setState(() => _searchQuery = value.trim());
+      },
+    );
+  }
+
+  Widget _buildAllMembersHeader(int hitCount, int totalCount) {
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 12,
+      runSpacing: 8,
+      children: [
+        const AppSectionHeader(title: '全メンバ', subtitle: '五十音順'),
+        if (_searchQuery.isNotEmpty)
+          Text(
+            '$hitCount件 / 全$totalCount件',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+      ],
     );
   }
 
