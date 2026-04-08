@@ -510,9 +510,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
 
   Widget _buildWrap(List<PlayerWithStats> players,
       {bool showCheckbox = false, bool showStats = false}) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isWideScreen = screenWidth >= 1000;
+    final horizontalSpacing = isWideScreen ? 6.0 : 8.0;
+    final verticalSpacing = isWideScreen ? 6.0 : 8.0;
+
     return Wrap(
-      spacing: 10,
-      runSpacing: 10,
+      spacing: horizontalSpacing,
+      runSpacing: verticalSpacing,
       children: players.map((p) {
         return PlayerChip(
           playerWithStats: p,
