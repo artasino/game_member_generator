@@ -8,6 +8,9 @@ import '../notifiers/session_notifier.dart';
 import '../theme/app_theme.dart';
 import '../widgets/player_list_widgets.dart';
 
+const _kUiAnimationDuration = Duration(milliseconds: 180);
+const _kUiAnimationCurve = Curves.easeOutCubic;
+
 class PlayerListScreen extends StatefulWidget {
   final PlayerNotifier notifier;
   final SessionNotifier sessionNotifier;
@@ -281,40 +284,48 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   ],
                   _buildAllMembersHeader(filteredPool.length, totalCount),
                   const SizedBox(height: 16),
-                  if (maleLabels.isEmpty && femaleLabels.isEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl + AppSpacing.sm),
-                      child: Center(
-                        child: Text('該当するメンバが見つかりません',
-                            style: TextStyle(color: theme.colorScheme.outline)),
-                      ),
-                    )
-                  ] else ...[
-                    useSingleColumn
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildGroupedList(groupedMales, maleLabels, theme),
-                              const SizedBox(height: 8),
-                              _buildGroupedList(
-                                  groupedFemales, femaleLabels, theme),
-                            ],
+                  AnimatedSwitcher(
+                    duration: _kUiAnimationDuration,
+                    reverseDuration: _kUiAnimationDuration,
+                    switchInCurve: _kUiAnimationCurve,
+                    switchOutCurve: _kUiAnimationCurve,
+                    transitionBuilder: (child, animation) {
+                      final offsetAnimation = Tween<Offset>(
+                        begin: const Offset(0.0, 0.03),
+                        end: Offset.zero,
+                      ).animate(animation);
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: offsetAnimation,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: maleLabels.isEmpty && femaleLabels.isEmpty
+                        ? Padding(
+                            key: const ValueKey('empty-search-result'),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.xl + AppSpacing.sm,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '該当するメンバが見つかりません',
+                                style: TextStyle(
+                                  color: theme.colorScheme.outline,
+                                ),
+                              ),
+                            ),
                           )
-                        : Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child:
-                                    _buildGroupedList(groupedMales, maleLabels, theme),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildGroupedList(
-                                    groupedFemales, femaleLabels, theme),
-                              ),
-                            ],
+                        : _buildGroupedMembersSection(
+                            useSingleColumn: useSingleColumn,
+                            groupedMales: groupedMales,
+                            maleLabels: maleLabels,
+                            groupedFemales: groupedFemales,
+                            femaleLabels: femaleLabels,
+                            theme: theme,
                           ),
-                  ],
+                  ),
                 ],
               ),
             ),
@@ -428,6 +439,55 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           ],
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildGroupedMembersSection({
+    required bool useSingleColumn,
+    required Map<String, List<PlayerWithStats>> groupedMales,
+    required List<String> maleLabels,
+    required Map<String, List<PlayerWithStats>> groupedFemales,
+    required List<String> femaleLabels,
+    required ThemeData theme,
+  }) {
+    return AnimatedSwitcher(
+      duration: _kUiAnimationDuration,
+      reverseDuration: _kUiAnimationDuration,
+      switchInCurve: _kUiAnimationCurve,
+      switchOutCurve: _kUiAnimationCurve,
+      transitionBuilder: (child, animation) {
+        final offsetAnimation = Tween<Offset>(
+          begin: const Offset(0.0, 0.02),
+          end: Offset.zero,
+        ).animate(animation);
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(position: offsetAnimation, child: child),
+        );
+      },
+      child: useSingleColumn
+          ? Column(
+              key: const ValueKey('grouped-single-column'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildGroupedList(groupedMales, maleLabels, theme),
+                const SizedBox(height: 8),
+                _buildGroupedList(groupedFemales, femaleLabels, theme),
+              ],
+            )
+          : Row(
+              key: const ValueKey('grouped-two-columns'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildGroupedList(groupedMales, maleLabels, theme),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildGroupedList(groupedFemales, femaleLabels, theme),
+                ),
+              ],
+            ),
     );
   }
 
