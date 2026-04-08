@@ -7,6 +7,9 @@ import '../notifiers/session_notifier.dart';
 import '../theme/app_theme.dart';
 import '../widgets/match_history_widgets.dart';
 
+const _kSessionAnimationDuration = Duration(milliseconds: 180);
+const _kSessionAnimationCurve = Curves.easeOutCubic;
+
 extension LayoutScale on BoxConstraints {
   /// 画面サイズに基づいた動的なスケール値を計算
   double calculateMatchScale(int gameCount) {
@@ -93,9 +96,34 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                     _buildPopupMenu(),
                   ],
           ),
-          body: session == null
-              ? _buildEmpty(colorScheme)
-              : _buildContent(session),
+          body: AnimatedSwitcher(
+            duration: _kSessionAnimationDuration,
+            reverseDuration: _kSessionAnimationDuration,
+            switchInCurve: _kSessionAnimationCurve,
+            switchOutCurve: _kSessionAnimationCurve,
+            transitionBuilder: (child, animation) {
+              final offsetAnimation = Tween<Offset>(
+                begin: const Offset(0.0, 0.025),
+                end: Offset.zero,
+              ).animate(animation);
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: offsetAnimation,
+                  child: child,
+                ),
+              );
+            },
+            child: session == null
+                ? KeyedSubtree(
+                    key: const ValueKey('empty-history'),
+                    child: _buildEmpty(colorScheme),
+                  )
+                : KeyedSubtree(
+                    key: ValueKey('session-${session.index}'),
+                    child: _buildContent(session),
+                  ),
+          ),
           floatingActionButton: _buildFABs(session, colorScheme),
         );
       },

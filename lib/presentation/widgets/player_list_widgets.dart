@@ -10,6 +10,9 @@ import 'common_widgets.dart';
 
 export 'common_widgets.dart';
 
+const _kPlayerChipAnimationDuration = Duration(milliseconds: 180);
+const _kPlayerChipAnimationCurve = Curves.easeOutCubic;
+
 class SectionHeader extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -108,9 +111,12 @@ class PlayerChip extends StatelessWidget {
               )
             : EdgeInsets.zero,
         child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 200),
+          duration: _kPlayerChipAnimationDuration,
+          curve: _kPlayerChipAnimationCurve,
           opacity: token.opacity,
-          child: Container(
+          child: AnimatedContainer(
+            duration: _kPlayerChipAnimationDuration,
+            curve: _kPlayerChipAnimationCurve,
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
               vertical: AppSpacing.sm,
