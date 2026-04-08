@@ -1144,7 +1144,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           Expanded(
             flex: 58,
             child: _resultBox(
-                "均等割り算定額", mSuggested, Theme.of(context).colorScheme.primary),
+                "割り勘額", mSuggested, Theme.of(context).colorScheme.primary),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1183,13 +1183,13 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   Widget _buildSuggestedOnly(int mSuggested, int fSuggested) {
     if (!_useGenderSplit) {
       return _resultBox(
-          "均等割り算定額", mSuggested, Theme.of(context).colorScheme.primary);
+          "割り勘額", mSuggested, Theme.of(context).colorScheme.primary);
     }
     return Row(
       children: [
-        Expanded(child: _resultBox("男子算定額", mSuggested, Colors.blue.shade800)),
+        Expanded(child: _resultBox("男子", mSuggested, Colors.blue.shade800)),
         const SizedBox(width: 10),
-        Expanded(child: _resultBox("女子算定額", fSuggested, Colors.pink.shade800)),
+        Expanded(child: _resultBox("女子", fSuggested, Colors.pink.shade800)),
       ],
     );
   }

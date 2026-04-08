@@ -165,7 +165,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                 value: 'clear_history',
                 child: ListTile(
                   leading: Icon(Icons.delete_outline_rounded),
-                  title: Text('履歴をクリア'),
+                  title: Text('全履歴を削除'),
                 ),
               ),
             ]);
@@ -335,7 +335,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   Future<void> _showClearConfirm(BuildContext context) => showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('履歴をクリア',
+          title: const Text('全履歴を削除',
               style: TextStyle(fontWeight: FontWeight.w900)),
           content: const Text('これまでの全ての試合履歴が削除されます。よろしいですか？'),
           actions: [
@@ -397,7 +397,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                 _updateIndexSafely();
               },
               child: const Text(
-                '完全に削除する',
+                '削除',
                 style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
               ),
             ),
@@ -488,7 +488,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                 _updateIndexSafely(targetIndex: _currentIndex);
               },
               child: const Text(
-                '完全に削除する',
+                '削除',
                 style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
               ),
             ),
