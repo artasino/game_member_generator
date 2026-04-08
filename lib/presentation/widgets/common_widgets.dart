@@ -34,6 +34,39 @@ class AppSectionHeader extends StatelessWidget {
   }
 }
 
+/// アプリ全体で統一されたセクション用コンテナ
+class AppSectionCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? margin;
+  final Color? backgroundColor;
+
+  const AppSectionCard({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(AppSpacing.md),
+    this.margin,
+    this.backgroundColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: margin,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
 /// アプリ全体で統一されたバッジ（ラベル）
 class AppBadge extends StatelessWidget {
   final String label;

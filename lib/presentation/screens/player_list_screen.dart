@@ -213,118 +213,135 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSearchField(theme),
-                  const SizedBox(height: 16),
-                  _buildTodayMemberHeader(
-                      activeMales.length, activeFemales.length),
-                  const SizedBox(height: 12),
-                  if (activeMales.isNotEmpty || activeFemales.isNotEmpty) ...[
-                    useSingleColumn
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (activeMales.isNotEmpty) ...[
-                              GenderLabel(
-                                label: '男性 ${activeMales.length}名',
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(height: 8),
-                              _buildWrap(activeMales, showStats: true),
-                              const SizedBox(height: 16),
-                            ],
-                            if (activeFemales.isNotEmpty) ...[
-                              GenderLabel(
-                                label: '女性 ${activeFemales.length}名',
-                                color: theme.colorScheme.secondary,
-                              ),
-                              const SizedBox(height: 8),
-                              _buildWrap(activeFemales, showStats: true),
-                            ],
-                          ],
-                        )
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (activeMales.isNotEmpty) ...[
-                                    GenderLabel(
-                                      label: '男性 ${activeMales.length}名',
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildWrap(activeMales, showStats: true),
+                  const SizedBox(height: AppSpacing.lg),
+                  AppSectionCard(
+                    backgroundColor: theme.colorScheme.surfaceContainer,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTodayMemberHeader(
+                            activeMales.length, activeFemales.length),
+                        if (activeMales.isNotEmpty || activeFemales.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          useSingleColumn
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (activeMales.isNotEmpty) ...[
+                                      GenderLabel(
+                                        label: '男性 ${activeMales.length}名',
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildWrap(activeMales, showStats: true),
+                                      const SizedBox(height: 16),
+                                    ],
+                                    if (activeFemales.isNotEmpty) ...[
+                                      GenderLabel(
+                                        label: '女性 ${activeFemales.length}名',
+                                        color: theme.colorScheme.secondary,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildWrap(activeFemales, showStats: true),
+                                    ],
                                   ],
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (activeFemales.isNotEmpty) ...[
-                                    GenderLabel(
-                                      label: '女性 ${activeFemales.length}名',
-                                      color: theme.colorScheme.secondary,
+                                )
+                              : Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          if (activeMales.isNotEmpty) ...[
+                                            GenderLabel(
+                                              label: '男性 ${activeMales.length}名',
+                                              color: theme.colorScheme.primary,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            _buildWrap(activeMales,
+                                                showStats: true),
+                                          ],
+                                        ],
+                                      ),
                                     ),
-                                    const SizedBox(height: 8),
-                                    _buildWrap(activeFemales, showStats: true),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          if (activeFemales.isNotEmpty) ...[
+                                            GenderLabel(
+                                              label: '女性 ${activeFemales.length}名',
+                                              color: theme.colorScheme.secondary,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            _buildWrap(activeFemales,
+                                                showStats: true),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
                                   ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                      child: Divider(),
-                    ),
-                  ],
-                  _buildAllMembersHeader(filteredPool.length, totalCount),
-                  const SizedBox(height: 16),
-                  AnimatedSwitcher(
-                    duration: _kUiAnimationDuration,
-                    reverseDuration: _kUiAnimationDuration,
-                    switchInCurve: _kUiAnimationCurve,
-                    switchOutCurve: _kUiAnimationCurve,
-                    transitionBuilder: (child, animation) {
-                      final offsetAnimation = Tween<Offset>(
-                        begin: const Offset(0.0, 0.03),
-                        end: Offset.zero,
-                      ).animate(animation);
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: offsetAnimation,
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: maleLabels.isEmpty && femaleLabels.isEmpty
-                        ? Padding(
-                            key: const ValueKey('empty-search-result'),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.xl + AppSpacing.sm,
-                            ),
-                            child: Center(
-                              child: Text(
-                                '該当するメンバが見つかりません',
-                                style: TextStyle(
-                                  color: theme.colorScheme.outline,
                                 ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppSectionCard(
+                    backgroundColor: theme.colorScheme.surfaceContainerLowest,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildAllMembersHeader(filteredPool.length, totalCount),
+                        const SizedBox(height: 16),
+                        AnimatedSwitcher(
+                          duration: _kUiAnimationDuration,
+                          reverseDuration: _kUiAnimationDuration,
+                          switchInCurve: _kUiAnimationCurve,
+                          switchOutCurve: _kUiAnimationCurve,
+                          transitionBuilder: (child, animation) {
+                            final offsetAnimation = Tween<Offset>(
+                              begin: const Offset(0.0, 0.03),
+                              end: Offset.zero,
+                            ).animate(animation);
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: offsetAnimation,
+                                child: child,
                               ),
-                            ),
-                          )
-                        : _buildGroupedMembersSection(
-                            useSingleColumn: useSingleColumn,
-                            groupedMales: groupedMales,
-                            maleLabels: maleLabels,
-                            groupedFemales: groupedFemales,
-                            femaleLabels: femaleLabels,
-                            theme: theme,
-                          ),
+                            );
+                          },
+                          child: maleLabels.isEmpty && femaleLabels.isEmpty
+                              ? Padding(
+                                  key: const ValueKey('empty-search-result'),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: AppSpacing.xl + AppSpacing.sm,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '該当するメンバが見つかりません',
+                                      style: TextStyle(
+                                        color: theme.colorScheme.outline,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : _buildGroupedMembersSection(
+                                  useSingleColumn: useSingleColumn,
+                                  groupedMales: groupedMales,
+                                  maleLabels: maleLabels,
+                                  groupedFemales: groupedFemales,
+                                  femaleLabels: femaleLabels,
+                                  theme: theme,
+                                ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

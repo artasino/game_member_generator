@@ -531,10 +531,9 @@ class RestingContainer extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          border: Border(
-              top: BorderSide(
-                  color: theme.colorScheme.outlineVariant, width: 1.5))),
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

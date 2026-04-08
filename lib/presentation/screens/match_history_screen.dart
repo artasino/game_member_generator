@@ -5,6 +5,7 @@ import '../../domain/entities/player.dart';
 import '../../domain/entities/session.dart';
 import '../notifiers/session_notifier.dart';
 import '../theme/app_theme.dart';
+import '../widgets/common_widgets.dart';
 import '../widgets/match_history_widgets.dart';
 
 const _kSessionAnimationDuration = Duration(milliseconds: 180);
@@ -210,30 +211,52 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg),
-                  child: GamesArea(
-                    session: session,
-                    pool: scopedPool,
-                    scale: scale,
-                    screenWidth: (constraints.maxWidth -
-                            MatchHistoryLayoutTokens.contentHorizontalPadding)
-                        .clamp(0, double.infinity),
-                    selectedPlayer: _selectedPlayer,
-                    onPlayerTap: (p) => _handleTap(session, p),
-                    onPlayerLongPress: (p) =>
-                        setState(() => _selectedPlayer = p),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: AppSectionCard(
+                    backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                    child: GamesArea(
+                      session: session,
+                      pool: scopedPool,
+                      scale: scale,
+                      screenWidth: (constraints.maxWidth -
+                              MatchHistoryLayoutTokens.contentHorizontalPadding)
+                          .clamp(0, double.infinity),
+                      selectedPlayer: _selectedPlayer,
+                      onPlayerTap: (p) => _handleTap(session, p),
+                      onPlayerLongPress: (p) =>
+                          setState(() => _selectedPlayer = p),
+                    ),
                   ),
                 ),
               ),
               if (session.restingPlayers.isNotEmpty)
-                RestingContainer(
-                  session: session,
-                  scale: scale,
-                  maxWidth: constraints.maxWidth,
-                  selectedPlayerId: _selectedPlayer?.id,
-                  onPlayerTap: (p) => _handleTap(session, p),
-                  onPlayerLongPress: (p) => setState(() => _selectedPlayer = p),
-                  pool: scopedPool,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: AppSectionCard(
+                    padding: EdgeInsets.zero,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.surfaceContainerLowest,
+                    child: RestingContainer(
+                      session: session,
+                      scale: scale,
+                      maxWidth: constraints.maxWidth,
+                      selectedPlayerId: _selectedPlayer?.id,
+                      onPlayerTap: (p) => _handleTap(session, p),
+                      onPlayerLongPress: (p) =>
+                          setState(() => _selectedPlayer = p),
+                      pool: scopedPool,
+                    ),
+                  ),
                 ),
             ],
           );
