@@ -28,6 +28,22 @@ void main() {
       expect(recovered.isActive, player.isActive);
     });
 
+    test('Player: fromJson supports bool/string values', () {
+      final recovered = Player.fromJson({
+        'id': 'p2',
+        'name': '佐藤 花子',
+        'yomigana': 'さとう はなこ',
+        'gender': '1',
+        'isActive': true,
+        'isMustRest': '0',
+        'excludedPartnerId': null,
+      });
+
+      expect(recovered.gender, Gender.female);
+      expect(recovered.isActive, isTrue);
+      expect(recovered.isMustRest, isFalse);
+    });
+
     test('Team: toJson / fromJson roundtrip', () {
       final p1 =
           Player(id: '1', name: 'P1', yomigana: 'p1', gender: Gender.male);

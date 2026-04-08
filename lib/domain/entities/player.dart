@@ -57,13 +57,40 @@ class Player extends Equatable {
   }
 
   factory Player.fromJson(Map<String, dynamic> json) {
+    final genderValue = json['gender'];
+    final isActiveValue = json['isActive'];
+    final isMustRestValue = json['isMustRest'];
+
+    int parseGender(dynamic value) {
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value) ?? 0;
+      return 0;
+    }
+
+    bool parseBool(dynamic value, {required bool defaultValue}) {
+      if (value is bool) return value;
+      if (value is int) return value == 1;
+      if (value is String) {
+        final normalized = value.trim().toLowerCase();
+        if (normalized == '1' || normalized == 'true') return true;
+        if (normalized == '0' || normalized == 'false') return false;
+      }
+      return defaultValue;
+    }
+
+    final parsedGenderIndex = parseGender(genderValue);
+    final safeGenderIndex = (parsedGenderIndex >= 0 &&
+            parsedGenderIndex < Gender.values.length)
+        ? parsedGenderIndex
+        : 0;
+
     return Player(
       id: json['id'],
       name: json['name'],
       yomigana: json['yomigana'] ?? '',
-      gender: Gender.values[json['gender']],
-      isActive: json['isActive'] == 1,
-      isMustRest: json['isMustRest'] == 1,
+      gender: Gender.values[safeGenderIndex],
+      isActive: parseBool(isActiveValue, defaultValue: true),
+      isMustRest: parseBool(isMustRestValue, defaultValue: false),
       excludedPartnerId: json['excludedPartnerId'],
     );
   }
