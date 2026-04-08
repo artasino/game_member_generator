@@ -321,9 +321,9 @@ class _PlayerChipVisualToken {
       mustRestIconColor:
           isActive ? colorScheme.tertiary : colorScheme.outline,
       statsPrimaryBadgeColor:
-          isActive ? const Color(0xFF2F7D8C) : colorScheme.outline,
+          isActive ? const Color(0xFF0B6BDE) : colorScheme.outline,
       statsRestBadgeColor:
-          isActive ? const Color(0xFF8A6D3B) : colorScheme.outline,
+          isActive ? const Color(0xFFD9480F) : colorScheme.outline,
       statsTextColor:
           isActive
               ? colorScheme.onSurfaceVariant.withValues(alpha: 0.92)
