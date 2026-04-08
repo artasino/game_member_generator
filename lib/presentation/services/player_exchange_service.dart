@@ -120,37 +120,74 @@ class PlayerExchangeService {
       final content = file.bytes != null
           ? utf8.decode(file.bytes!)
           : await File(file.path!).readAsString();
-
-      if (extension == 'json') {
-        final decoded = jsonDecode(content);
-        if (decoded is List) {
-          return decoded
-              .map(
-                (item) => Player.fromJson(
-                  Map<String, dynamic>.from(item as Map),
-                ),
-              )
-              .toList();
-        }
-      } else if (extension == 'csv') {
-        final List<List<dynamic>> rows = CsvCodec().decode(content);
-        if (rows.length <= 1) return null;
-
-        return rows.sublist(1).map((row) {
-          return Player(
-            id: row[0].toString(),
-            name: row[1].toString(),
-            yomigana: row[2].toString(),
-            gender: Gender.values[int.tryParse(row[3].toString()) ?? 0],
-            isActive: (int.tryParse(row[4].toString()) ?? 1) == 1,
-            isMustRest: (int.tryParse(row[5].toString()) ?? 0) == 1,
-            excludedPartnerId: row.length > 6 && row[6].toString().isNotEmpty
-                ? row[6].toString()
-                : null,
-          );
-        }).toList();
-      }
+      return parsePlayersForImport(content: content, extension: extension);
     } catch (_) {}
     return null;
+  }
+
+  @visibleForTesting
+  List<Player>? parsePlayersForImport({
+    required String content,
+    String? extension,
+  }) {
+    // Web では拡張子が取れないケースがあるため、JSON/CSV を順にフォールバック判定する
+    final normalized = _removeUtf8Bom(content);
+
+    if (extension == 'json' || extension == null || extension.isEmpty) {
+      final jsonPlayers = _parseJsonPlayers(normalized);
+      if (jsonPlayers != null) return jsonPlayers;
+    }
+
+    if (extension == 'csv' || extension == null || extension.isEmpty) {
+      return _parseCsvPlayers(normalized);
+    }
+
+    return null;
+  }
+
+  List<Player>? _parseJsonPlayers(String content) {
+    try {
+      final decoded = jsonDecode(content);
+      if (decoded is! List) return null;
+      return decoded
+          .map(
+            (item) => Player.fromJson(
+              Map<String, dynamic>.from(item as Map),
+            ),
+          )
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  List<Player>? _parseCsvPlayers(String content) {
+    try {
+      final List<List<dynamic>> rows = CsvCodec().decode(content);
+      if (rows.length <= 1) return null;
+
+      return rows.sublist(1).map((row) {
+        return Player(
+          id: row[0].toString(),
+          name: row[1].toString(),
+          yomigana: row[2].toString(),
+          gender: Gender.values[int.tryParse(row[3].toString()) ?? 0],
+          isActive: (int.tryParse(row[4].toString()) ?? 1) == 1,
+          isMustRest: (int.tryParse(row[5].toString()) ?? 0) == 1,
+          excludedPartnerId: row.length > 6 && row[6].toString().isNotEmpty
+              ? row[6].toString()
+              : null,
+        );
+      }).toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _removeUtf8Bom(String content) {
+    if (content.isNotEmpty && content.codeUnitAt(0) == 0xFEFF) {
+      return content.substring(1);
+    }
+    return content;
   }
 }
