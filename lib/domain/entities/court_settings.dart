@@ -28,7 +28,7 @@ class CourtSettings {
   const CourtSettings(
     this.matchTypes, {
     this.autoCourtCount = 3,
-    this.autoCourtPolicy = AutoCourtPolicy.genderSeparated,
+    this.autoCourtPolicy = AutoCourtPolicy.balance,
     this.isAutoRecommendMode = false,
   });
 
@@ -43,7 +43,7 @@ class CourtSettings {
 
   factory CourtSettings.fromJson(dynamic json) {
     if (json is List<dynamic>) {
-      // Compatibility with old format where only matchTypes were stored as a list
+      // 旧形式互換: matchTypes のみを List で保存していた過去データを読み込む
       return CourtSettings(
         json.map((t) => MatchType.values[t as int]).toList(),
       );
@@ -56,9 +56,9 @@ class CourtSettings {
 
     return CourtSettings(
       types.isEmpty ? [MatchType.menDoubles] : types,
-      autoCourtCount: (map['autoCourtCount'] as int?) ?? 2,
-      autoCourtPolicy:
-          AutoCourtPolicy.values[(map['autoCourtPolicy'] as int?) ?? 1],
+      autoCourtCount: (map['autoCourtCount'] as int?) ?? 3,
+      autoCourtPolicy: AutoCourtPolicy
+          .values[(map['autoCourtPolicy'] as int?) ?? AutoCourtPolicy.balance.index],
       isAutoRecommendMode: (map['isAutoRecommendMode'] as bool?) ?? false,
     );
   }
