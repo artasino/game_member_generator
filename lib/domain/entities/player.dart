@@ -4,6 +4,8 @@ import 'gender.dart';
 
 /// プレイヤーの情報を保持するクラス
 class Player extends Equatable {
+  static const Object _excludedPartnerIdSentinel = Object();
+
   final String id;
   final String name;
   final String yomigana;
@@ -31,7 +33,7 @@ class Player extends Equatable {
     Gender? gender,
     bool? isActive,
     bool? isMustRest,
-    String? excludedPartnerId,
+    Object? excludedPartnerId = _excludedPartnerIdSentinel,
   }) {
     return Player(
       id: id ?? this.id,
@@ -40,7 +42,10 @@ class Player extends Equatable {
       gender: gender ?? this.gender,
       isActive: isActive ?? this.isActive,
       isMustRest: isMustRest ?? this.isMustRest,
-      excludedPartnerId: excludedPartnerId ?? this.excludedPartnerId,
+      excludedPartnerId:
+          identical(excludedPartnerId, _excludedPartnerIdSentinel)
+              ? this.excludedPartnerId
+              : excludedPartnerId as String?,
     );
   }
 
