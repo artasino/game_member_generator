@@ -115,7 +115,7 @@ class _OtherScreenState extends State<OtherScreen> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('その他'),
+        title: const Text('設定・ヘルプ'),
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
         centerTitle: true,

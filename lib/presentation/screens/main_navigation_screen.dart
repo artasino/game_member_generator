@@ -63,19 +63,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.people),
-            label: 'メンバ',
+            label: 'メンバー管理',
           ),
           NavigationDestination(
             icon: Icon(Symbols.badminton),
-            label: '試合履歴',
+            label: '試合を振り返る',
           ),
           NavigationDestination(
             icon: Icon(Icons.money),
-            label: '費用計算',
+            label: '費用を計算',
           ),
           NavigationDestination(
-            icon: Icon(Icons.help_outline),
-            label: 'その他',
+            icon: Icon(Icons.settings_help_suggest_outlined),
+            label: '設定・ヘルプ',
           ),
         ],
       ),
