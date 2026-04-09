@@ -69,7 +69,7 @@
 
 ## 🔄 Firebase Hosting デプロイ自動化（GitHub Actions）
 
-`main` ブランチへの push（または手動実行）で、次を自動実行します。
+`main` 向けPRが **merge（closed+merged）** された時（または手動実行）に、次を自動実行します。
 
 1. `flutter pub get`
 2. `flutter build web --release`
