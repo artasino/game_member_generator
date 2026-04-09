@@ -993,7 +993,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               label:
                   '男性: ${pool.activeMales.length} 名 (${maleAvg.toStringAsFixed(1)}回/人)',
               color: Colors.blue.shade700),
-          const SizedBox(width: 12),
+          const SizedBox(width: 6),
           _CompactBadge(
               label:
                   '女性: ${pool.activeFemales.length} 名 (${femaleAvg.toStringAsFixed(1)}回/人)',
@@ -1225,7 +1225,7 @@ class _CompactBadge extends StatelessWidget {
       ),
       child: Text(label,
           style: TextStyle(
-              color: color, fontSize: 13, fontWeight: FontWeight.bold)),
+              color: color, fontSize: 11)),
     );
   }
 }
