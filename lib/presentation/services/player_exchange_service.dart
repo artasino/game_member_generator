@@ -130,6 +130,7 @@ class PlayerExchangeService {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json', 'csv'],
+        withData: kIsWeb,
       );
 
       if (result == null || result.files.isEmpty) {
@@ -141,9 +142,18 @@ class PlayerExchangeService {
 
       final file = result.files.first;
       final extension = file.extension?.toLowerCase();
-      final content = file.bytes != null
-          ? utf8.decode(file.bytes!)
-          : await File(file.path!).readAsString();
+      final String content;
+      if (file.bytes != null) {
+        content = utf8.decode(file.bytes!);
+      } else if (!kIsWeb && file.path != null) {
+        content = await File(file.path!).readAsString();
+      } else {
+        debugPrint(
+          '[PlayerExchangeService] importFromFile: file bytes/path unavailable.'
+          ' extension=$extension, name=${file.name}, size=${file.size}',
+        );
+        return null;
+      }
       final players =
           parsePlayersForImport(content: content, extension: extension);
       if (players == null) {
