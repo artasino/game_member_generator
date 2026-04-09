@@ -685,13 +685,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                         segments: const <ButtonSegment<Gender>>[
                           ButtonSegment<Gender>(
                             value: Gender.male,
-                            label: Text('男性'),
                             icon: Icon(Icons.male),
+                            tooltip: '男性',
                           ),
                           ButtonSegment<Gender>(
                             value: Gender.female,
-                            label: Text('女性'),
                             icon: Icon(Icons.female),
+                            tooltip: '女性',
                           ),
                         ],
                         selected: <Gender>{selectedGender},
@@ -1057,13 +1057,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                   segments: const <ButtonSegment<Gender>>[
                                     ButtonSegment<Gender>(
                                       value: Gender.male,
-                                      label: Text('男性'),
                                       icon: Icon(Icons.male),
+                                      tooltip: '男性',
                                     ),
                                     ButtonSegment<Gender>(
                                       value: Gender.female,
-                                      label: Text('女性'),
                                       icon: Icon(Icons.female),
+                                      tooltip: '女性',
                                     ),
                                   ],
                                   selected: <Gender>{row.selectedGender},
