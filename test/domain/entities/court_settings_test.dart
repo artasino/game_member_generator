@@ -17,13 +17,13 @@ void main() {
 
     test('旧形式(List)を読み込める', () {
       final settings = CourtSettings.fromJson([
-        MatchType.menSingles.index,
-        MatchType.womenSingles.index,
+        MatchType.menDoubles.index,
+        MatchType.womenDoubles.index,
       ]);
 
       expect(
         settings.matchTypes,
-        [MatchType.menSingles, MatchType.womenSingles],
+        [MatchType.menDoubles, MatchType.womenDoubles],
       );
       expect(settings.autoCourtCount, 3);
       expect(settings.autoCourtPolicy, AutoCourtPolicy.balance);
