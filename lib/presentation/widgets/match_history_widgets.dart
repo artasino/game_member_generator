@@ -990,14 +990,18 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
       children: [
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           _CompactBadge(
-              label:
-                  '男性: ${pool.activeMales.length} 名 (${maleAvg.toStringAsFixed(1)}回/人)',
-              color: Colors.blue.shade700),
+            icon: Icons.male,
+            label:
+                '${pool.activeMales.length} 名 (${maleAvg.toStringAsFixed(1)}回/人)',
+            color: Colors.blue.shade700,
+          ),
           const SizedBox(width: 6),
           _CompactBadge(
-              label:
-                  '女性: ${pool.activeFemales.length} 名 (${femaleAvg.toStringAsFixed(1)}回/人)',
-              color: Colors.pink.shade600),
+            icon: Icons.female,
+            label:
+                '${pool.activeFemales.length} 名 (${femaleAvg.toStringAsFixed(1)}回/人)',
+            color: Colors.pink.shade600,
+          ),
         ]),
       ],
     );
@@ -1209,10 +1213,15 @@ class _MatchTypeSelector extends StatelessWidget {
 }
 
 class _CompactBadge extends StatelessWidget {
+  final IconData icon;
   final String label;
   final Color color;
 
-  const _CompactBadge({required this.label, required this.color});
+  const _CompactBadge({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1223,9 +1232,17 @@ class _CompactBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
-      child: Text(label,
-          style: TextStyle(
-              color: color, fontSize: 11)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(color: color, fontSize: 11),
+          ),
+        ],
+      ),
     );
   }
 }
