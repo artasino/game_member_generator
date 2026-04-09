@@ -3,7 +3,7 @@ name: Deploy Flutter Web to Firebase Hosting
 on:
   pull_request:
     branches:
-      - main
+      - master
     types:
       - closed
   workflow_dispatch:
