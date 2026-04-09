@@ -65,3 +65,23 @@
 
 1. 全ての試合が終わったら「費用計算」タブへ。
 2. 使用したシャトル数やコート代を入力して、1人あたりの金額を確認！
+---
+
+## 🔄 Firebase Hosting デプロイ自動化（GitHub Actions）
+
+`main` 向けPRが **merge（closed+merged）** された時（または手動実行）に、次を自動実行します。
+
+1. `flutter pub get`
+2. `flutter build web --release`
+3. `firebase deploy --only hosting`
+
+ワークフロー: `.github/workflows/deploy_firebase_hosting.yml`
+
+### 事前設定（GitHub Secrets）
+
+リポジトリの **Settings > Secrets and variables > Actions** に、以下の Secret を追加してください。
+
+- `FIREBASE_SERVICE_ACCOUNT_GAME_MEMBER_GENERATOR`
+  - Firebase プロジェクト `game-member-generator` で発行したサービスアカウント JSON
+
+> サービスアカウントには Hosting へデプロイ可能な権限（例: Firebase Admin もしくは必要最小限のカスタム権限）を付与してください。
