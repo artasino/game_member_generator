@@ -59,11 +59,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        onDestinationSelected: (index) =>
+            setState(() => _selectedIndex = index),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.people),
-            label: 'メンバ',
+            label: 'メンバー',
           ),
           NavigationDestination(
             icon: Icon(Symbols.badminton),

@@ -41,7 +41,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('メンバ一覧'),
+        title: const Text('メンバー'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         centerTitle: true,
@@ -69,10 +69,11 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'add_member',
         onPressed: () {
           _showAddMemberTypeSelector(context);
         },
-        tooltip: 'メンバを追加',
+        tooltip: 'メンバーを追加',
         child: const Icon(Icons.add),
       ),
     );
@@ -145,14 +146,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           value: 'bulk_add',
           child: ListTile(
             leading: Icon(Icons.playlist_add),
-            title: Text('複数メンバを登録'),
+            title: Text('複数メンバーを登録'),
           ),
         ),
         const PopupMenuItem(
           value: 'bulk_delete',
           child: ListTile(
             leading: Icon(Icons.playlist_remove),
-            title: Text('複数メンバを削除'),
+            title: Text('複数メンバーを削除'),
           ),
         ),
       ],
@@ -167,8 +168,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         children: [
           Icon(Icons.people_outline, size: 64, color: colorScheme.outline),
           const SizedBox(height: AppSpacing.lg),
-          Text('メンバを登録してください',
-              style: TextStyle(color: colorScheme.outline)),
+          Text('メンバーを登録してください', style: TextStyle(color: colorScheme.outline)),
         ],
       ),
     );
@@ -201,14 +201,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final contentWidth =
-            constraints.maxWidth.clamp(0.0, 1100.0).toDouble();
+        final contentWidth = constraints.maxWidth.clamp(0.0, 1100.0).toDouble();
         return Align(
           alignment: Alignment.topCenter,
           child: SizedBox(
             width: contentWidth,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.fabBottomOffset + AppSpacing.sm),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg,
+                  AppSpacing.lg, AppSpacing.fabBottomOffset + AppSpacing.sm),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -219,64 +219,65 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   const SizedBox(height: 12),
                   if (activeMales.isNotEmpty || activeFemales.isNotEmpty) ...[
                     useSingleColumn
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (activeMales.isNotEmpty) ...[
-                              GenderLabel(
-                                label: '男性 ${activeMales.length}名',
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(height: 8),
-                              _buildWrap(activeMales, showStats: true),
-                              const SizedBox(height: 16),
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (activeMales.isNotEmpty) ...[
+                                GenderLabel(
+                                  label: '男性 ${activeMales.length}名',
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(height: 8),
+                                _buildWrap(activeMales, showStats: true),
+                                const SizedBox(height: 16),
+                              ],
+                              if (activeFemales.isNotEmpty) ...[
+                                GenderLabel(
+                                  label: '女性 ${activeFemales.length}名',
+                                  color: theme.colorScheme.secondary,
+                                ),
+                                const SizedBox(height: 8),
+                                _buildWrap(activeFemales, showStats: true),
+                              ],
                             ],
-                            if (activeFemales.isNotEmpty) ...[
-                              GenderLabel(
-                                label: '女性 ${activeFemales.length}名',
-                                color: theme.colorScheme.secondary,
+                          )
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (activeMales.isNotEmpty) ...[
+                                      GenderLabel(
+                                        label: '男性 ${activeMales.length}名',
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildWrap(activeMales, showStats: true),
+                                    ],
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 8),
-                              _buildWrap(activeFemales, showStats: true),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (activeFemales.isNotEmpty) ...[
+                                      GenderLabel(
+                                        label: '女性 ${activeFemales.length}名',
+                                        color: theme.colorScheme.secondary,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildWrap(activeFemales,
+                                          showStats: true),
+                                    ],
+                                  ],
+                                ),
+                              ),
                             ],
-                          ],
-                        )
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (activeMales.isNotEmpty) ...[
-                                    GenderLabel(
-                                      label: '男性 ${activeMales.length}名',
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildWrap(activeMales, showStats: true),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (activeFemales.isNotEmpty) ...[
-                                    GenderLabel(
-                                      label: '女性 ${activeFemales.length}名',
-                                      color: theme.colorScheme.secondary,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildWrap(activeFemales, showStats: true),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                       child: Divider(),
@@ -310,7 +311,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                             ),
                             child: Center(
                               child: Text(
-                                '該当するメンバが見つかりません',
+                                '該当するメンバーが見つかりません',
                                 style: TextStyle(
                                   color: theme.colorScheme.outline,
                                 ),
@@ -356,7 +357,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 tooltip: '検索をクリア',
               ),
         filled: true,
-        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        fillColor:
+            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
       ),
       onChanged: (value) {
         setState(() => _searchQuery = value.trim());
@@ -370,7 +372,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       spacing: 12,
       runSpacing: 8,
       children: [
-        const AppSectionHeader(title: '全メンバ', subtitle: '五十音順'),
+        const AppSectionHeader(title: '全メンバー', subtitle: '五十音順'),
         if (_searchQuery.isNotEmpty)
           Text(
             '$hitCount件 / 全$totalCount件',
@@ -403,13 +405,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       runSpacing: 8,
       children: [
         AppSectionHeader(
-          title: '本日の参加メンバ',
+          title: '本日の参加メンバー',
           subtitle: '計$totalCount名 (男$activeMalesCount 女$activeFemalesCount)',
         ),
         OutlinedButton.icon(
           onPressed: () => _showBulkParticipationTypeSelector(context),
           icon: const Icon(Icons.groups),
-          label: const Text('参加メンバ編集'),
+          label: const Text('参加メンバー編集'),
         ),
       ],
     );
@@ -424,7 +426,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(left: AppSpacing.xs, bottom: AppSpacing.sm),
+              padding: const EdgeInsets.only(
+                  left: AppSpacing.xs, bottom: AppSpacing.sm),
               child: Text(
                 label,
                 style: TextStyle(
@@ -608,10 +611,10 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("参加メンバ設定",
+          title: const Text("参加メンバー設定",
               style: TextStyle(fontWeight: FontWeight.w900)),
           content:
-              Text(isToActivate ? '今日の参加メンバーに登録しますか？' : '今日の参加メンバから削除しますか？'),
+              Text(isToActivate ? '今日の参加メンバーに登録しますか？' : '今日の参加メンバーから削除しますか？'),
           actions: [
             AppActionButton(
               label: 'キャンセル',
@@ -648,7 +651,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text(isEdit ? 'メンバ編集' : 'メンバ登録',
+              title: Text(isEdit ? 'メンバー編集' : 'メンバー登録',
                   style: const TextStyle(fontWeight: FontWeight.w900)),
               content: SingleChildScrollView(
                 child: Column(
@@ -732,7 +735,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           context,
                           player?.id,
                           nameController.text.isEmpty
-                              ? '新規メンバ'
+                              ? '新規メンバー'
                               : nameController.text,
                           selectedGender,
                           currentExcludedPartnerId,
@@ -842,7 +845,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.sheetTop)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppRadius.sheetTop)),
       ),
       builder: (context) {
         return StatefulBuilder(builder: (context, setSheetState) {
@@ -905,8 +909,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppRadius.lg),
                             ),
-                            contentPadding:
-                                const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.lg),
                           ),
                           onChanged: (v) {
                             setSheetState(() => selectorQuery = v.trim());
@@ -918,9 +922,11 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   const Divider(height: 1),
                   if (currentPartnerId != null && selectorQuery.isEmpty) ...[
                     ListTile(
-                      leading: Icon(Icons.link_off, color: Theme.of(context).colorScheme.error),
+                      leading: Icon(Icons.link_off,
+                          color: Theme.of(context).colorScheme.error),
                       title: Text('現在のペア設定を解除する',
-                          style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error)),
                       onTap: () {
                         onSelected(null);
                         Navigator.pop(context);
@@ -932,7 +938,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                     child: candidates.isEmpty
                         ? Center(
                             child: Text('候補者が見つかりません',
-                                style: TextStyle(color: Theme.of(context).colorScheme.outline)))
+                                style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.outline)))
                         : ListView.builder(
                             controller: scrollController,
                             itemCount: candidates.length,
@@ -945,8 +953,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                 leading: CircleAvatar(
                                   backgroundColor:
                                       candidate.gender == Gender.male
-                                          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
-                                          : Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withValues(alpha: 0.1)
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .secondary
+                                              .withValues(alpha: 0.1),
                                   child: Icon(
                                     candidate.gender == Gender.male
                                         ? Icons.male
@@ -954,7 +968,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                     size: 16,
                                     color: candidate.gender == Gender.male
                                         ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(context).colorScheme.secondary,
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .secondary,
                                   ),
                                 ),
                                 title: Text(candidate.name),
@@ -962,7 +978,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                     style: const TextStyle(fontSize: 11)),
                                 trailing: isCurrentPartner
                                     ? Icon(Icons.check_circle,
-                                        color: Theme.of(context).colorScheme.primary)
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary)
                                     : null,
                                 onTap: () {
                                   onSelected(candidate.id);
@@ -992,14 +1010,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('複数メンバを登録',
+              title: const Text('複数メンバーを登録',
                   style: TextStyle(fontWeight: FontWeight.w900)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('登録したいメンバを入力してください'),
+                    const Text('登録したいメンバーを入力してください'),
                     const SizedBox(height: 12),
                     ...rows.asMap().entries.map((entry) {
                       final index = entry.key;
@@ -1009,21 +1027,26 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(AppSpacing.md - 2),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                            border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant),
                             borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
                           child: Column(
                             children: [
                               Row(
                                 children: [
-                                  Text('メンバ ${index + 1}',
+                                  Text('メンバー ${index + 1}',
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   const Spacer(),
                                   if (rows.length > 1)
                                     IconButton(
                                       icon: Icon(Icons.close,
-                                          color: Theme.of(context).colorScheme.error),
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .error),
                                       onPressed: () {
                                         setState(() {
                                           rows.removeAt(index).dispose();
@@ -1117,8 +1140,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       final yomigana = row.yomiganaController.text.trim();
                       if (name.isEmpty || yomigana.isEmpty) continue;
                       players.add(Player(
-                        id:
-                            '${DateTime.now().microsecondsSinceEpoch}_${players.length}',
+                        id: '${DateTime.now().microsecondsSinceEpoch}_${players.length}',
                         name: name,
                         yomigana: yomigana,
                         gender: row.selectedGender,
@@ -1127,13 +1149,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                     }
 
                     if (players.isEmpty) return;
-                    final result = await widget.notifier.addPlayersBulk(players);
+                    final result =
+                        await widget.notifier.addPlayersBulk(players);
                     if (!context.mounted) return;
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                            '${result.$1}名を登録しました（重複スキップ: ${result.$2}名）'),
+                        content:
+                            Text('${result.$1}名を登録しました（重複スキップ: ${result.$2}名）'),
                       ),
                     );
                   },
@@ -1212,7 +1235,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               ..sort((a, b) => a.yomigana.compareTo(b.yomigana));
 
             return AlertDialog(
-              title: const Text('複数メンバを削除',
+              title: const Text('複数メンバーを削除',
                   style: TextStyle(fontWeight: FontWeight.w900)),
               content: SizedBox(
                 width: 420,
@@ -1240,8 +1263,11 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                     Flexible(
                       child: candidates.isEmpty
                           ? Center(
-                              child: Text('対象メンバが見つかりません',
-                                  style: TextStyle(color: Theme.of(context).colorScheme.outline)),
+                              child: Text('対象メンバーが見つかりません',
+                                  style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline)),
                             )
                           : ListView.builder(
                               shrinkWrap: true,
@@ -1320,7 +1346,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               ..sort((a, b) => a.yomigana.compareTo(b.yomigana));
 
             return AlertDialog(
-              title: Text(isToActivate ? '参加メンバに複数登録' : '参加メンバを複数解除',
+              title: Text(isToActivate ? '参加メンバーに複数登録' : '参加メンバーを複数解除',
                   style: const TextStyle(fontWeight: FontWeight.w900)),
               content: SizedBox(
                 width: 420,
@@ -1350,9 +1376,11 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           ? Center(
                               child: Text(
                                 isToActivate
-                                    ? '登録可能なメンバがいません'
-                                    : '解除可能なメンバがいません',
-                                style: TextStyle(color: Theme.of(context).colorScheme.outline),
+                                    ? '登録可能なメンバーがいません'
+                                    : '解除可能なメンバーがいません',
+                                style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.outline),
                               ),
                             )
                           : ListView.builder(
@@ -1393,15 +1421,15 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   onPressed: selectedIds.isEmpty
                       ? null
                       : () async {
-                          final updated = await widget.notifier
-                              .setActiveBulk(selectedIds.toList(), isToActivate);
+                          final updated = await widget.notifier.setActiveBulk(
+                              selectedIds.toList(), isToActivate);
                           if (!context.mounted) return;
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(isToActivate
-                                  ? '$updated名を参加メンバに登録しました'
-                                  : '$updated名を参加メンバから解除しました'),
+                                  ? '$updated名を参加メンバーに登録しました'
+                                  : '$updated名を参加メンバーから解除しました'),
                             ),
                           );
                         },
@@ -1420,7 +1448,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       context: parentContext,
       builder: (context) {
         return AlertDialog(
-          title: const Text('参加メンバを一括設定',
+          title: const Text('参加メンバーを一括設定',
               style: TextStyle(fontWeight: FontWeight.w900)),
           contentPadding: const EdgeInsets.only(top: 8),
           content: Column(
@@ -1429,19 +1457,21 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               ListTile(
                 leading: const Icon(Icons.group_add),
                 title: const Text('複数登録'),
-                subtitle: const Text('選択したメンバを参加にします'),
+                subtitle: const Text('選択したメンバーを参加にします'),
                 onTap: () {
                   Navigator.pop(context);
-                  _showBulkParticipationDialog(parentContext, isToActivate: true);
+                  _showBulkParticipationDialog(parentContext,
+                      isToActivate: true);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.group_remove),
                 title: const Text('複数解除'),
-                subtitle: const Text('選択したメンバを不参加にします'),
+                subtitle: const Text('選択したメンバーを不参加にします'),
                 onTap: () {
                   Navigator.pop(context);
-                  _showBulkParticipationDialog(parentContext, isToActivate: false);
+                  _showBulkParticipationDialog(parentContext,
+                      isToActivate: false);
                 },
               ),
             ],
