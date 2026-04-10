@@ -156,13 +156,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   value: 'import',
                   child: ListTile(
                       leading: Icon(Icons.file_upload_outlined),
-                      title: Text('インポート'),
+                      title: Text('データをインポート'),
                       contentPadding: EdgeInsets.zero)),
               const PopupMenuItem(
                   value: 'export',
                   child: ListTile(
                       leading: Icon(Icons.file_download_outlined),
-                      title: Text('エクスポート'),
+                      title: Text('データをエクスポート'),
                       contentPadding: EdgeInsets.zero)),
             ],
           ),
