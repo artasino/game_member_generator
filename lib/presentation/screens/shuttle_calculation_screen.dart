@@ -39,11 +39,8 @@ class ShuttleCalculationScreen extends StatefulWidget {
 
 class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   List<ExpenseEntry> _entries = [];
+  bool _useGenderSplit = false;
 
-  bool _useGenderSplit = false; // true: 男女ごとに計算, false: 全体化
-  bool _showCompactDetails = false;
-
-  // 手動入力用の集金額
   int? _manualMaleCollection;
   int? _manualFemaleCollection;
 
@@ -147,17 +144,6 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     );
   }
 
-  Future<void> _selectFromStock(int index) async {
-    final ShuttleStock? selected = await _pickStock();
-    if (selected != null) {
-      setState(() {
-        _entries[index].name = selected.name;
-        _entries[index].pricePerDozens = selected.pricePerDozens;
-        _entries[index].payerId = selected.payerId;
-      });
-    }
-  }
-
   Future<ShuttleStock?> _pickStock() async {
     final activePlayers =
         widget.playerNotifier.players.where((p) => p.isActive).toList();
@@ -175,6 +161,9 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.only(bottom: 20),
@@ -183,15 +172,15 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Text('費用種別を選択',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                child: Text('費用を追加',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         )),
               ),
               ...ExpenseType.values.map((type) {
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: type.color.withOpacity(0.1),
+                    backgroundColor: type.color.withValues(alpha: 0.1),
                     child: Icon(type.icon, color: type.color),
                   ),
                   title: Text(type.label,
@@ -289,806 +278,101 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final activePlayers =
+        widget.playerNotifier.players.where((p) => p.isActive).toList();
+
     return ListenableBuilder(
-        listenable:
-            Listenable.merge([widget.playerNotifier, widget.sessionNotifier]),
-        builder: (context, _) {
-          final theme = Theme.of(context);
-          final screenWidth = MediaQuery.sizeOf(context).width;
-          final bool useCompactLayout = screenWidth < 860;
-          final activePlayers =
-              widget.playerNotifier.players.where((p) => p.isActive).toList();
-          final maleCount =
-              activePlayers.where((p) => p.gender == Gender.male).length;
-          final femaleCount =
-              activePlayers.where((p) => p.gender == Gender.female).length;
-          final totalCount = maleCount + femaleCount;
+      listenable:
+          Listenable.merge([widget.playerNotifier, widget.sessionNotifier]),
+      builder: (context, _) {
+        final totalAmount = _entries.fold(0.0, (sum, item) => sum + item.total);
 
-          // --- 試合数と有効試合数の計算 ---
-          final sessions = widget.sessionNotifier.sessions;
-          final Map<MatchType, int> typeCounts = {};
-          double maleEffectiveGames = 0;
-          double femaleEffectiveGames = 0;
-
-          for (var s in sessions) {
-            for (var g in s.games) {
-              typeCounts[g.type] = (typeCounts[g.type] ?? 0) + 1;
-              if (g.type == MatchType.menDoubles) {
-                maleEffectiveGames += 1.0;
-              } else if (g.type == MatchType.womenDoubles) {
-                femaleEffectiveGames += 1.0;
-              } else {
-                maleEffectiveGames += 0.5;
-                femaleEffectiveGames += 0.5;
-              }
-            }
-          }
-          final totalGames = sessions.fold(0, (sum, s) => sum + s.games.length);
-
-          // --- シャトル消費スピード計算 ---
-          double totalShuttles = 0;
-          double maleShuttles = 0;
-          double femaleShuttles = 0;
-
-          for (var entry
-              in _entries.where((e) => e.type == ExpenseType.shuttle)) {
-            final count = entry.shuttleCount.toDouble();
-            totalShuttles += count;
-            if (entry.target == SplitTarget.male) {
-              maleShuttles += count;
-            } else if (entry.target == SplitTarget.female) {
-              femaleShuttles += count;
-            } else {
-              maleShuttles += count * 0.5;
-              femaleShuttles += count * 0.5;
-            }
-          }
-
-          final speedTotal = totalGames > 0 ? totalShuttles / totalGames : 0.0;
-          final speedMale =
-              maleEffectiveGames > 0 ? maleShuttles / maleEffectiveGames : 0.0;
-          final speedFemale = femaleEffectiveGames > 0
-              ? femaleShuttles / femaleEffectiveGames
-              : 0.0;
-
-          // --- 費用計算ロジック ---
-          double totalAmount =
-              _entries.fold(0, (sum, item) => sum + item.total);
-          double maleShare = 0;
-          double femaleShare = 0;
-
-          if (!_useGenderSplit) {
-            final perPerson = totalCount > 0 ? totalAmount / totalCount : 0.0;
-            maleShare = perPerson;
-            femaleShare = perPerson;
-          } else {
-            for (var entry in _entries) {
-              final amount = entry.total;
-              switch (entry.target) {
-                case SplitTarget.all:
-                  if (totalCount > 0) {
-                    final share = amount / totalCount;
-                    maleShare += share;
-                    femaleShare += share;
+        return Scaffold(
+          backgroundColor: theme.colorScheme.surface,
+          appBar: AppBar(
+            title: const Text('費用計算',
+                style:
+                    TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+            centerTitle: true,
+            backgroundColor: theme.colorScheme.primary,
+            foregroundColor: theme.colorScheme.onPrimary,
+            elevation: 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.history),
+                tooltip: '履歴',
+                onPressed: _showHistory,
+              ),
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'reset') {
+                    setState(() {
+                      _entries.clear();
+                      _manualMaleCollection = null;
+                      _manualFemaleCollection = null;
+                    });
                   }
-                case SplitTarget.male:
-                  if (maleCount > 0) {
-                    maleShare += amount / maleCount;
-                  }
-                case SplitTarget.female:
-                  if (femaleCount > 0) {
-                    femaleShare += amount / femaleCount;
-                  }
-              }
-            }
-          }
-
-          // 算定額 (1円単位切り上げ)
-          final mSuggested = maleShare.ceil();
-          final fSuggested = femaleShare.ceil();
-
-          // 手動入力の初期値設定
-          if (_manualMaleCollection == null && totalAmount > 0) {
-            _manualMaleCollection = (mSuggested / 100).ceil() * 100;
-          }
-          if (_manualFemaleCollection == null && totalAmount > 0) {
-            _manualFemaleCollection = (fSuggested / 100).ceil() * 100;
-          }
-
-          final mCol = _manualMaleCollection ?? 0;
-          final fCol = _manualFemaleCollection ?? 0;
-          final totalCollection = (mCol * maleCount) + (fCol * femaleCount);
-          final balance = totalCollection - totalAmount;
-
-          return Scaffold(
-            backgroundColor: theme.colorScheme.surfaceContainerLow,
-            appBar: AppBar(
-              title: const Text('費用計算',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-              centerTitle: true,
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: theme.colorScheme.onPrimary,
-              elevation: 0,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.inventory_2_outlined),
-                  tooltip: '在庫管理',
-                  onPressed: _showStockManager,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.save),
-                  tooltip: '保存',
-                  onPressed: _saveRecord,
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'history') _showHistory();
-                    if (value == 'stock') _showStockManager();
-                    if (value == 'speed') {
-                      _showConsumptionSpeedDialog(totalGames, typeCounts,
-                          speedTotal, speedMale, speedFemale);
-                    }
-                    if (value == 'reset') {
-                      setState(() {
-                        _entries.clear();
-                        _manualMaleCollection = null;
-                        _manualFemaleCollection = null;
-                        _entries.add(ExpenseEntry(
-                            name: 'シャトル/ボール',
-                            type: ExpenseType.shuttle,
-                            pricePerDozens: 0,
-                            shuttleCount: 0));
-                      });
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                        value: 'stock',
-                        child: ListTile(
-                            leading: Icon(Icons.inventory_2_outlined),
-                            title: Text('在庫管理'),
-                            contentPadding: EdgeInsets.zero)),
-                    const PopupMenuItem(
-                        value: 'speed',
-                        child: ListTile(
-                            leading: Icon(Icons.speed),
-                            title: Text('消費スピード'),
-                            contentPadding: EdgeInsets.zero)),
-                    const PopupMenuItem(
-                        value: 'history',
-                        child: ListTile(
-                            leading: Icon(Icons.history),
-                            title: Text('履歴を表示'),
-                            contentPadding: EdgeInsets.zero)),
-                    const PopupMenuItem(
-                        value: 'reset',
-                        child: ListTile(
-                            leading: Icon(Icons.refresh),
-                            title: Text('リセット'),
-                            contentPadding: EdgeInsets.zero)),
-                  ],
-                ),
-              ],
-            ),
-            body: LayoutBuilder(
-              builder: (context, constraints) {
-                final bool showSideSummary = !useCompactLayout;
-                final contentWidth = constraints.maxWidth
-                    .clamp(0.0, showSideSummary ? 1320.0 : 1100.0)
-                    .toDouble();
-
-                Widget inputArea({required EdgeInsets listPadding}) {
-                  return Column(
-                    children: [
-                      _buildInfoBar(maleCount, femaleCount, totalCount),
-                      _buildModeSelectorHeader(),
-                      Expanded(
-                        child: ListView.builder(
-                          padding: listPadding,
-                          itemCount: _entries.length,
-                          itemBuilder: (context, index) =>
-                              _buildExpenseCard(index, activePlayers),
-                        ),
-                      ),
-                    ],
-                  );
-                }
-
-                return Align(
-                  alignment: Alignment.topCenter,
-                  child: SizedBox(
-                    width: contentWidth,
-                    child: showSideSummary
-                        ? Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: inputArea(
-                                  listPadding:
-                                      const EdgeInsets.fromLTRB(16, 4, 12, 16),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 360,
-                                child: _buildSideSummaryPanel(
-                                    totalAmount,
-                                    mSuggested,
-                                    fSuggested,
-                                    activePlayers,
-                                    totalCollection,
-                                    balance),
-                              ),
-                            ],
-                          )
-                        : Column(
-                            children: [
-                              Expanded(
-                                child: inputArea(
-                                  listPadding:
-                                      const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                                ),
-                              ),
-                              _buildSummaryPanel(
-                                  totalAmount,
-                                  mSuggested,
-                                  fSuggested,
-                                  useCompactLayout,
-                                  activePlayers,
-                                  totalCollection,
-                                  balance),
-                            ],
-                          ),
-                  ),
-                );
-              },
-            ),
-            bottomSheet: null,
-            floatingActionButton: FloatingActionButton(
-              heroTag: 'add_expense',
-              onPressed: _showAddExpenseTypeSelector,
-              tooltip: '費用を追加',
-              child: const Icon(Icons.add),
-            ),
-          );
-        });
-  }
-
-  Widget _buildInfoBar(int m, int f, int t) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 12,
-        runSpacing: 6,
-        children: [
-          _countChip("男子", m, Colors.blue),
-          _countChip("女子", f, Colors.pink),
-          _countChip("合計", t, Colors.grey.shade700),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModeSelectorHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: SizedBox(
-        width: double.infinity,
-        height: 36,
-        child: SegmentedButton<bool>(
-          segments: const [
-            ButtonSegment(
-                value: false,
-                label: Text('均等に割り勘',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-            ButtonSegment(
-                value: true,
-                label: Text('男女別に計算',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-          ],
-          selected: {_useGenderSplit},
-          onSelectionChanged: (v) {
-            setState(() {
-              _useGenderSplit = v.first;
-              _manualMaleCollection = null;
-              _manualFemaleCollection = null;
-            });
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildConsumptionSpeedBanner(int games, Map<MatchType, int> typeCounts,
-      double total, double male, double female) {
-    final theme = Theme.of(context);
-
-    final matchTypeSummary = MatchType.values
-        .where((t) => (typeCounts[t] ?? 0) > 0)
-        .map((t) => '${t.displayName}:${typeCounts[t]}')
-        .join(', ');
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.colorScheme.outlineVariant, width: 0.5),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.speed, color: theme.colorScheme.secondary, size: 18),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('消費スピード ($games 試合)',
-                        style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.secondary)),
-                    if (matchTypeSummary.isNotEmpty)
-                      Text('($matchTypeSummary)',
-                          style: TextStyle(
-                              fontSize: 9,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                if (!_useGenderSplit)
-                  Text('${total.toStringAsFixed(2)} 個 / 試合',
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w900))
-                else
-                  Row(
-                    children: [
-                      Text('男: ${male.toStringAsFixed(2)}',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.blue.shade800)),
-                      const SizedBox(width: 12),
-                      Text('女: ${female.toStringAsFixed(2)}',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.pink.shade800)),
-                      const Spacer(),
-                      Text('計: ${total.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showConsumptionSpeedDialog(int games, Map<MatchType, int> typeCounts,
-      double total, double male, double female) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('消費スピード'),
-        contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        content: SizedBox(
-          width: 460,
-          child:
-              _buildConsumptionSpeedBanner(games, typeCounts, total, male, female),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('閉じる'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExpenseCard(int index, List<Player> activePlayers) {
-    final entry = _entries[index];
-    final theme = Theme.of(context);
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 2),
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: theme.colorScheme.outlineVariant, width: 0.8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 6, 6, 10),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Icon(entry.type.icon, size: 18, color: entry.type.color),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SizedBox(
-                    height: 26,
-                    child: _NameField(
-                      key: ValueKey('name_$index'),
-                      initialValue: entry.name,
-                      onChanged: (v) {
-                        entry.name = v;
-                        _persistState();
-                      },
-                    ),
-                  ),
-                ),
-                if (entry.type == ExpenseType.shuttle)
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.inventory_2_outlined,
-                        size: 18, color: Colors.blue),
-                    tooltip: '在庫から選択',
-                    onPressed: () => _selectFromStock(index),
-                  ),
-                if (_useGenderSplit) _buildSplitTargetDropdown(entry),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  icon: const Icon(Icons.close, color: Colors.grey, size: 18),
-                  onPressed: () => setState(() => _entries.removeAt(index)),
-                ),
-              ],
-            ),
-            const Divider(height: 1, thickness: 0.8),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  flex: 58,
-                  child: entry.type == ExpenseType.shuttle
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: _compactTextField(
-                                    key: ValueKey('price_$index'),
-                                    label: '単価/ダース',
-                                    suffix: '円',
-                                    initialValue: entry.pricePerDozens > 0
-                                        ? entry.pricePerDozens
-                                            .toStringAsFixed(0)
-                                        : '',
-                                    onChanged: (v) => entry.pricePerDozens =
-                                        double.tryParse(v) ?? 0,
-                                    maxLength: 5,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  flex: 2,
-                                  child: _compactTextField(
-                                    key: ValueKey('count_$index'),
-                                    label: '数',
-                                    suffix: '個',
-                                    initialValue: entry.shuttleCount > 0
-                                        ? entry.shuttleCount.toString()
-                                        : '',
-                                    onChanged: (v) =>
-                                        entry.shuttleCount = int.tryParse(v) ?? 0,
-                                    maxLength: 5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (entry.shuttleCount > 0 &&
-                                entry.pricePerDozens > 0)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  '1個単価: ¥${(entry.pricePerDozens / 12).toStringAsFixed(1)}',
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey.shade600,
-                                      fontStyle: FontStyle.italic),
-                                ),
-                              ),
-                          ],
-                        )
-                      : _compactTextField(
-                          key: ValueKey('amount_$index'),
-                          label: '金額',
-                          suffix: '円',
-                          initialValue:
-                              entry.amount > 0 ? entry.amount.toStringAsFixed(0) : '',
-                          onChanged: (v) =>
-                              entry.amount = double.tryParse(v) ?? 0,
-                          maxLength: 5,
-                        ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 42,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _buildPayerDropdown(entry, activePlayers),
-                      const SizedBox(height: 4),
-                      Text(
-                        '¥${entry.total.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSplitTargetDropdown(ExpenseEntry entry) {
-    return Container(
-      height: 24,
-      margin: const EdgeInsets.only(right: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: DropdownButton<SplitTarget>(
-        value: entry.target,
-        underline: const SizedBox(),
-        isDense: true,
-        items: SplitTarget.values
-            .map((t) => DropdownMenuItem(
-                value: t,
-                child: Text(t.label,
-                    style: const TextStyle(
-                        fontSize: 10, fontWeight: FontWeight.bold))))
-            .toList(),
-        onChanged: (v) => setState(() {
-          if (v != null) entry.target = v;
-        }),
-      ),
-    );
-  }
-
-  Widget _buildPayerDropdown(ExpenseEntry entry, List<Player> activePlayers) {
-    return SizedBox(
-      height: 20,
-      child: DropdownButton<String>(
-        value: entry.payerId,
-        underline: const SizedBox(),
-        isExpanded: true,
-        alignment: Alignment.centerRight,
-        hint: const Text('支払人なし',
-            style: TextStyle(fontSize: 9), textAlign: TextAlign.right),
-        icon: const Icon(Icons.arrow_drop_down, size: 12),
-        items: [
-          const DropdownMenuItem<String>(
-              value: null, child: Text('なし', style: TextStyle(fontSize: 10))),
-          ...activePlayers.map((p) => DropdownMenuItem(
-              value: p.id,
-              child: Text(p.name,
-                  style: const TextStyle(fontSize: 10),
-                  overflow: TextOverflow.ellipsis)))
-        ],
-        onChanged: (v) => setState(() => entry.payerId = v),
-      ),
-    );
-  }
-
-  Widget _compactTextField({
-    Key? key,
-    required String label,
-    required String suffix,
-    required String initialValue,
-    required Function(String) onChanged,
-    bool isSmall = false,
-    int maxLength = 5,
-  }) {
-    return SizedBox(
-      height: isSmall ? 28 : 36,
-      child: TextFormField(
-        key: key,
-        initialValue: initialValue,
-        decoration: InputDecoration(
-          labelText: label,
-          suffixText: suffix,
-          isDense: true,
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 10, vertical: isSmall ? 8 : 12),
-          border: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(8))),
-          labelStyle:
-              const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
-          filled: true,
-          fillColor: Theme.of(context).colorScheme.surface,
-        ),
-        style:
-            TextStyle(fontSize: isSmall ? 15 : 17, fontWeight: FontWeight.w900),
-        keyboardType: TextInputType.number,
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(maxLength),
-        ],
-        onChanged: (v) => setState(() => onChanged(v)),
-      ),
-    );
-  }
-
-  Widget _buildSummaryPanel(
-      double total,
-      int mSuggested,
-      int fSuggested,
-      bool useCompactLayout,
-      List<Player> activePlayers,
-      int totalCollection,
-      double balance) {
-    final theme = Theme.of(context);
-    final isPortrait =
-        MediaQuery.orientationOf(context) == Orientation.portrait;
-    final usePopupManualEditor = useCompactLayout && isPortrait;
-
-    final Map<ExpenseType, double> typeTotals = {};
-    for (var entry in _entries) {
-      typeTotals[entry.type] = (typeTotals[entry.type] ?? 0) + entry.total;
-    }
-    final payerTotals = _buildPayerTotals(activePlayers);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: const [
-          BoxShadow(
-              color: Colors.black12, blurRadius: 15, offset: Offset(0, -5))
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              useCompactLayout
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(child: _buildSummaryTotal(theme, total)),
-                            Row(
-                              children: [
-                                if (usePopupManualEditor)
-                                  TextButton.icon(
-                                    onPressed: () => _showManualAndBalanceSheet(
-                                        totalCollection, balance),
-                                    icon: const Icon(Icons.calculate_outlined,
-                                        size: 16),
-                                    label: const Text(
-                                      '手動/利益',
-                                      style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                TextButton.icon(
-                                  onPressed: () => setState(() {
-                                    _showCompactDetails = !_showCompactDetails;
-                                  }),
-                                  icon: Icon(
-                                    _showCompactDetails
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    size: 16,
-                                  ),
-                                  label: Text(
-                                    _showCompactDetails ? '内訳を隠す' : '内訳を見る',
-                                    style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        if (_showCompactDetails) ...[
-                          const SizedBox(height: 8),
-                          _buildSummaryBreakdown(theme, typeTotals),
-                          const SizedBox(height: 10),
-                          _buildPayerSummary(theme, payerTotals),
-                        ],
-                      ],
-                    )
-                  : Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // カテゴリ別内訳
-                        Expanded(
-                          flex: 5,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSummaryBreakdown(theme, typeTotals),
-                              const SizedBox(height: 10),
-                              _buildPayerSummary(theme, payerTotals),
-                            ],
-                          ),
-                        ),
-                        Container(
-                            height: 30,
-                            width: 1,
-                            color: theme.colorScheme.outlineVariant,
-                            margin: const EdgeInsets.symmetric(horizontal: 16)),
-                        // 合計費用
-                        Expanded(
-                          flex: 4,
-                          child: _buildSummaryTotal(theme, total),
-                        ),
-                      ],
-                    ),
-              const SizedBox(height: 12),
-              if (usePopupManualEditor) ...[
-                _buildSuggestedOnly(mSuggested, fSuggested),
-                const SizedBox(height: 12),
-              ] else ...[
-                _buildSuggestedAndManualInputs(mSuggested, fSuggested),
-                const SizedBox(height: 12),
-                _buildCollectionSummary(totalCollection, balance, theme),
-              ],
+                  if (value == 'stock') _showStockManager();
+                  if (value == 'save') _saveRecord();
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                      value: 'save',
+                      child: ListTile(
+                          leading: Icon(Icons.save),
+                          title: Text('消費記録を保存'),
+                          contentPadding: EdgeInsets.zero)),
+                  const PopupMenuItem(
+                      value: 'stock',
+                      child: ListTile(
+                          leading: Icon(Icons.inventory_2_outlined),
+                          title: Text('在庫管理'),
+                          contentPadding: EdgeInsets.zero)),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                      value: 'reset',
+                      child: ListTile(
+                          leading: Icon(Icons.refresh, color: Colors.red),
+                          title: Text('全てリセット',
+                              style: TextStyle(color: Colors.red)),
+                          contentPadding: EdgeInsets.zero)),
+                ],
+              ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showManualAndBalanceSheet(int totalCollection, double balance) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) {
-        final theme = Theme.of(context);
-        final viewInsets = MediaQuery.viewInsetsOf(context);
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + viewInsets.bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('手動徴収・利益計算',
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                _buildManualInputsOnly(),
-                const SizedBox(height: 12),
-                _buildCollectionSummary(totalCollection, balance, theme),
-              ],
+          body: Column(
+            children: [
+              _buildModeSelectorHeader(),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: _entries.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+                            itemCount: _entries.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) =>
+                                _buildExpenseCard(index, activePlayers),
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          bottomSheet: _entries.isEmpty
+              ? null
+              : _buildFeeNavigationPanel(totalAmount, activePlayers),
+          floatingActionButton: Padding(
+            padding: const EdgeInsets.only(bottom: 100),
+            child: FloatingActionButton.extended(
+              heroTag: 'add_expense',
+              onPressed: _showAddExpenseTypeSelector,
+              icon: const Icon(Icons.add),
+              label: const Text('出費を追加'),
             ),
           ),
         );
@@ -1096,408 +380,720 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     );
   }
 
-  Widget _buildSideSummaryPanel(
-      double total,
-      int mSuggested,
-      int fSuggested,
-      List<Player> activePlayers,
-      int totalCollection,
-      double balance) {
+  Widget _buildEmptyState() {
     final theme = Theme.of(context);
-
-    final Map<ExpenseType, double> typeTotals = {};
-    for (var entry in _entries) {
-      typeTotals[entry.type] = (typeTotals[entry.type] ?? 0) + entry.total;
-    }
-    final payerTotals = _buildPayerTotals(activePlayers);
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(0, 8, 16, 12),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 2))
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildSummaryTotal(theme, total, alignEnd: true),
-          const SizedBox(height: 16),
-          _buildSuggestedAndManualInputs(mSuggested, fSuggested),
-          const SizedBox(height: 16),
-          _buildCollectionSummary(totalCollection, balance, theme),
-          const SizedBox(height: 20),
-          _buildSummaryBreakdown(theme, typeTotals),
-          const SizedBox(height: 12),
-          _buildPayerSummary(theme, payerTotals),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSuggestedAndManualInputs(int mSuggested, int fSuggested) {
-    if (!_useGenderSplit) {
-      return Row(
-        children: [
-          Expanded(
-            flex: 58,
-            child: _resultBox(
-                "割り勘額", mSuggested, Theme.of(context).colorScheme.primary),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 42,
-            child: _buildManualInputsOnly(),
-          ),
-        ],
-      );
-    }
-
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildSuggestedManualRow(
-          label: '男子算定額',
-          suggested: mSuggested,
-          color: Colors.blue.shade800,
-          fieldKey: const ValueKey('male_col_manual'),
-          fieldLabel: '男子徴収',
-          initialValue: _manualMaleCollection?.toString() ?? '',
-          onChanged: (v) => _manualMaleCollection = int.tryParse(v),
-        ),
+        Icon(Icons.payments_outlined,
+            size: 64, color: theme.colorScheme.outlineVariant),
+        const SizedBox(height: 16),
+        Text('出費項目がありません',
+            style: TextStyle(
+                color: theme.colorScheme.outline,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         const SizedBox(height: 8),
-        _buildSuggestedManualRow(
-          label: '女子算定額',
-          suggested: fSuggested,
-          color: Colors.pink.shade800,
-          fieldKey: const ValueKey('female_col_manual'),
-          fieldLabel: '女子徴収',
-          initialValue: _manualFemaleCollection?.toString() ?? '',
-          onChanged: (v) => _manualFemaleCollection = int.tryParse(v),
-        ),
+        const Text('右下のボタンから出費を追加してください',
+            style: TextStyle(color: Colors.grey, fontSize: 13)),
       ],
     );
   }
 
-  Widget _buildSuggestedOnly(int mSuggested, int fSuggested) {
-    if (!_useGenderSplit) {
-      return _resultBox(
-          "割り勘額", mSuggested, Theme.of(context).colorScheme.primary);
-    }
-    return Row(
-      children: [
-        Expanded(child: _resultBox("男子", mSuggested, Colors.blue.shade800)),
-        const SizedBox(width: 10),
-        Expanded(child: _resultBox("女子", fSuggested, Colors.pink.shade800)),
-      ],
-    );
-  }
-
-  Widget _buildManualInputsOnly() {
-    return Column(
-      children: [
-        _compactTextField(
-          key: const ValueKey('male_col_manual'),
-          label: '男子徴収',
-          suffix: '円',
-          initialValue: _manualMaleCollection?.toString() ?? '',
-          onChanged: (v) => _manualMaleCollection = int.tryParse(v),
-          isSmall: true,
-        ),
-        const SizedBox(height: 6),
-        _compactTextField(
-          key: const ValueKey('female_col_manual'),
-          label: '女子徴収',
-          suffix: '円',
-          initialValue: _manualFemaleCollection?.toString() ?? '',
-          onChanged: (v) => _manualFemaleCollection = int.tryParse(v),
-          isSmall: true,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSuggestedManualRow({
-    required String label,
-    required int suggested,
-    required Color color,
-    required Key fieldKey,
-    required String fieldLabel,
-    required String initialValue,
-    required ValueChanged<String> onChanged,
-  }) {
-    return Row(
-      children: [
-        Expanded(flex: 58, child: _resultBox(label, suggested, color)),
-        const SizedBox(width: 10),
-        Expanded(
-          flex: 42,
-          child: _compactTextField(
-            key: fieldKey,
-            label: fieldLabel,
-            suffix: '円',
-            initialValue: initialValue,
-            onChanged: onChanged,
-            isSmall: true,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCollectionSummary(
-      int totalCollection, double balance, ThemeData theme) {
-    final balanceColor =
-        balance >= 0 ? Colors.green.shade700 : Colors.red.shade700;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('徴収総額',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              Text('¥$totalCollection',
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w900)),
-            ],
-          ),
-          const Divider(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('収支',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              Text(
-                '${balance >= 0 ? "+" : ""}¥${balance.toStringAsFixed(0)}',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: balanceColor),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _resultBox(String label, int valueRound, Color color,
-      {bool isLarge = false}) {
+  Widget _buildModeSelectorHeader() {
+    final theme = Theme.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+        color: theme.colorScheme.surface,
+        border: Border(
+            bottom: BorderSide(
+                color: theme.colorScheme.outlineVariant, width: 0.5)),
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: SegmentedButton<bool>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(
+                  value: false,
+                  label: Text('均等わり',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13))),
+              ButtonSegment(
+                  value: true,
+                  label: Text('男女別',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13))),
+            ],
+            selected: {_useGenderSplit},
+            onSelectionChanged: (v) {
+              setState(() {
+                _useGenderSplit = v.first;
+                _manualMaleCollection = null;
+                _manualFemaleCollection = null;
+              });
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpenseCard(int index, List<Player> activePlayers) {
+    final entry = _entries[index];
+    final theme = Theme.of(context);
+    final payer = activePlayers.where((p) => p.id == entry.payerId).firstOrNull;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: theme.colorScheme.outlineVariant, width: 0.5),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _showExpenseDetailEditor(index, activePlayers),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: payer != null
+                      ? (payer.gender == Gender.male
+                          ? Colors.blue.withValues(alpha: 0.1)
+                          : Colors.pink.withValues(alpha: 0.1))
+                      : theme.colorScheme.surfaceContainerHighest,
+                  child: payer != null
+                      ? Text(payer.name.substring(0, 1),
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: payer.gender == Gender.male
+                                  ? Colors.blue
+                                  : Colors.pink))
+                      : Icon(Icons.person_outline,
+                          size: 22, color: theme.colorScheme.outline),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(entry.name,
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 2),
+                      Text(
+                        payer != null ? '${payer.name}が支払い' : '支払人未設定',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: payer != null
+                                ? theme.colorScheme.onSurfaceVariant
+                                : theme.colorScheme.outline),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '¥${entry.total.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    if (entry.type == ExpenseType.shuttle)
+                      Text(
+                        '${entry.shuttleCount}個使用',
+                        style: TextStyle(
+                            fontSize: 11, color: theme.colorScheme.outline),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right,
+                    size: 20, color: theme.colorScheme.outlineVariant),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeeNavigationPanel(
+      double totalAmount, List<Player> activePlayers) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, -4)),
+        ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label,
-              style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: color.withValues(alpha: 0.8))),
-          Text("¥$valueRound",
-              style: TextStyle(
-                  fontSize: isLarge ? 26 : 20,
-                  fontWeight: FontWeight.w900,
-                  color: color)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('合計',
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey)),
+              Text('¥${totalAmount.toStringAsFixed(0)}',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: theme.colorScheme.primary)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: FilledButton.icon(
+              onPressed: () => _showSettlementSheet(totalAmount, activePlayers),
+              icon: const Icon(Icons.calculate_outlined),
+              label: const Text('支払調整画面へ',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _countChip(String label, int count, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+  Future<void> _showSettlementSheet(
+      double totalAmount, List<Player> activePlayers) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Text("$label: $count",
-          style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: color.withValues(alpha: 0.8))),
+      builder: (context) => _SettlementSheet(
+        totalAmount: totalAmount,
+        entries: _entries,
+        activePlayers: activePlayers,
+        useGenderSplit: _useGenderSplit,
+        manualMaleCollection: _manualMaleCollection,
+        manualFemaleCollection: _manualFemaleCollection,
+        onManualCollectionChanged: (m, f) {
+          setState(() {
+            _manualMaleCollection = m;
+            _manualFemaleCollection = f;
+          });
+        },
+      ),
     );
   }
 
-  Widget _buildSummaryBreakdown(
-      ThemeData theme, Map<ExpenseType, double> typeTotals) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("内訳",
-            style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary)),
-        const SizedBox(height: 4),
-        ...ExpenseType.values.where((t) => (typeTotals[t] ?? 0) > 0).map((t) =>
-            Padding(
-              padding: const EdgeInsets.only(bottom: 1),
-              child: Row(
+  void _showExpenseDetailEditor(int index, List<Player> activePlayers) {
+    final entry = _entries[index];
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(t.icon, size: 9, color: t.color.withValues(alpha: 0.7)),
-                  const SizedBox(width: 4),
-                  Expanded(
-                      child:
-                          Text(t.label, style: const TextStyle(fontSize: 10))),
-                  Text("¥${typeTotals[t]!.toStringAsFixed(0)}",
-                      style: const TextStyle(
-                          fontSize: 10, fontWeight: FontWeight.bold)),
+                  Text('出費の編集',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  IconButton(
+                    onPressed: () {
+                      setState(() => _entries.removeAt(index));
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  ),
                 ],
               ),
-            )),
-      ],
-    );
-  }
-
-  Widget _buildSummaryTotal(ThemeData theme, double total,
-      {bool alignEnd = false}) {
-    return Column(
-      crossAxisAlignment:
-          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      children: [
-        const Text("総費用額",
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-        Text("¥${total.toStringAsFixed(0)}",
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-      ],
-    );
-  }
-
-  Map<String, double> _buildPayerTotals(List<Player> activePlayers) {
-    final nameById = {for (final p in activePlayers) p.id: p.name};
-    final Map<String, double> payerTotals = {};
-
-    for (final entry in _entries) {
-      final payerName = nameById[entry.payerId] ?? 'なし';
-      payerTotals[payerName] = (payerTotals[payerName] ?? 0) + entry.total;
-    }
-
-    return Map.fromEntries(
-      payerTotals.entries.toList()
-        ..sort((a, b) {
-          if (a.key == 'なし') return 1;
-          if (b.key == 'なし') return -1;
-          return a.key.compareTo(b.key);
-        }),
-    );
-  }
-
-  Widget _buildPayerSummary(ThemeData theme, Map<String, double> payerTotals) {
-    if (payerTotals.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("支払人別",
-            style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary)),
-        const SizedBox(height: 4),
-        ...payerTotals.entries
-            .where((entry) => entry.value > 0)
-            .map((entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 1),
-                  child: Row(
-                    children: [
-                      Expanded(
-                          child: Text(entry.key,
-                              style: const TextStyle(fontSize: 10))),
-                      Text("¥${entry.value.toStringAsFixed(0)}",
-                          style: const TextStyle(
-                              fontSize: 10, fontWeight: FontWeight.bold)),
-                    ],
+              const SizedBox(height: 16),
+              TextFormField(
+                initialValue: entry.name,
+                decoration: const InputDecoration(
+                  labelText: '項目名',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (v) => setState(() => entry.name = v),
+              ),
+              const SizedBox(height: 16),
+              const Text('支払った人',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey)),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 50,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: activePlayers.length + 1,
+                  itemBuilder: (context, i) {
+                    if (i == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: const Text('未設定'),
+                          selected: entry.payerId == null,
+                          onSelected: (v) => setModalState(
+                              () => setState(() => entry.payerId = null)),
+                        ),
+                      );
+                    }
+                    final p = activePlayers[i - 1];
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        avatar: CircleAvatar(
+                          backgroundColor: p.gender == Gender.male
+                              ? Colors.blue
+                              : Colors.pink,
+                          child: Text(p.name.substring(0, 1),
+                              style: const TextStyle(
+                                  fontSize: 10, color: Colors.white)),
+                        ),
+                        label: Text(p.name),
+                        selected: entry.payerId == p.id,
+                        onSelected: (v) => setModalState(
+                            () => setState(() => entry.payerId = p.id)),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (entry.type == ExpenseType.shuttle) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: _modalTextField(
+                        label: '単価/ダース',
+                        suffix: '円',
+                        initialValue: entry.pricePerDozens > 0
+                            ? entry.pricePerDozens.toStringAsFixed(0)
+                            : '',
+                        onChanged: (v) => setModalState(() => setState(() =>
+                            entry.pricePerDozens = double.tryParse(v) ?? 0)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _modalTextField(
+                        label: '使用数',
+                        suffix: '個',
+                        initialValue: entry.shuttleCount > 0
+                            ? entry.shuttleCount.toString()
+                            : '',
+                        onChanged: (v) => setModalState(() => setState(
+                            () => entry.shuttleCount = int.tryParse(v) ?? 0)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.inventory_2_outlined, size: 16),
+                    label: const Text('在庫から単価を読み込む'),
+                    onPressed: () async {
+                      final s = await _pickStock();
+                      if (s != null) {
+                        setModalState(() {
+                          setState(() {
+                            entry.name = s.name;
+                            entry.pricePerDozens = s.pricePerDozens;
+                            entry.payerId = s.payerId;
+                          });
+                        });
+                      }
+                    },
                   ),
-                )),
-      ],
+                ),
+              ] else ...[
+                _modalTextField(
+                  label: '金額',
+                  suffix: '円',
+                  initialValue:
+                      entry.amount > 0 ? entry.amount.toStringAsFixed(0) : '',
+                  onChanged: (v) => setModalState(() =>
+                      setState(() => entry.amount = double.tryParse(v) ?? 0)),
+                ),
+              ],
+              if (_useGenderSplit) ...[
+                const SizedBox(height: 20),
+                const Text('負担する対象',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<SplitTarget>(
+                    segments: SplitTarget.values
+                        .map((t) =>
+                            ButtonSegment(value: t, label: Text(t.label)))
+                        .toList(),
+                    selected: {entry.target},
+                    onSelectionChanged: (v) => setModalState(
+                        () => setState(() => entry.target = v.first)),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('完了'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _modalTextField(
+      {required String label,
+      required String suffix,
+      required String initialValue,
+      required Function(String) onChanged}) {
+    return TextFormField(
+      initialValue: initialValue,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      decoration: InputDecoration(
+        labelText: label,
+        suffixText: suffix,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey.withValues(alpha: 0.05),
+      ),
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+      onChanged: onChanged,
     );
   }
 }
 
-class _NameField extends StatefulWidget {
-  final String initialValue;
-  final ValueChanged<String> onChanged;
+class _SettlementSheet extends StatefulWidget {
+  final double totalAmount;
+  final List<ExpenseEntry> entries;
+  final List<Player> activePlayers;
+  final bool useGenderSplit;
+  final int? manualMaleCollection;
+  final int? manualFemaleCollection;
+  final Function(int?, int?) onManualCollectionChanged;
 
-  const _NameField({
-    super.key,
-    required this.initialValue,
-    required this.onChanged,
+  const _SettlementSheet({
+    required this.totalAmount,
+    required this.entries,
+    required this.activePlayers,
+    required this.useGenderSplit,
+    required this.manualMaleCollection,
+    required this.manualFemaleCollection,
+    required this.onManualCollectionChanged,
   });
 
   @override
-  State<_NameField> createState() => _NameFieldState();
+  State<_SettlementSheet> createState() => _SettlementSheetState();
 }
 
-class _NameFieldState extends State<_NameField> {
-  late final TextEditingController _controller;
-  late final FocusNode _focusNode;
+class _SettlementSheetState extends State<_SettlementSheet> {
+  late int? _m;
+  late int? _f;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialValue);
-    _focusNode = FocusNode();
-    _focusNode.addListener(_handleFocusChanged);
-  }
-
-  @override
-  void didUpdateWidget(covariant _NameField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.initialValue != oldWidget.initialValue &&
-        widget.initialValue != _controller.text) {
-      _controller.text = widget.initialValue;
-    }
-  }
-
-  void _handleFocusChanged() {
-    if (_focusNode.hasFocus) {
-      _controller.selection =
-          TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
-    }
-  }
-
-  @override
-  void dispose() {
-    _focusNode.removeListener(_handleFocusChanged);
-    _focusNode.dispose();
-    _controller.dispose();
-    super.dispose();
+    _m = widget.manualMaleCollection;
+    _f = widget.manualFemaleCollection;
   }
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: _controller,
-      focusNode: _focusNode,
-      decoration: const InputDecoration(
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(vertical: 8),
-        border: InputBorder.none,
-        hintText: '項目名',
+    final theme = Theme.of(context);
+    final maleCount =
+        widget.activePlayers.where((p) => p.gender == Gender.male).length;
+    final femaleCount =
+        widget.activePlayers.where((p) => p.gender == Gender.female).length;
+    final totalCount = maleCount + femaleCount;
+
+    double maleShare = 0;
+    double femaleShare = 0;
+
+    if (!widget.useGenderSplit) {
+      final perPerson = totalCount > 0 ? widget.totalAmount / totalCount : 0.0;
+      maleShare = perPerson;
+      femaleShare = perPerson;
+    } else {
+      for (var entry in widget.entries) {
+        final amount = entry.total;
+        switch (entry.target) {
+          case SplitTarget.all:
+            if (totalCount > 0) {
+              final share = amount / totalCount;
+              maleShare += share;
+              femaleShare += share;
+            }
+          case SplitTarget.male:
+            if (maleCount > 0) {
+              maleShare += amount / maleCount;
+            }
+          case SplitTarget.female:
+            if (femaleCount > 0) {
+              femaleShare += amount / femaleCount;
+            }
+        }
+      }
+    }
+
+    final mSuggested = maleShare.ceil();
+    final fSuggested = femaleShare.ceil();
+
+    final mCol = _m ?? ((mSuggested / 100).ceil() * 100);
+    final fCol = _f ?? ((fSuggested / 100).ceil() * 100);
+    final totalCollection = (mCol * maleCount) + (fCol * femaleCount);
+    final balance = totalCollection - widget.totalAmount;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+          20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('精算・支払調整',
+                  style: theme.textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w900)),
+              const Spacer(),
+              IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close)),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildSummaryCard(
+              theme, widget.totalAmount, totalCollection, balance),
+          const SizedBox(height: 32),
+          Text('集金額の設定',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          _buildCollectionInput(
+            label: widget.useGenderSplit ? '男子の集金額' : '1人あたりの集金額',
+            suggested: mSuggested,
+            value: mCol,
+            color: Colors.blue,
+            onChanged: (v) {
+              setState(() => _m = int.tryParse(v));
+              widget.onManualCollectionChanged(_m, _f);
+            },
+          ),
+          if (widget.useGenderSplit) ...[
+            const SizedBox(height: 16),
+            _buildCollectionInput(
+              label: '女子の集金額',
+              suggested: fSuggested,
+              value: fCol,
+              color: Colors.pink,
+              onChanged: (v) {
+                setState(() => _f = int.tryParse(v));
+                widget.onManualCollectionChanged(_m, _f);
+              },
+            ),
+          ],
+          const SizedBox(height: 32),
+          _buildPayerList(theme),
+          const SizedBox(height: 40),
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('完了',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
       ),
-      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-      onChanged: widget.onChanged,
-      onTap: () {
-        _controller.selection =
-            TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
-      },
+    );
+  }
+
+  Widget _buildSummaryCard(
+      ThemeData theme, double total, int collection, double balance) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(20),
+        border:
+            Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          _summaryRow('合計出費', '¥${total.toStringAsFixed(0)}', Colors.grey),
+          const SizedBox(height: 8),
+          _summaryRow('徴収総額', '¥$collection', Colors.grey),
+          const Divider(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('収支（プラスが利益）',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                balance >= 0
+                    ? '+¥${balance.toStringAsFixed(0)}'
+                    : '¥${balance.toStringAsFixed(0)}',
+                style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: balance >= 0 ? Colors.green : Colors.red),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryRow(String label, String value, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label,
+            style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+        Text(value,
+            style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+      ],
+    );
+  }
+
+  Widget _buildCollectionInput({
+    required String label,
+    required int suggested,
+    required int value,
+    required Color color,
+    required ValueChanged<String> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: color)),
+                const SizedBox(height: 4),
+                Text('算定額: ¥$suggested',
+                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 120,
+            child: TextFormField(
+              initialValue: value.toString(),
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+              decoration: const InputDecoration(
+                suffixText: '円',
+                isDense: true,
+                border: InputBorder.none,
+              ),
+              onChanged: onChanged,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPayerList(ThemeData theme) {
+    final Map<String, double> payerTotals = {};
+    final nameById = {for (final p in widget.activePlayers) p.id: p.name};
+    for (final entry in widget.entries) {
+      final payerName = nameById[entry.payerId] ?? '未設定';
+      payerTotals[payerName] = (payerTotals[payerName] ?? 0) + entry.total;
+    }
+
+    if (payerTotals.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('支払人ごとの立替額',
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+        const SizedBox(height: 8),
+        ...payerTotals.entries.map((e) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(e.key,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text('¥${e.value.toStringAsFixed(0)}',
+                      style: const TextStyle(fontWeight: FontWeight.w900)),
+                ],
+              ),
+            )),
+      ],
     );
   }
 }
