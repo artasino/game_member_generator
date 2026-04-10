@@ -81,6 +81,15 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                 isSwapping ? colorScheme.tertiary : colorScheme.primary,
             foregroundColor:
                 isSwapping ? colorScheme.onPrimary : colorScheme.onPrimary,
+            leading: isSwapping
+                ? null
+                : IconButton(
+                    icon: const Icon(Icons.undo_rounded),
+                    onPressed: widget.notifier.canUndo
+                        ? () => _showUndoLastConfirm(context)
+                        : null,
+                    tooltip: 'やり直し',
+                  ),
             title: MatchHistoryHeader(
               isSwapping: isSwapping,
               session: session,
@@ -131,7 +140,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   }
 
   Widget _buildPopupMenu() {
-    final canUndo = widget.notifier.canUndo;
     return PopupMenuButton<String>(
         onSelected: (value) async {
           if (value == 'clear_history') {
@@ -141,19 +149,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             if (session != null) {
               await _showDeleteSessionConfirm(context, session.index);
             }
-          } else if (value == 'undo_last') {
-            await _showUndoLastConfirm(context);
           }
         },
         itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'undo_last',
-                enabled: canUndo,
-                child: ListTile(
-                  leading: Icon(Icons.undo_rounded),
-                  title: Text('一個前の状態に戻す'),
-                ),
-              ),
               const PopupMenuItem(
                 value: 'delete_session',
                 child: ListTile(
@@ -176,14 +174,21 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.history_rounded,
-                size: 64, color: colorScheme.outlineVariant),
+                size: 80,
+                color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               '試合履歴がありません',
               style: TextStyle(
                   color: colorScheme.outline,
                   fontSize: 18,
-                  fontWeight: FontWeight.w900), // 統一
+                  fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => _showSettings(false),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('最初の試合を作成'),
             ),
           ],
         ),
@@ -201,16 +206,19 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
 
   Widget _buildContent(Session session) => LayoutBuilder(
         builder: (context, constraints) {
+          final theme = Theme.of(context);
           final scale = constraints.calculateMatchScale(session.games.length);
           final scopedPool =
               widget.notifier.getPlayerStatsPoolUpToSession(session.index);
 
           return Column(
             children: [
+              _buildInstructionBanner(theme, _selectedPlayer != null),
               Expanded(
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg),
+                  padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg, 8, AppSpacing.lg, AppSpacing.lg),
                   child: GamesArea(
                     session: session,
                     pool: scopedPool,
@@ -239,6 +247,50 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           );
         },
       );
+
+  Widget _buildInstructionBanner(ThemeData theme, bool isSwapping) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: isSwapping
+          ? theme.colorScheme.tertiaryContainer
+          : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      child: Row(
+        children: [
+          Icon(
+            isSwapping ? Icons.swap_horiz : Icons.lightbulb_outline,
+            size: 16,
+            color: isSwapping
+                ? theme.colorScheme.onTertiaryContainer
+                : theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isSwapping ? '入れ替える相手をタップしてください' : '長押しで選手を入れ替え、タップで戦績を確認できます',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSwapping ? FontWeight.bold : FontWeight.normal,
+                color: isSwapping
+                    ? theme.colorScheme.onTertiaryContainer
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          if (isSwapping)
+            TextButton(
+              onPressed: () => setState(() => _selectedPlayer = null),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('キャンセル', style: TextStyle(fontSize: 11)),
+            ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildFABs(Session? session, ColorScheme colorScheme) => Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.fabBottomOffset),
@@ -276,7 +328,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
       );
 
   void _handleTap(Session session, Player p) async {
-    if (_selectedPlayer == null) return;
+    if (_selectedPlayer == null) {
+      return;
+    }
     if (_selectedPlayer!.id != p.id) {
       await widget.notifier.swapPlayers(session, _selectedPlayer!, p);
     }
