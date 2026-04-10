@@ -552,36 +552,44 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
               offset: const Offset(0, -4)),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween, // 両端に配置
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // 左側：合計金額
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('合計',
+              const Text('合計金額',
                   style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: Colors.grey)),
               Text('¥${totalAmount.toStringAsFixed(0)}',
                   style: TextStyle(
-                      fontSize: 22,
+                      fontSize: 24,
                       fontWeight: FontWeight.w900,
-                      color: theme.colorScheme.primary)),
+                      color: theme.colorScheme.primary,
+                      height: 1.2)),
             ],
           ),
-          const SizedBox(height: 16),
+
+          // 右側：ボタン（幅をコンテンツに合わせる）
           SizedBox(
-            width: double.infinity,
-            height: 54,
+            height: 50, // 高さを少し抑えてスマートに
             child: FilledButton.icon(
               onPressed: () => _showSettlementSheet(totalAmount, activePlayers),
-              icon: const Icon(Icons.calculate_outlined),
-              label: const Text('支払調整画面へ',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              icon: const Icon(Icons.calculate_outlined, size: 20),
+              label: const Text('支払調整',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                // 文字の横に適切な余白
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
               ),
             ),
           ),
