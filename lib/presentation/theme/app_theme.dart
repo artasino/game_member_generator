@@ -35,22 +35,24 @@ class AppTheme {
         foregroundColor: colorScheme.onPrimary,
       ),
       navigationBarTheme: NavigationBarThemeData(
+        height: 60,
         backgroundColor: colorScheme.surface,
         indicatorColor: colorScheme.secondaryContainer,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final style = TextStyle(fontSize: 11, fontWeight: FontWeight.w500);
           if (states.contains(WidgetState.selected)) {
-            return TextStyle(
+            return style.copyWith(
               color: colorScheme.primary,
               fontWeight: FontWeight.w700,
             );
           }
-          return TextStyle(color: colorScheme.onSurfaceVariant);
+          return style.copyWith(color: colorScheme.onSurfaceVariant);
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return IconThemeData(color: colorScheme.primary);
+            return IconThemeData(color: colorScheme.primary, size: 22);
           }
-          return IconThemeData(color: colorScheme.onSurfaceVariant);
+          return IconThemeData(color: colorScheme.onSurfaceVariant, size: 22);
         }),
       ),
       chipTheme: ChipThemeData(

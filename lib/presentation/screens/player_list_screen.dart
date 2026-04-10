@@ -35,6 +35,102 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     super.dispose();
   }
 
+  Future<void> _handleExportClipboard() async {
+    await widget.notifier.exportPlayersToClipboard();
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('クリップボードにコピーしました')));
+    }
+  }
+
+  Future<void> _handleImportClipboard() async {
+    final message = await widget.notifier.importPlayersFromClipboard();
+    if (message != null && mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  Future<void> _handleExportFile(String format) async {
+    await widget.notifier.exportPlayersToFile(format);
+  }
+
+  Future<void> _handleImportFile() async {
+    final message = await widget.notifier.importPlayersFromFile();
+    if (message != null && mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  void _showImportOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.paste),
+              title: const Text('クリップボードから追加'),
+              onTap: () {
+                Navigator.pop(context);
+                _handleImportClipboard();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.file_open),
+              title: const Text('ファイルからインポート'),
+              onTap: () {
+                Navigator.pop(context);
+                _handleImportFile();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showExportOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text('クリップボードへコピー'),
+              onTap: () {
+                Navigator.pop(context);
+                _handleExportClipboard();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.save_alt),
+              title: const Text('JSONファイルで保存'),
+              onTap: () {
+                Navigator.pop(context);
+                _handleExportFile('json');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.grid_on),
+              title: const Text('CSVファイルで保存'),
+              onTap: () {
+                Navigator.pop(context);
+                _handleExportFile('csv');
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -45,9 +141,6 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         centerTitle: true,
-        actions: [
-          _buildPopupMenu(),
-        ],
       ),
       body: AnimatedBuilder(
         animation: Listenable.merge([widget.notifier, widget.sessionNotifier]),
@@ -79,97 +172,67 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     );
   }
 
-  Widget _buildPopupMenu() {
-    return PopupMenuButton<String>(
-      onSelected: (value) async {
-        String? message;
-        if (value == 'export_clipboard') {
-          await widget.notifier.exportPlayersToClipboard();
-          message = 'クリップボードにコピーしました';
-        } else if (value == 'import_clipboard') {
-          message = await widget.notifier.importPlayersFromClipboard();
-        } else if (value == 'export_json') {
-          await widget.notifier.exportPlayersToFile('json');
-        } else if (value == 'export_csv') {
-          await widget.notifier.exportPlayersToFile('csv');
-        } else if (value == 'import_file') {
-          message = await widget.notifier.importPlayersFromFile();
-        } else if (value == 'bulk_add') {
-          _showBulkAddDialog(context);
-        } else if (value == 'bulk_delete') {
-          _showBulkDeleteDialog(context);
-        }
-
-        if (message != null && mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(message)));
-        }
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: 'export_clipboard',
-          child: ListTile(
-            leading: Icon(Icons.copy),
-            title: Text('クリップボードへコピー'),
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'import_clipboard',
-          child: ListTile(
-            leading: Icon(Icons.paste),
-            title: Text('クリップボードから追加'),
-          ),
-        ),
-        const PopupMenuDivider(),
-        const PopupMenuItem(
-          value: 'export_json',
-          child: ListTile(
-            leading: Icon(Icons.save_alt),
-            title: Text('JSONファイルで保存'),
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'export_csv',
-          child: ListTile(
-            leading: Icon(Icons.grid_on),
-            title: Text('CSVファイルで保存'),
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'import_file',
-          child: ListTile(
-            leading: Icon(Icons.file_open),
-            title: Text('ファイルからインポート'),
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'bulk_add',
-          child: ListTile(
-            leading: Icon(Icons.playlist_add),
-            title: Text('複数メンバーを登録'),
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'bulk_delete',
-          child: ListTile(
-            leading: Icon(Icons.playlist_remove),
-            title: Text('複数メンバーを削除'),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildEmptyState() {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.people_outline, size: 64, color: colorScheme.outline),
-          const SizedBox(height: AppSpacing.lg),
-          Text('メンバーを登録してください', style: TextStyle(color: colorScheme.outline)),
-        ],
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.people_outline,
+                size: 80, color: colorScheme.outline.withValues(alpha: 0.5)),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'メンバーが登録されていません',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'まずはメンバーを1人ずつ登録するか、\n一括登録・インポートを試してみましょう。',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: AppSpacing.xl + AppSpacing.md),
+            SizedBox(
+              width: 240,
+              child: Column(
+                children: [
+                  FilledButton.icon(
+                    onPressed: () => _showAddEditDialog(context),
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('メンバーを1人登録'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => _showBulkAddDialog(context),
+                    icon: const Icon(Icons.playlist_add),
+                    label: const Text('複数まとめて登録'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: () => _showImportOptions(context),
+                    icon: const Icon(Icons.file_download),
+                    label: const Text('ファイル等から読込'),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -213,7 +276,11 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSearchField(theme),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+                  _buildQuickActions(theme),
+                  const SizedBox(height: 8),
+                  _buildHintChip(theme),
+                  const SizedBox(height: 20),
                   _buildTodayMemberHeader(
                       activeMales.length, activeFemales.length),
                   const SizedBox(height: 12),
@@ -336,6 +403,63 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     );
   }
 
+  Widget _buildQuickActions(ThemeData theme) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _ActionChip(
+            icon: Icons.file_upload_outlined,
+            label: '読込',
+            onPressed: () => _showImportOptions(context),
+          ),
+          const SizedBox(width: 8),
+          _ActionChip(
+            icon: Icons.file_download_outlined,
+            label: '保存',
+            onPressed: () => _showExportOptions(context),
+          ),
+          const SizedBox(width: 8),
+          _ActionChip(
+            icon: Icons.playlist_add_outlined,
+            label: '一括登録',
+            onPressed: () => _showBulkAddDialog(context),
+          ),
+          const SizedBox(width: 8),
+          _ActionChip(
+            icon: Icons.playlist_remove_outlined,
+            label: '一括削除',
+            onPressed: () => _showBulkDeleteDialog(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHintChip(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lightbulb_outline,
+              size: 16, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'タップで本日の参加切替、長押しでメンバー情報の修正ができます',
+              style: TextStyle(
+                  fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSearchField(ThemeData theme) {
     return TextField(
       controller: _searchController,
@@ -411,7 +535,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         OutlinedButton.icon(
           onPressed: () => _showBulkParticipationTypeSelector(context),
           icon: const Icon(Icons.groups),
-          label: const Text('参加メンバー編集'),
+          label: const Text('参加を一括変更'),
         ),
       ],
     );
@@ -1497,5 +1621,28 @@ class _BulkAddRowInput {
   void dispose() {
     nameController.dispose();
     yomiganaController.dispose();
+  }
+}
+
+class _ActionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      avatar: Icon(icon, size: 18),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+    );
   }
 }
