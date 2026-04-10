@@ -267,7 +267,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              isSwapping ? '入れ替える相手をタップしてください' : '長押しで選手を入れ替え、タップで戦績を確認できます',
+              isSwapping ? '入れ替える相手をタップしてください' : '長押しで選手を入れ替えられます',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isSwapping ? FontWeight.bold : FontWeight.normal,

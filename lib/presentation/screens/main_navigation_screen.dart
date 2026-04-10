@@ -52,33 +52,46 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) =>
-            setState(() => _selectedIndex = index),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.people),
-            label: 'メンバー',
-          ),
-          NavigationDestination(
-            icon: Icon(Symbols.badminton),
-            label: '試合履歴',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.money),
-            label: '費用計算',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.help_outline),
-            label: 'その他',
-          ),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: (index) =>
+              setState(() => _selectedIndex = index),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.people),
+              label: 'メンバー',
+            ),
+            NavigationDestination(
+              icon: Icon(Symbols.badminton),
+              label: '試合履歴',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.money),
+              label: '費用計算',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.help_outline),
+              label: 'その他',
+            ),
+          ],
+        ),
       ),
     );
   }
