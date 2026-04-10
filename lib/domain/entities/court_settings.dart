@@ -12,9 +12,9 @@ extension AutoCourtPolicyX on AutoCourtPolicy {
       case AutoCourtPolicy.genderSeparated:
         return '男女別';
       case AutoCourtPolicy.balance:
-        return 'バランス';
+        return '最適';
       case AutoCourtPolicy.mix:
-        return 'ミックス';
+        return '混合';
     }
   }
 }

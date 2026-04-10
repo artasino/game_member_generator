@@ -45,7 +45,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
 
   Future<void> _handleImportClipboard() async {
     final message = await widget.notifier.importPlayersFromClipboard();
-    if (message != null && mounted) {
+    if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
     }
@@ -57,7 +57,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
 
   Future<void> _handleImportFile() async {
     final message = await widget.notifier.importPlayersFromFile();
-    if (message != null && mounted) {
+    if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
     }
@@ -141,6 +141,32 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         centerTitle: true,
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'import') {
+                _showImportOptions(context);
+              }
+              if (value == 'export') {
+                _showExportOptions(context);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                  value: 'import',
+                  child: ListTile(
+                      leading: Icon(Icons.file_upload_outlined),
+                      title: Text('インポート'),
+                      contentPadding: EdgeInsets.zero)),
+              const PopupMenuItem(
+                  value: 'export',
+                  child: ListTile(
+                      leading: Icon(Icons.file_download_outlined),
+                      title: Text('エクスポート'),
+                      contentPadding: EdgeInsets.zero)),
+            ],
+          ),
+        ],
       ),
       body: AnimatedBuilder(
         animation: Listenable.merge([widget.notifier, widget.sessionNotifier]),
@@ -160,14 +186,6 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
 
           return _buildPlayerList(filteredPool, pool.all.length, theme);
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'add_member',
-        onPressed: () {
-          _showAddMemberTypeSelector(context);
-        },
-        tooltip: 'メンバーを追加',
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -409,26 +427,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       child: Row(
         children: [
           _ActionChip(
-            icon: Icons.file_upload_outlined,
-            label: '読込',
-            onPressed: () => _showImportOptions(context),
-          ),
-          const SizedBox(width: 8),
-          _ActionChip(
-            icon: Icons.file_download_outlined,
-            label: '保存',
-            onPressed: () => _showExportOptions(context),
-          ),
-          const SizedBox(width: 8),
-          _ActionChip(
             icon: Icons.playlist_add_outlined,
-            label: '一括登録',
-            onPressed: () => _showBulkAddDialog(context),
+            label: '登録',
+            onPressed: () => _showAddMemberTypeSelector(context),
           ),
           const SizedBox(width: 8),
           _ActionChip(
             icon: Icons.playlist_remove_outlined,
-            label: '一括削除',
+            label: '削除',
             onPressed: () => _showBulkDeleteDialog(context),
           ),
         ],
@@ -450,7 +456,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'タップで本日の参加切替、長押しでメンバー情報の修正ができます',
+              'タップで本日の参加切替、長押しでメンバー情報の修正',
               style: TextStyle(
                   fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
             ),

@@ -419,12 +419,12 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
             segments: const [
               ButtonSegment(
                   value: false,
-                  label: Text('均等わり',
+                  label: Text('均等',
                       style: TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 13))),
               ButtonSegment(
                   value: true,
-                  label: Text('男女別',
+                  label: Text('男女',
                       style: TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 13))),
             ],

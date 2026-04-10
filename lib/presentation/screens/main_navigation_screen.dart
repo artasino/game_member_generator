@@ -52,8 +52,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
@@ -83,7 +81,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               label: '試合履歴',
             ),
             NavigationDestination(
-              icon: Icon(Icons.money),
+              icon: Icon(Icons.currency_yen),
               label: '費用計算',
             ),
             NavigationDestination(

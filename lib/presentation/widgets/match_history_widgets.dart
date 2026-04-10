@@ -865,7 +865,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           continue;
         }
         double score = pow((mg + md * 4) / m - (fg + wd * 4) / f, 2).toDouble();
-        if (score < minScore || (md + wd) > result.length) {
+        if (score < minScore && (md + wd) >= result.length) {
           minScore = score;
           result = [
             ...List.filled(wd, MatchType.womenDoubles),
@@ -884,23 +884,23 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     if (maxMix == 0) {
       return _recommendGenderSeparated(m, f, mg, fg, maxM, maxF);
     }
-    for (int mix = 0; mix <= 1; mix++) {
+    for (int xd = 0; xd <= 1; xd++) {
       for (int md = 0; md <= maxM; md++) {
         for (int wd = 0; wd <= maxF; wd++) {
-          if (md + wd + mix > autoCourtCount) {
+          if (md + wd + xd > autoCourtCount) {
             continue;
           }
-          if (md * 4 + mix * 2 > m || wd * 4 + mix * 2 > f) {
+          if (md * 4 + xd * 2 > m || wd * 4 + xd * 2 > f) {
             continue;
           }
           double score =
-              pow((mg + md * 4 + mix * 2) / m - (fg + wd * 4 + mix * 2) / f, 2)
+              pow((mg + md * 4 + xd * 2) / m - (fg + wd * 4 + xd * 2) / f, 2)
                   .toDouble();
-          if (score < minScore || (md + wd + mix) > result.length) {
+          if (score < minScore && (md + wd + xd) >= result.length) {
             minScore = score;
             result = [
               ...List.filled(wd, MatchType.womenDoubles),
-              ...List.filled(mix, MatchType.mixedDoubles),
+              ...List.filled(xd, MatchType.mixedDoubles),
               ...List.filled(md, MatchType.menDoubles)
             ];
           }
