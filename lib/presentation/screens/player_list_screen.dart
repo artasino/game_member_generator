@@ -156,13 +156,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   value: 'import',
                   child: ListTile(
                       leading: Icon(Icons.file_upload_outlined),
-                      title: Text('インポート'),
+                      title: Text('データをインポート'),
                       contentPadding: EdgeInsets.zero)),
               const PopupMenuItem(
                   value: 'export',
                   child: ListTile(
                       leading: Icon(Icons.file_download_outlined),
-                      title: Text('エクスポート'),
+                      title: Text('データをエクスポート'),
                       contentPadding: EdgeInsets.zero)),
             ],
           ),
@@ -1647,8 +1647,6 @@ class _ActionChip extends StatelessWidget {
       avatar: Icon(icon, size: 18),
       label: Text(label, style: const TextStyle(fontSize: 12)),
       onPressed: onPressed,
-      visualDensity: VisualDensity.compact,
-      padding: EdgeInsets.zero,
     );
   }
 }
