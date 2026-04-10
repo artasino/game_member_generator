@@ -545,6 +545,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
             ),
             bottomSheet: null,
             floatingActionButton: FloatingActionButton(
+              heroTag: 'add_expense',
               onPressed: _showAddExpenseTypeSelector,
               tooltip: '費用を追加',
               child: const Icon(Icons.add),
@@ -721,7 +722,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: SizedBox(
-                    height: 36,
+                    height: 26,
                     child: _NameField(
                       key: ValueKey('name_$index'),
                       initialValue: entry.name,
@@ -908,7 +909,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     int maxLength = 5,
   }) {
     return SizedBox(
-      height: isSmall ? 38 : 46,
+      height: isSmall ? 28 : 36,
       child: TextFormField(
         key: key,
         initialValue: initialValue,

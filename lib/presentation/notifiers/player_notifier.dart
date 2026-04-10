@@ -187,7 +187,7 @@ class PlayerNotifier extends ChangeNotifier {
       count++;
     }
     await _refresh();
-    String msg = '$count名のメンバをインポートしました';
+    String msg = '$count名のメンバーをインポートしました';
     if (skipCount > 0) msg += ' ($skipCount名は重複のためスキップ)';
     return msg;
   }

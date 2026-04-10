@@ -261,7 +261,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               const SizedBox(height: 12),
             ],
             FloatingActionButton(
-              heroTag: 'add',
+              heroTag: 'add_match',
               elevation: 4,
               tooltip: '試合を作成',
               onPressed: widget.notifier.isGenerating

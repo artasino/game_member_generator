@@ -1239,7 +1239,8 @@ class _CompactBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(color: color, fontSize: 11),
+            style: TextStyle(
+                color: color, fontSize: 12, fontWeight: FontWeight.bold),
           ),
         ],
       ),

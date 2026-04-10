@@ -110,8 +110,7 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('シャトル/ボール在庫一覧',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('在庫一覧', style: TextStyle(fontWeight: FontWeight.bold)),
           IconButton(
             icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
             onPressed: () => _showAddEditDialog(),

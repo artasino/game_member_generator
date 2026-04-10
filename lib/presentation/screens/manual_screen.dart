@@ -17,13 +17,13 @@ class ManualScreen extends StatelessWidget {
           _HeroGuideCard(theme: theme),
           const SizedBox(height: 16),
           const _GuideSection(
-            title: '1. メンバ画面で準備する',
+            title: '1. メンバー画面で準備する',
             icon: Icons.group_add,
             items: [
-              '「メンバ」タブで + ボタンから登録し、参加メンバをONにします。',
+              '「メンバー」タブで + ボタンから登録し、参加メンバーをONにします。',
               '同時出場制限を設定すると、夫婦でどちらかが小さい子供を見る必要がある場合などにどちらかは必ず休みになります。',
               '検索バーで名前・よみがなをすぐに探せます。',
-              '右上メニューからCSV/JSONで保存・読み込み、複数メンバの登録・削除ができます。',
+              '右上メニューからCSV/JSONで保存・読み込み、複数メンバーの登録・削除ができます。',
             ],
           ),
           const SizedBox(height: 12),
@@ -120,7 +120,7 @@ class _HeroGuideCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '''メンバ登録 → 試合生成 → 試合開始！''',
+            '''メンバー登録 → 試合生成 → 試合開始！''',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onPrimary,
               height: 1.5,
