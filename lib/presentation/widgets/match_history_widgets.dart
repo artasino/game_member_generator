@@ -473,17 +473,18 @@ class PlayerTag extends StatelessWidget {
             width: isSelected ? 2 : 1,
           ),
         ),
-        child: Text(
-          player.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          softWrap: false,
-          style: TextStyle(
-            fontSize: 20 * scale * textScale,
-            fontWeight: FontWeight.w900,
-            color: isSelected
-                ? theme.colorScheme.onPrimaryContainer
-                : Colors.black87,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            player.name,
+            maxLines: 1,
+            style: TextStyle(
+              fontSize: 20 * scale * textScale,
+              fontWeight: FontWeight.w900,
+              color: isSelected
+                  ? theme.colorScheme.onPrimaryContainer
+                  : Colors.black87,
+            ),
           ),
         ),
       ),
@@ -491,9 +492,9 @@ class PlayerTag extends StatelessWidget {
   }
 
   double _adaptivePlayerTextScale(double width) {
-    if (width <= MatchHistoryLayoutTokens.tightPlayerTagWidth) return 0.65;
+    if (width <= MatchHistoryLayoutTokens.tightPlayerTagWidth) return 0.75;
     if (width <= MatchHistoryLayoutTokens.compactPlayerTagWidth) {
-      return 0.8;
+      return 0.85;
     }
     return 1.0;
   }
