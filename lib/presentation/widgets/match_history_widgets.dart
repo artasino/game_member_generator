@@ -861,11 +861,19 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     List<MatchType> result = [];
     for (int md = 0; md <= maxM; md++) {
       for (int wd = 0; wd <= maxF; wd++) {
-        if (md + wd > autoCourtCount) {
+        var courtNum = md + wd;
+        if (courtNum > autoCourtCount || courtNum < result.length) {
           continue;
         }
         double score = pow((mg + md * 4) / m - (fg + wd * 4) / f, 2).toDouble();
-        if (score < minScore && (md + wd) >= result.length) {
+        if (courtNum > result.length) {
+          minScore = score;
+          result = [
+            ...List.filled(wd, MatchType.womenDoubles),
+            ...List.filled(md, MatchType.menDoubles)
+          ];
+        }
+        if (courtNum == result.length && score < minScore) {
           minScore = score;
           result = [
             ...List.filled(wd, MatchType.womenDoubles),
@@ -887,7 +895,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     for (int xd = 0; xd <= 1; xd++) {
       for (int md = 0; md <= maxM; md++) {
         for (int wd = 0; wd <= maxF; wd++) {
-          if (md + wd + xd > autoCourtCount) {
+          var courtNum = md + wd + xd;
+          if (courtNum > autoCourtCount || courtNum < result.length) {
             continue;
           }
           if (md * 4 + xd * 2 > m || wd * 4 + xd * 2 > f) {
@@ -896,7 +905,14 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           double score =
               pow((mg + md * 4 + xd * 2) / m - (fg + wd * 4 + xd * 2) / f, 2)
                   .toDouble();
-          if (score < minScore && (md + wd + xd) >= result.length) {
+          if (courtNum > result.length) {
+            minScore = score;
+            result = [
+              ...List.filled(wd, MatchType.womenDoubles),
+              ...List.filled(xd, MatchType.mixedDoubles),
+              ...List.filled(md, MatchType.menDoubles)
+            ];
+          } else if (courtNum == result.length && score < minScore) {
             minScore = score;
             result = [
               ...List.filled(wd, MatchType.womenDoubles),
