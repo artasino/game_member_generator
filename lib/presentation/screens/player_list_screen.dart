@@ -1647,8 +1647,6 @@ class _ActionChip extends StatelessWidget {
       avatar: Icon(icon, size: 18),
       label: Text(label, style: const TextStyle(fontSize: 12)),
       onPressed: onPressed,
-      visualDensity: VisualDensity.compact,
-      padding: EdgeInsets.zero,
     );
   }
 }
