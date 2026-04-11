@@ -830,12 +830,16 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     int maxMixNumPossible = min(
         min((effective.male / 2).floor(), (effective.female / 2).floor()),
         autoCourtCount);
+    var activeMenCount = pool.activeMales.length;
+    var activeWomenCount = pool.activeFemales.length;
 
     switch (autoCourtPolicy) {
       case AutoCourtPolicy.genderSeparated:
         return _recommendGenderSeparated(
           effective.male,
           effective.female,
+          activeMenCount,
+          activeWomenCount,
           maleGameCount,
           femaleGameCount,
           maxMaleDoublesNumPossible,
@@ -847,6 +851,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         return _recommendBalanced(
           effective.male,
           effective.female,
+          activeMenCount,
+          activeWomenCount,
           maleGameCount,
           femaleGameCount,
           maxMaleDoublesNumPossible,
@@ -856,8 +862,14 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     }
   }
 
-  List<MatchType> _recommendGenderSeparated(
-      double m, double f, int mg, int fg, int maxM, int maxF) {
+  List<MatchType> _recommendGenderSeparated(double effectiveMen,
+      double effectiveWomen,
+      int activeMen,
+      int activeWomen,
+      int mg,
+      int fg,
+      int maxM,
+      int maxF) {
     double minScore = double.infinity;
     List<MatchType> result = [];
     for (int md = 0; md <= maxM; md++) {
@@ -866,7 +878,9 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         if (courtNum > autoCourtCount || courtNum < result.length) {
           continue;
         }
-        double score = pow((mg + md * 4) / m - (fg + wd * 4) / f, 2).toDouble();
+        double score =
+            pow((mg + md * 4) / activeMen - (fg + wd * 4) / activeWomen, 2)
+                .toDouble();
         if (courtNum > result.length) {
           minScore = score;
           result = [
@@ -886,12 +900,20 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     return result;
   }
 
-  List<MatchType> _recommendBalanced(
-      double m, double f, int mg, int fg, int maxM, int maxF, int maxMix) {
+  List<MatchType> _recommendBalanced(double effectiveMen,
+      double effectiveWomen,
+      int activeMen,
+      int activeWomen,
+      int mg,
+      int fg,
+      int maxM,
+      int maxF,
+      int maxMix) {
     double minScore = double.infinity;
     List<MatchType> result = [];
     if (maxMix == 0) {
-      return _recommendGenderSeparated(m, f, mg, fg, maxM, maxF);
+      return _recommendGenderSeparated(effectiveMen, effectiveWomen, activeMen,
+          activeWomen, mg, fg, maxM, maxF);
     }
     for (int xd = 0; xd <= 1; xd++) {
       for (int md = 0; md <= maxM; md++) {
@@ -900,13 +922,18 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           if (courtNum > autoCourtCount || courtNum < result.length) {
             continue;
           }
-          if (md * 4 + xd * 2 > m || wd * 4 + xd * 2 > f) {
+          if (md * 4 + xd * 2 > effectiveMen ||
+              wd * 4 + xd * 2 > effectiveWomen) {
             continue;
           }
-          double score =
-              pow((mg + md * 4 + xd * 2) / m - (fg + wd * 4 + xd * 2) / f, 2)
-                  .toDouble();
+          int updatedMenGames = mg + md * 4 + xd * 2;
+          int updatedWomenGames = fg + wd * 4 + xd * 2;
+          double score = pow(
+                  updatedMenGames / activeMen - updatedWomenGames / activeWomen,
+                  2)
+              .toDouble();
           if (courtNum > result.length) {
+            print("courtIncrease $courtNum $md $wd $xd $score");
             minScore = score;
             result = [
               ...List.filled(wd, MatchType.womenDoubles),
@@ -914,6 +941,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               ...List.filled(md, MatchType.menDoubles)
             ];
           } else if (courtNum == result.length && score < minScore) {
+            print("minScoreUpdate $courtNum $md $wd $xd $score");
             minScore = score;
             result = [
               ...List.filled(wd, MatchType.womenDoubles),
