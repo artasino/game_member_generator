@@ -17,6 +17,9 @@ class PlayerStats {
   /// このプレイヤーが誰と何回対戦（敵）したか (key: Player.id, value: 回数)
   final Map<String, int> opponentCounts;
 
+  /// このプレイヤーが誰と一緒に休んだか (key: Player.id, value: 回数)
+  final Map<String, int> restTogetherCounts;
+
   /// 直近のセッションでお休みだったかどうか
   final bool restedLastTime;
 
@@ -35,6 +38,7 @@ class PlayerStats {
     required this.typeCounts,
     required this.partnerCounts,
     required this.opponentCounts,
+    this.restTogetherCounts = const {},
     this.restedLastTime = false,
     this.sessionsSinceLastRest = 99,
     this.consecutiveRests = 0,

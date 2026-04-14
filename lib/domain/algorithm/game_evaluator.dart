@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:game_member_generator/domain/algorithm/session_score.dart';
 
 import '../entities/game.dart';
@@ -70,14 +72,34 @@ class GameEvaluator {
   // score is minus
   double calculateSessionsFromLastRestPenalty(
       List<PlayerWithStats> availablePlayers) {
-    final gain = 200.0;
+    final gain = 100.0;
     var score = 0.0;
     for (var ps in availablePlayers) {
       if (ps.stats.restedLastTime) {
-        score -= gain * 2;
+        score -= gain;
       }
     }
     return score;
+  }
+
+  /// 一緒に休みになった回数に基づくペナルティ（同性内のみ）
+  double calculateRestTogetherPenalty(List<PlayerWithStats> restingPlayers) {
+    double penalty = 0.0;
+    int maxCount = 0;
+    for (int i = 0; i < restingPlayers.length; i++) {
+      for (int j = i + 1; j < restingPlayers.length; j++) {
+        final p1 = restingPlayers[i];
+        final p2 = restingPlayers[j];
+        if (p1.player.gender == p2.player.gender) {
+          final count = p1.stats.restTogetherCounts[p2.player.id] ?? 0;
+          penalty += count * 50.0;
+          maxCount = max(maxCount, count);
+        }
+      }
+    }
+    // 最も多く一緒に休んでいるペアの回数に応じた追加ペナルティ
+    penalty += maxCount * 200.0;
+    return penalty;
   }
 
   double _calculateTypeImbalancePenalty(PlayerWithStats ps, MatchType type) {
@@ -127,26 +149,18 @@ class GameEvaluator {
       PlayerWithStats p3, PlayerWithStats p4) {
     // 優先度3位: ペア重複
     var penalty = 0.0;
-    final normalizedPairCount = 10.0;
-    penalty += (p1.stats.partnerCounts[p2.player.id] ?? 0) /
-        normalizedPairCount *
-        50.0;
-    penalty += (p3.stats.partnerCounts[p4.player.id] ?? 0) /
-        normalizedPairCount *
-        50.0;
+    penalty += (p1.stats.partnerCounts[p2.player.id] ?? 0) * 100.0;
+    penalty += (p3.stats.partnerCounts[p4.player.id] ?? 0) * 100.0;
     return penalty;
   }
 
   double _calculateOpponentCountPenalty(PlayerWithStats p1, PlayerWithStats p2,
       PlayerWithStats p3, PlayerWithStats p4) {
-    // 優先度4位: 敵重複 (Weight: 10.0)
-    final normalizedOpponentCount = 10.0;
+    // 優先度4位: 敵重複
     var penalty = 0.0;
     for (var a in [p1, p2]) {
       for (var b in [p3, p4]) {
-        penalty += (a.stats.opponentCounts[b.player.id] ?? 0) /
-            normalizedOpponentCount *
-            10.0;
+        penalty += (a.stats.opponentCounts[b.player.id] ?? 0) * 30.0;
       }
     }
     return penalty;

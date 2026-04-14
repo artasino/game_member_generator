@@ -75,6 +75,9 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
       mustFemales: session.female.mustPlayers,
       candidateMales: session.male.candidatePool.all,
       candidateFemales: session.female.candidatePool.all,
+      previousMaleSelections: session.male.candidatePool.previousMaleSelections,
+      previousFemaleSelections:
+          session.female.candidatePool.previousFemaleSelections,
     );
 
     if (assignmentResult.games.isEmpty) {

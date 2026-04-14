@@ -1,3 +1,4 @@
+import '../entities/gender.dart';
 import '../entities/match_type.dart';
 import '../entities/player.dart';
 import '../entities/player_stats.dart';
@@ -29,6 +30,32 @@ class PlayerStatsCalculator {
     final consecutiveRests =
         _countConsecutiveRests(allPlayers: allPlayers, sessions: sessions);
 
+    final previousMaleSelections = sessions.map((session) {
+      return session.games
+          .expand((g) => [
+                g.teamA.player1,
+                g.teamA.player2,
+                g.teamB.player1,
+                g.teamB.player2
+              ])
+          .where((p) => p.gender == Gender.male)
+          .map((p) => p.id)
+          .toSet();
+    }).toList();
+
+    final previousFemaleSelections = sessions.map((session) {
+      return session.games
+          .expand((g) => [
+                g.teamA.player1,
+                g.teamA.player2,
+                g.teamB.player1,
+                g.teamB.player2
+              ])
+          .where((p) => p.gender == Gender.female)
+          .map((p) => p.id)
+          .toSet();
+    }).toList();
+
     final stats = allPlayers
         .map(
           (player) => PlayerWithStats(
@@ -39,6 +66,8 @@ class PlayerStatsCalculator {
               typeCounts: accumulator.typeCounts[player.id] ?? {},
               partnerCounts: accumulator.partnerCounts[player.id] ?? {},
               opponentCounts: accumulator.opponentCounts[player.id] ?? {},
+              restTogetherCounts:
+                  accumulator.restTogetherCounts[player.id] ?? {},
               restedLastTime: sessions.isNotEmpty &&
                   sessions.last.restingPlayers.any((p) => p.id == player.id),
               sessionsSinceLastRest: sessionsSinceLastRest[player.id] ?? 0,
@@ -49,7 +78,11 @@ class PlayerStatsCalculator {
         )
         .toList(growable: false);
 
-    return PlayerStatsPool(stats);
+    return PlayerStatsPool(
+      stats,
+      previousMaleSelections: previousMaleSelections,
+      previousFemaleSelections: previousFemaleSelections,
+    );
   }
 
   void _collectLastMatchType({
@@ -147,13 +180,22 @@ class PlayerStatsCalculator {
     required Session session,
     required _StatsAccumulator accumulator,
   }) {
-    for (final restingPlayer in session.restingPlayers) {
-      if (!accumulator.totalRests.containsKey(restingPlayer.id)) {
-        continue;
-      }
+    final restingPlayers = session.restingPlayers;
+    for (int i = 0; i < restingPlayers.length; i++) {
+      final p1 = restingPlayers[i];
+      if (!accumulator.totalRests.containsKey(p1.id)) continue;
 
-      accumulator.totalRests[restingPlayer.id] =
-          (accumulator.totalRests[restingPlayer.id] ?? 0) + 1;
+      accumulator.totalRests[p1.id] = (accumulator.totalRests[p1.id] ?? 0) + 1;
+
+      for (int j = i + 1; j < restingPlayers.length; j++) {
+        final p2 = restingPlayers[j];
+        if (!accumulator.totalRests.containsKey(p2.id)) continue;
+
+        accumulator.restTogetherCounts[p1.id]![p2.id] =
+            (accumulator.restTogetherCounts[p1.id]![p2.id] ?? 0) + 1;
+        accumulator.restTogetherCounts[p2.id]![p1.id] =
+            (accumulator.restTogetherCounts[p2.id]![p1.id] ?? 0) + 1;
+      }
     }
   }
 
@@ -206,6 +248,7 @@ class _StatsAccumulator {
   final Map<String, Map<MatchType, int>> typeCounts;
   final Map<String, Map<String, int>> partnerCounts;
   final Map<String, Map<String, int>> opponentCounts;
+  final Map<String, Map<String, int>> restTogetherCounts;
   final Map<String, MatchType?> lastMatchType;
 
   _StatsAccumulator({
@@ -214,6 +257,7 @@ class _StatsAccumulator {
     required this.typeCounts,
     required this.partnerCounts,
     required this.opponentCounts,
+    required this.restTogetherCounts,
     required this.lastMatchType,
   });
 
@@ -223,6 +267,7 @@ class _StatsAccumulator {
     final typeCounts = <String, Map<MatchType, int>>{};
     final partnerCounts = <String, Map<String, int>>{};
     final opponentCounts = <String, Map<String, int>>{};
+    final restTogetherCounts = <String, Map<String, int>>{};
     final lastMatchType = <String, MatchType?>{};
 
     for (final player in players) {
@@ -231,6 +276,7 @@ class _StatsAccumulator {
       typeCounts[player.id] = {};
       partnerCounts[player.id] = {};
       opponentCounts[player.id] = {};
+      restTogetherCounts[player.id] = {};
       lastMatchType[player.id] = null;
     }
 
@@ -240,6 +286,7 @@ class _StatsAccumulator {
       typeCounts: typeCounts,
       partnerCounts: partnerCounts,
       opponentCounts: opponentCounts,
+      restTogetherCounts: restTogetherCounts,
       lastMatchType: lastMatchType,
     );
   }

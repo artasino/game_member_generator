@@ -17,27 +17,39 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
   StochasticCourtAssignmentAlgorithm({required this.gameEvaluator});
 
   @override
-  SessionScore searchBestAssignment(
-      {required List<MatchType> types,
-      required List<PlayerWithStats> mustMales,
-      required List<PlayerWithStats> mustFemales,
-      required List<PlayerWithStats> candidateMales,
-      required List<PlayerWithStats> candidateFemales}) {
+  SessionScore searchBestAssignment({
+    required List<MatchType> types,
+    required List<PlayerWithStats> mustMales,
+    required List<PlayerWithStats> mustFemales,
+    required List<PlayerWithStats> candidateMales,
+    required List<PlayerWithStats> candidateFemales,
+    List<Set<String>> previousMaleSelections = const [],
+    List<Set<String>> previousFemaleSelections = const [],
+  }) {
     Random random = Random();
     final loopCount = AppConfig.loopCount;
     mustMales.shuffle(random);
     mustFemales.shuffle(random);
-    return _findBestSession(loopCount, types, mustMales, mustFemales,
-        candidateMales, candidateFemales);
+    return _findBestSession(
+      loopCount,
+      types,
+      mustMales,
+      mustFemales,
+      candidateMales,
+      candidateFemales,
+      previousMaleSelections,
+      previousFemaleSelections,
+    );
   }
 
-  SessionScore _findBestSession(
-      int count,
+  SessionScore _findBestSession(int count,
       List<MatchType> types,
       List<PlayerWithStats> mustMales,
       List<PlayerWithStats> mustFemales,
       List<PlayerWithStats> candidateMales,
-      List<PlayerWithStats> candidateFemales) {
+      List<PlayerWithStats> candidateFemales,
+      List<Set<String>> previousMaleSelections,
+      List<Set<String>> previousFemaleSelections,) {
     var requiredMale = types.requiredPlayerCount(isMale: true);
     var requiredFemale = types.requiredPlayerCount(isMale: false);
     var state = AlgorithmsState.initial(
@@ -48,13 +60,27 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
         candidateFemales: candidateFemales,
         requiredFemale: requiredFemale);
 
-    SessionScore bestSession =
-        _calculateScore(types, state.selectedMales, state.selectedFemales);
+    SessionScore bestSession = _calculateScore(
+      types,
+      state.selectedMales,
+      state.benchMales,
+      state.selectedFemales,
+      state.benchFemales,
+      previousMaleSelections,
+      previousFemaleSelections,
+    );
     for (int i = 0; i < count; i++) {
       AlgorithmsState newState = state.copyWithSwap();
 
       final nextScore = _calculateScore(
-          types, newState.selectedMales, newState.selectedFemales);
+        types,
+        newState.selectedMales,
+        newState.benchMales,
+        newState.selectedFemales,
+        newState.benchFemales,
+        previousMaleSelections,
+        previousFemaleSelections,
+      );
       if (nextScore.score < bestSession.score) {
         bestSession = nextScore;
         state = newState;
@@ -67,11 +93,38 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
     return bestSession;
   }
 
-  SessionScore _calculateScore(
-      List<MatchType> matchTypes,
+  SessionScore _calculateScore(List<MatchType> matchTypes,
       List<PlayerWithStats> availableMales,
-      List<PlayerWithStats> availableFemales) {
+      List<PlayerWithStats> benchMales,
+      List<PlayerWithStats> availableFemales,
+      List<PlayerWithStats> benchFemales,
+      List<Set<String>> previousMaleSelections,
+      List<Set<String>> previousFemaleSelections,) {
     double score = 0;
+
+    // 同一メンバーペナルティ
+    final currentMaleIds = availableMales.map((p) => p.player.id).toSet();
+    for (final prev in previousMaleSelections) {
+      if (prev.length == currentMaleIds.length &&
+          prev.every(currentMaleIds.contains)) {
+        score += 1000.0;
+        break;
+      }
+    }
+
+    final currentFemaleIds = availableFemales.map((p) => p.player.id).toSet();
+    for (final prev in previousFemaleSelections) {
+      if (prev.length == currentFemaleIds.length &&
+          prev.every(currentFemaleIds.contains)) {
+        score += 1000.0;
+        break;
+      }
+    }
+
+    // 同時に休みペナルティ
+    score += gameEvaluator.calculateRestTogetherPenalty(benchMales);
+    score += gameEvaluator.calculateRestTogetherPenalty(benchFemales);
+
     final availablePlayers = [...availableMales, ...availableFemales];
     score +=
         gameEvaluator.calculateSessionsFromLastRestPenalty(availablePlayers);

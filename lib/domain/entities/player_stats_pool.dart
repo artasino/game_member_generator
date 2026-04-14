@@ -8,7 +8,17 @@ import 'player_with_stats.dart';
 class PlayerStatsPool {
   final List<PlayerWithStats> _players;
 
-  PlayerStatsPool(this._players);
+  /// 過去のセッションごとの選出メンバーIDセット（男子）
+  final List<Set<String>> previousMaleSelections;
+
+  /// 過去のセッションごとの選出メンバーIDセット（女子）
+  final List<Set<String>> previousFemaleSelections;
+
+  PlayerStatsPool(
+    this._players, {
+    this.previousMaleSelections = const [],
+    this.previousFemaleSelections = const [],
+  });
 
   /// 参加メンバ全員
   List<PlayerWithStats> get all => List.unmodifiable(_players);
@@ -19,16 +29,22 @@ class PlayerStatsPool {
   /// 男性のみのプールを返す
   PlayerStatsPool get males => PlayerStatsPool(
         _players.where((p) => p.player.gender == Gender.male).toList(),
+        previousMaleSelections: previousMaleSelections,
+        previousFemaleSelections: const [],
       );
 
   /// 女性のみのプールを返す
   PlayerStatsPool get females => PlayerStatsPool(
         _players.where((p) => p.player.gender == Gender.female).toList(),
+        previousMaleSelections: const [],
+        previousFemaleSelections: previousFemaleSelections,
       );
 
   /// アクティブなプレイヤーのみのプールを返す
   PlayerStatsPool get active => PlayerStatsPool(
         _players.where((p) => p.player.isActive).toList(),
+        previousMaleSelections: previousMaleSelections,
+        previousFemaleSelections: previousFemaleSelections,
       );
 
   /// アクティブな男性のみのプールを返す
@@ -48,6 +64,8 @@ class PlayerStatsPool {
   PlayerStatsPool filterByIds(Set<String> ids) {
     return PlayerStatsPool(
       _players.where((p) => ids.contains(p.player.id)).toList(),
+      previousMaleSelections: previousMaleSelections,
+      previousFemaleSelections: previousFemaleSelections,
     );
   }
 
@@ -60,6 +78,8 @@ class PlayerStatsPool {
   PlayerStatsPool filterAvailable() {
     return PlayerStatsPool(
       _players.where((p) => !p.player.isMustRest).toList(),
+      previousMaleSelections: previousMaleSelections,
+      previousFemaleSelections: previousFemaleSelections,
     );
   }
 
@@ -73,7 +93,14 @@ class PlayerStatsPool {
     }
     // 回数（Key）でソートされたMapを作成
     final sortedKeys = groups.keys.toList()..sort();
-    return {for (var k in sortedKeys) k: PlayerStatsPool(groups[k]!)};
+    return {
+      for (var k in sortedKeys)
+        k: PlayerStatsPool(
+          groups[k]!,
+          previousMaleSelections: previousMaleSelections,
+          previousFemaleSelections: previousFemaleSelections,
+        )
+    };
   }
 
   /// 試合数が少ない順にソートしたリストを返す（同じ回数ならランダム）
@@ -112,8 +139,16 @@ class PlayerStatsPool {
 
     return PlayerSelection(
       mustPlayers: must,
-      candidatePool: PlayerStatsPool(candidates),
-      unselectedPool: PlayerStatsPool(unselected),
+      candidatePool: PlayerStatsPool(
+        candidates,
+        previousMaleSelections: previousMaleSelections,
+        previousFemaleSelections: previousFemaleSelections,
+      ),
+      unselectedPool: PlayerStatsPool(
+        unselected,
+        previousMaleSelections: previousMaleSelections,
+        previousFemaleSelections: previousFemaleSelections,
+      ),
     );
   }
 
@@ -149,8 +184,16 @@ class PlayerStatsPool {
 
     return PlayerSelection(
       mustPlayers: selection.mustPlayers,
-      candidatePool: PlayerStatsPool(newCandidates),
-      unselectedPool: PlayerStatsPool(remainingUnselected),
+      candidatePool: PlayerStatsPool(
+        newCandidates,
+        previousMaleSelections: previousMaleSelections,
+        previousFemaleSelections: previousFemaleSelections,
+      ),
+      unselectedPool: PlayerStatsPool(
+        remainingUnselected,
+        previousMaleSelections: previousMaleSelections,
+        previousFemaleSelections: previousFemaleSelections,
+      ),
     );
   }
 }
