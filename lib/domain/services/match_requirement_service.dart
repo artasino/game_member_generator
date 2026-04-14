@@ -26,32 +26,40 @@ class MatchRequirementService {
   const MatchRequirementService();
 
   /// 指定された構成で判定を行う
-  RequirementResult check(List<MatchType> types, PlayerStatsPool pool) {
+  RequirementResult check(List<MatchType> types, PlayerStatsPool pool,
+      {bool silent = false}) {
     if (types.isEmpty) return RequirementResult.empty();
 
     // 1. 必要人数の算出
     final counts = calculateRequired(types);
 
     // 2. 有効プレイヤーの抽出 (Active かつ 休み希望でない)
-    final available = PlayerStatsPool(
-      pool.all.where((p) => p.player.isActive && !p.player.isMustRest).toList(),
-    );
+    // ここで一旦全プレイヤーをフィルタリングして使い回す
+    final allAvailable = pool.all
+        .where((p) => p.player.isActive && !p.player.isMustRest)
+        .toList();
+    final males =
+        allAvailable.where((p) => p.player.gender == Gender.male).toList();
+    final females =
+        allAvailable.where((p) => p.player.gender == Gender.female).toList();
 
     // 3. 基本的な人数チェック
-    if (available.males.length < counts.male ||
-        available.females.length < counts.female) {
+    if (males.length < counts.male || females.length < counts.female) {
       return RequirementResult(
         canGenerate: false,
-        errorMessage: _buildShortageMsg(counts.male - available.males.length,
-            counts.female - available.females.length),
+        errorMessage: _buildShortageMsg(
+            counts.male - males.length, counts.female - females.length),
       );
     }
 
     // 4. 同時出場制限の解消シミュレーション
+    final availablePool = PlayerStatsPool(allAvailable);
     final (restNames, resolvedSel) =
-        _simulateConflictResolution(counts.male, counts.female, available);
+        _simulateConflictResolution(counts.male, counts.female, availablePool);
 
-    dev.log('--- 同時出場制限の解消シミュレーション結果 ---$restNames', name: 'MatchAlgo');
+    if (!silent) {
+      dev.log('--- 同時出場制限の解消シミュレーション結果 ---$restNames', name: 'MatchAlgo');
+    }
 
     // 5. 最終判定
     final shortageM = counts.male - resolvedSel.male.selectedCount;
@@ -97,49 +105,50 @@ class MatchRequirementService {
   }
 
   /// 同時出場制限を考慮した「実質的な」有効人数を計算する
-  /// ペアのうち1人しか出られない場合、優先度に基づいて休むべき方を決定し、その性別のカウントを1減らす
   EffectivePlayerCounts calculateEffectiveCounts(PlayerStatsPool pool) {
     final available = pool.all
         .where((p) => p.player.isActive && !p.player.isMustRest)
         .toList();
-    int m = available.where((p) => p.player.gender == Gender.male).length;
-    int f = available.where((p) => p.player.gender == Gender.female).length;
 
     final idMap = {for (final p in available) p.player.id: p};
-    final processedPairs = <String>{};
+    final Set<String> restrictedIds = {};
+
+    int m = 0;
+    int f = 0;
 
     for (final p in available) {
-      final partnerId = p.player.excludedPartnerId;
-      if (partnerId == null || processedPairs.contains(p.player.id)) continue;
+      if (restrictedIds.contains(p.player.id)) continue;
 
-      final partner = idMap[partnerId];
-      // 相手もアクティブかつ有効な場合のみ「制限」としてカウント
-      if (partner != null && partner.player.excludedPartnerId == p.player.id) {
-        // 出場優先度（shouldRestOver）に基づいて、どちらか一方を実質的な数から除外する
-        if (p.shouldRestOver(partner)) {
-          // pが休むべき（＝カウントに入れない）
-          if (p.player.gender == Gender.male) {
-            m--;
+      final partnerId = p.player.excludedPartnerId;
+      if (partnerId != null) {
+        final partner = idMap[partnerId];
+        if (partner != null &&
+            partner.player.excludedPartnerId == p.player.id) {
+          // 制限ペア：どちらか一方が休む
+          final restPlayer = p.shouldRestOver(partner) ? p : partner;
+          restrictedIds.add(restPlayer.player.id);
+
+          final stayPlayer = restPlayer == p ? partner : p;
+          if (stayPlayer.player.gender == Gender.male) {
+            m++;
           } else {
-            f--;
+            f++;
           }
-        } else {
-          // partnerが休むべき（＝カウントに入れない）
-          if (partner.player.gender == Gender.male) {
-            m--;
-          } else {
-            f--;
-          }
+          continue;
         }
-        processedPairs.add(p.player.id);
-        processedPairs.add(partnerId);
+      }
+      // 制限なし
+      if (p.player.gender == Gender.male) {
+        m++;
+      } else {
+        f++;
       }
     }
 
     return EffectivePlayerCounts(male: m.toDouble(), female: f.toDouble());
   }
 
-  /// 制限解消のシミュレーションを行い、選外となったプレイヤー名と最終的な選抜状態を返す
+  /// 制限解消のシミュレーション
   (List<String> names, MatchSessionSelection finalSel)
       _simulateConflictResolution(int reqM, int reqF, PlayerStatsPool pool) {
     var sel = MatchSessionSelection(
@@ -161,13 +170,14 @@ class MatchRequirementService {
   }
 
   void _collectConflictNames(MatchSessionSelection sel, Set<String> names) {
-    final maleMap = {for (final m in sel.male.allCandidates) m.id: m};
+    final maleIds = sel.male.allCandidateIds;
     for (final f in sel.female.allCandidates) {
       final pId = f.player.excludedPartnerId;
-      if (pId == null) continue;
-      final m = maleMap[pId];
-      if (m != null && m.player.excludedPartnerId == f.id) {
-        names.add(f.shouldRestOver(m) ? f.name : m.name);
+      if (pId != null && maleIds.contains(pId)) {
+        final m = sel.male.allCandidates.firstWhere((p) => p.id == pId);
+        if (m.player.excludedPartnerId == f.id) {
+          names.add(f.shouldRestOver(m) ? f.name : m.name);
+        }
       }
     }
   }
@@ -183,18 +193,12 @@ class RequiredPlayerCounts {
   final int male;
   final int female;
 
-  const RequiredPlayerCounts({
-    required this.male,
-    required this.female,
-  });
+  const RequiredPlayerCounts({required this.male, required this.female});
 }
 
 class EffectivePlayerCounts {
   final double male;
   final double female;
 
-  const EffectivePlayerCounts({
-    required this.male,
-    required this.female,
-  });
+  const EffectivePlayerCounts({required this.male, required this.female});
 }

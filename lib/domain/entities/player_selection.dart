@@ -12,6 +12,9 @@ class PlayerSelection {
   /// 今回のセッションでは選出されないプレイヤーのプール
   final PlayerStatsPool unselectedPool;
 
+  // キャッシュ用のフィールド
+  Set<String>? _allCandidateIds;
+
   PlayerSelection({
     required this.mustPlayers,
     required this.candidatePool,
@@ -21,6 +24,15 @@ class PlayerSelection {
   /// 選出候補（確定枠 + 抽選枠）の全員
   List<PlayerWithStats> get allCandidates =>
       List.unmodifiable([...mustPlayers, ...candidatePool.all]);
+
+  /// 選出候補のIDセット（計算効率化のためキャッシュ）
+  Set<String> get allCandidateIds {
+    _allCandidateIds ??= {
+      for (var p in mustPlayers) p.id,
+      for (var p in candidatePool.all) p.id,
+    };
+    return _allCandidateIds!;
+  }
 
   /// 空の選出状態を作成
   factory PlayerSelection.empty() => PlayerSelection(

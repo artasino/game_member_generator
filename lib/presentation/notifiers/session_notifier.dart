@@ -59,16 +59,20 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   /// 現在のアクティブプレイヤーで、指定された試合形式が組めるかチェックする
-  RequirementResult checkRequirements(List<MatchType> types) {
+  RequirementResult checkRequirements(List<MatchType> types,
+      {bool silent = false}) {
     final counts = _requirementService.calculateRequired(types);
     final cacheKey = '${counts.male}-${counts.female}';
 
-    if (_requirementCache.containsKey(cacheKey)) {
+    if (!silent && _requirementCache.containsKey(cacheKey)) {
       return _requirementCache[cacheKey]!;
     }
 
-    final result = _requirementService.check(types, _cachedPool);
-    _requirementCache[cacheKey] = result;
+    final result =
+        _requirementService.check(types, _cachedPool, silent: silent);
+    if (!silent) {
+      _requirementCache[cacheKey] = result;
+    }
     return result;
   }
 
