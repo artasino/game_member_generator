@@ -37,25 +37,25 @@ class GameEvaluator {
 
     // 3. 試合構成の最適化とペナルティ
     final bestGames = <Game>[];
-    int menOffset = 0;
-    int womenOffset = 0;
+    int maleOffset = 0;
+    int femaleOffset = 0;
 
     for (var type in matchTypes) {
       final GameScore gameScore;
-      if (type == MatchType.menDoubles) {
-        final players = selectedMales.skip(menOffset).take(4).toList();
+      if (type == MatchType.maleDoubles) {
+        final players = selectedMales.skip(maleOffset).take(4).toList();
         gameScore = getBestGameForFour(type, players);
-        menOffset += 4;
-      } else if (type == MatchType.womenDoubles) {
-        final players = selectedFemales.skip(womenOffset).take(4).toList();
+        maleOffset += 4;
+      } else if (type == MatchType.femaleDoubles) {
+        final players = selectedFemales.skip(femaleOffset).take(4).toList();
         gameScore = getBestGameForFour(type, players);
-        womenOffset += 4;
+        femaleOffset += 4;
       } else {
-        final ms = selectedMales.skip(menOffset).take(2).toList();
-        final fs = selectedFemales.skip(womenOffset).take(2).toList();
+        final ms = selectedMales.skip(maleOffset).take(2).toList();
+        final fs = selectedFemales.skip(femaleOffset).take(2).toList();
         gameScore = getBestMixedGame(type, ms, fs);
-        menOffset += 2;
-        womenOffset += 2;
+        maleOffset += 2;
+        femaleOffset += 2;
       }
       score += gameScore.score;
       bestGames.add(gameScore.game);
@@ -95,11 +95,12 @@ class GameEvaluator {
 
   /// 4人の中で最適なチーム分け（3パターン）を決定
   GameScore getBestGameForFour(MatchType type, List<PlayerWithStats> p) {
-    if (p.length < 4)
+    if (p.length < 4) {
       return GameScore(
           1000000,
           Game(type, Team(p[0].player, p[0].player),
               Team(p[0].player, p[0].player))); // Safety
+    }
     final patterns = [
       [p[0], p[1], p[2], p[3]],
       [p[0], p[2], p[1], p[3]],
@@ -111,11 +112,12 @@ class GameEvaluator {
   /// 混合ダブルスで最適なチーム分け（2パターン）を決定
   GameScore getBestMixedGame(
       MatchType type, List<PlayerWithStats> ms, List<PlayerWithStats> fs) {
-    if (ms.length < 2 || fs.length < 2)
+    if (ms.length < 2 || fs.length < 2) {
       return GameScore(
           1000000,
           Game(type, Team(ms[0].player, fs[0].player),
               Team(ms[0].player, fs[0].player))); // Safety
+    }
     final patterns = [
       [ms[0], fs[0], ms[1], fs[1]],
       [ms[0], fs[1], ms[1], fs[0]],
@@ -180,10 +182,10 @@ class GameEvaluator {
     bool isAppropriate = false;
     if (ps.player.gender == Gender.male) {
       isAppropriate =
-          (type == MatchType.menDoubles || type == MatchType.mixedDoubles);
+          (type == MatchType.maleDoubles || type == MatchType.mixedDoubles);
     } else {
       isAppropriate =
-          (type == MatchType.womenDoubles || type == MatchType.mixedDoubles);
+          (type == MatchType.femaleDoubles || type == MatchType.mixedDoubles);
     }
 
     if (!isAppropriate) return 0;

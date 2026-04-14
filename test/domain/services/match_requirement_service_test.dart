@@ -43,8 +43,8 @@ void main() {
 
     test('calculateRequired は種目構成に応じて必要人数を合算できる', () {
       final counts = service.calculateRequired([
-        MatchType.menDoubles,
-        MatchType.womenDoubles,
+        MatchType.maleDoubles,
+        MatchType.femaleDoubles,
         MatchType.mixedDoubles,
       ]);
 
@@ -60,7 +60,7 @@ void main() {
         ps('m4', Gender.male),
       ]);
 
-      final result = service.check([MatchType.menDoubles], pool);
+      final result = service.check([MatchType.maleDoubles], pool);
 
       expect(result.canGenerate, isFalse);
       expect(result.errorMessage, contains('男性が不足します'));

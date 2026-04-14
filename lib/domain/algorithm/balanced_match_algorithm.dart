@@ -59,7 +59,7 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     }
 
     if (retryCount >= maxRetries) {
-      dev.log('警告: $maxRetries 回試行しましたが、一部の制限ペアが解消しきれませんでした。',
+      dev.log('警告: $retryCount 回試行しましたが、一部の制限ペアが解消しきれませんでした。',
           name: 'MatchAlgo');
     }
 

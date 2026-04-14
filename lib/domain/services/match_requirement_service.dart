@@ -34,7 +34,6 @@ class MatchRequirementService {
     final counts = calculateRequired(types);
 
     // 2. 有効プレイヤーの抽出 (Active かつ 休み希望でない)
-    // ここで一旦全プレイヤーをフィルタリングして使い回す
     final allAvailable = pool.all
         .where((p) => p.player.isActive && !p.player.isMustRest)
         .toList();
@@ -92,9 +91,9 @@ class MatchRequirementService {
   RequiredPlayerCounts calculateRequired(List<MatchType> types) {
     int m = 0, f = 0;
     for (final t in types) {
-      if (t == MatchType.menDoubles) {
+      if (t == MatchType.maleDoubles) {
         m += 4;
-      } else if (t == MatchType.womenDoubles) {
+      } else if (t == MatchType.femaleDoubles) {
         f += 4;
       } else {
         m += 2;

@@ -81,8 +81,7 @@ class PlayerStatsCalculator {
     return PlayerStatsPool(
       stats,
       previousMaleSelections: previousMaleSelections,
-      previousFemaleSelections: previousFemaleSelections,
-    );
+        previousFemaleSelections: previousFemaleSelections);
   }
 
   void _collectLastMatchType({

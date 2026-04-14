@@ -20,17 +20,17 @@ void main() {
     final sessions = [
       Session(
         1,
-        [Game(MatchType.menDoubles, Team(p1, p2), Team(p3, p4))],
+        [Game(MatchType.maleDoubles, Team(p1, p2), Team(p3, p4))],
         restingPlayers: [p5],
       ),
       Session(
         2,
-        [Game(MatchType.menDoubles, Team(p2, p3), Team(p4, p5))],
+        [Game(MatchType.maleDoubles, Team(p2, p3), Team(p4, p5))],
         restingPlayers: [p1],
       ),
       Session(
         3,
-        [Game(MatchType.menDoubles, Team(p2, p4), Team(p3, p5))],
+        [Game(MatchType.maleDoubles, Team(p2, p4), Team(p3, p5))],
         restingPlayers: [p1],
       ),
     ];
@@ -59,7 +59,7 @@ void main() {
 
       expect(p2Stats.totalMatches, 3);
       expect(p2Stats.totalRests, 0);
-      expect(p2Stats.typeCounts[MatchType.menDoubles], 3);
+      expect(p2Stats.typeCounts[MatchType.maleDoubles], 3);
 
       // p2 のペア: s1でp1, s2でp3, s3でp4
       expect(p2Stats.partnerCounts['p1'], 1);
@@ -68,7 +68,7 @@ void main() {
 
       // p2 は p3 と s1/s3 で2回対戦
       expect(p2Stats.opponentCounts['p3'], 2);
-      expect(p2Stats.lastMatchType, MatchType.menDoubles);
+      expect(p2Stats.lastMatchType, MatchType.maleDoubles);
     });
   });
 }

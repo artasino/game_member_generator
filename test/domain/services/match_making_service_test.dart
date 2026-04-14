@@ -102,7 +102,7 @@ void main() {
       ]);
 
       final result = await service.generateMatchSession(
-        matchTypes: [MatchType.menDoubles],
+        matchTypes: [MatchType.maleDoubles],
         playerStats: playerStats,
       );
 

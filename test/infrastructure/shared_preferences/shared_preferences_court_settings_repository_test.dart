@@ -13,7 +13,7 @@ void main() {
       final repository = SharedPreferencesCourtSettingsRepository();
 
       const settings = CourtSettings(
-        [MatchType.menDoubles, MatchType.mixedDoubles],
+        [MatchType.maleDoubles, MatchType.mixedDoubles],
         autoCourtCount: 3,
         autoCourtPolicy: AutoCourtPolicy.balance,
         isAutoRecommendMode: true,

@@ -43,8 +43,8 @@ class MatchHistoryLayoutTokens {
 /// 試合形式に応じたテーマカラーを取得
 Color _getMatchTypeColor(BuildContext context, MatchType type) {
   return switch (type) {
-    MatchType.menDoubles => Colors.blue.shade800,
-    MatchType.womenDoubles => Colors.pink.shade700,
+    MatchType.maleDoubles => Colors.blue.shade800,
+    MatchType.femaleDoubles => Colors.pink.shade700,
     MatchType.mixedDoubles => Colors.orange.shade900,
   };
 }
@@ -884,15 +884,15 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         if (courtNum > result.length) {
           minScore = score;
           result = [
-            ...List.filled(wd, MatchType.womenDoubles),
-            ...List.filled(md, MatchType.menDoubles)
+            ...List.filled(wd, MatchType.femaleDoubles),
+            ...List.filled(md, MatchType.maleDoubles)
           ];
         }
         if (courtNum == result.length && score < minScore) {
           minScore = score;
           result = [
-            ...List.filled(wd, MatchType.womenDoubles),
-            ...List.filled(md, MatchType.menDoubles)
+            ...List.filled(wd, MatchType.femaleDoubles),
+            ...List.filled(md, MatchType.maleDoubles)
           ];
         }
       }
@@ -936,17 +936,17 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
             print("courtIncrease $courtNum $md $wd $xd $score");
             minScore = score;
             result = [
-              ...List.filled(wd, MatchType.womenDoubles),
+              ...List.filled(wd, MatchType.femaleDoubles),
               ...List.filled(xd, MatchType.mixedDoubles),
-              ...List.filled(md, MatchType.menDoubles)
+              ...List.filled(md, MatchType.maleDoubles)
             ];
           } else if (courtNum == result.length && score < minScore) {
             print("minScoreUpdate $courtNum $md $wd $xd $score");
             minScore = score;
             result = [
-              ...List.filled(wd, MatchType.womenDoubles),
+              ...List.filled(wd, MatchType.femaleDoubles),
               ...List.filled(xd, MatchType.mixedDoubles),
-              ...List.filled(md, MatchType.menDoubles)
+              ...List.filled(md, MatchType.maleDoubles)
             ];
           }
         }

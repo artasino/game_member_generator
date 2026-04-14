@@ -19,7 +19,7 @@ void main() {
     test('UTF-8 BOM 付き JSON を読み込める', () {
       const bom = '\uFEFF';
       const content =
-          '${bom}[{"id":"2","name":"Bob","yomigana":"ぼぶ","gender":0,"isActive":true,"isMustRest":false}]';
+          '$bom[{"id":"2","name":"Bob","yomigana":"ぼぶ","gender":0,"isActive":true,"isMustRest":false}]';
 
       final players = service.parsePlayersForImport(
         content: content,

@@ -55,7 +55,7 @@ class CourtSettings {
         .toList();
 
     return CourtSettings(
-      types.isEmpty ? [MatchType.menDoubles] : types,
+      types.isEmpty ? [MatchType.maleDoubles] : types,
       autoCourtCount: (map['autoCourtCount'] as int?) ?? 3,
       autoCourtPolicy: AutoCourtPolicy
           .values[(map['autoCourtPolicy'] as int?) ?? AutoCourtPolicy.balance.index],

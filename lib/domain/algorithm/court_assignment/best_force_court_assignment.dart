@@ -87,7 +87,7 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
     double bestScore = double.infinity;
     List<Game> bestGames = [];
 
-    if (type == MatchType.menDoubles) {
+    if (type == MatchType.maleDoubles) {
       final combos = _getCombinations(males, 4);
       for (final selected in combos) {
         final remaining = males.where((m) => !selected.contains(m)).toList();
@@ -99,7 +99,7 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
           bestGames = [gameScore.game, ...next.games];
         }
       }
-    } else if (type == MatchType.womenDoubles) {
+    } else if (type == MatchType.femaleDoubles) {
       final combos = _getCombinations(females, 4);
       for (final selected in combos) {
         final remaining = females.where((f) => !selected.contains(f)).toList();
