@@ -40,29 +40,13 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
       female: femalePool.splitSelection(requiredFemale),
     );
 
-    // 3. 制限ペア解消ループ (MatchSessionSelectionに責務を委譲)
-    int retryCount = 0;
-    const int maxRetries = 5;
-
-    while (session.hasCrossGenderConflict && retryCount < maxRetries) {
-      dev.log('コンフリクト検知。解消試行 ${retryCount + 1} 回目', name: 'MatchAlgo');
-
-      // 解消
-      session = session.resolveConflicts();
-
-      // 補充 (固定されたプールから補充を行うことで再計算を避ける)
-      session = MatchSessionSelection(
-        male: malePool.refillSelection(session.male, requiredMale),
-        female: femalePool.refillSelection(session.female, requiredFemale),
-      );
-
-      retryCount++;
-    }
-
-    if (retryCount >= maxRetries) {
-      dev.log('警告: $retryCount 回試行しましたが、一部の制限ペアが解消しきれませんでした。',
-          name: 'MatchAlgo');
-    }
+    // 3. 制限ペア解消と補充 (MatchSessionSelectionに責務を委譲)
+    session = session.resolveAndRefill(
+      requiredMale: requiredMale,
+      requiredFemale: requiredFemale,
+      malePool: malePool,
+      femalePool: femalePool,
+    );
 
     // 4. 最適な試合構成（コート割り当て）を探索
     return _findOptimalMatches(matchTypes, session);

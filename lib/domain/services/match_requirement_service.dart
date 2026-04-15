@@ -166,16 +166,42 @@ class MatchRequirementService {
     );
 
     final restedNames = <String>{};
-    for (int i = 0; i < 5 && sel.hasCrossGenderConflict; i++) {
+    // 初回のコンフリクト名を収集
+    if (sel.hasCrossGenderConflict) {
       _collectConflictNames(sel, restedNames);
-
-      sel = sel.resolveConflicts();
-      sel = MatchSessionSelection(
-        male: pool.males.refillSelection(sel.male, reqM),
-        female: pool.females.refillSelection(sel.female, reqF),
-      );
     }
-    return (restedNames.toList(), sel);
+
+    // resolveAndRefill を使用
+    final resolvedSel = sel.resolveAndRefill(
+      requiredMale: reqM,
+      requiredFemale: reqF,
+      malePool: pool.males,
+      femalePool: pool.females,
+    );
+
+    // 解消過程で削られた名前を正確に追跡するのは難しいが、
+    // 最終的な選出メンバーと元のプールを比較することで、
+    // 制限解消（または通常の選外）で外れた人を特定できる。
+    // ただし、元のロジックを尊重し、最初に見つかったコンフリクト名だけは入れておき、
+    // 最終的に選ばれなかった人の名前を補完する形にする。
+
+    final finalSelectedIds = {
+      ...resolvedSel.male.allCandidateIds,
+      ...resolvedSel.female.allCandidateIds
+    };
+    final initialCandidateIds = {
+      ...sel.male.allCandidateIds,
+      ...sel.female.allCandidateIds
+    };
+
+    // 初期候補だったが、最終的に外れた人（＝制限で削られた人）
+    for (final id in initialCandidateIds) {
+      if (!finalSelectedIds.contains(id)) {
+        restedNames.add(pool.getPlayer(id).name);
+      }
+    }
+
+    return (restedNames.toList(), resolvedSel);
   }
 
   void _collectConflictNames(MatchSessionSelection sel, Set<String> names) {

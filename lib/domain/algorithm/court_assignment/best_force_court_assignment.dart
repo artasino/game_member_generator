@@ -1,5 +1,6 @@
+import 'dart:math';
+
 import 'package:game_member_generator/domain/algorithm/court_assignment/court_assignment_algorithm.dart';
-import 'package:game_member_generator/domain/algorithm/player_selector_util.dart';
 import 'package:game_member_generator/domain/algorithm/session_score.dart';
 import 'package:game_member_generator/domain/entities/game.dart';
 import 'package:game_member_generator/domain/entities/match_type.dart';
@@ -25,10 +26,10 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
     var requiredMale = types.requiredPlayerCount(isMale: true);
     var requiredFemale = types.requiredPlayerCount(isMale: false);
 
-    List<PlayerWithStats> selectedMales = PlayerSelectorUtil.pickCourtMembers(
-        mustMales, candidateMales, requiredMale);
-    List<PlayerWithStats> selectedFemales = PlayerSelectorUtil.pickCourtMembers(
-        mustFemales, candidateFemales, requiredFemale);
+    List<PlayerWithStats> selectedMales =
+        _pickCourtMembers(mustMales, candidateMales, requiredMale);
+    List<PlayerWithStats> selectedFemales =
+        _pickCourtMembers(mustFemales, candidateFemales, requiredFemale);
 
     final selectedMaleSet = selectedMales.toSet();
     List<PlayerWithStats> benchMales =
@@ -70,6 +71,27 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
         _recurseAssignment(types, 0, selectedMales, selectedFemales);
 
     return SessionScore(sessionScore.score + penalty, sessionScore.games);
+  }
+
+  List<PlayerWithStats> _pickCourtMembers(
+    List<PlayerWithStats> must,
+    List<PlayerWithStats> candidates,
+    int requiredCount,
+  ) {
+    final random = Random();
+    final picked = List<PlayerWithStats>.from(must);
+    final needed = requiredCount - picked.length;
+    if (needed <= 0) return picked;
+
+    final sortedCandidates = List<PlayerWithStats>.from(candidates);
+    // 偏りを防ぐためにまずシャッフル
+    sortedCandidates.shuffle(random);
+    // 「前の休みからの試合間隔」が短い順（sessionsSinceLastRestが小さい＝直近で休んだ人）にソート
+    sortedCandidates.sort((a, b) =>
+        a.stats.sessionsSinceLastRest.compareTo(b.stats.sessionsSinceLastRest));
+
+    picked.addAll(sortedCandidates.take(needed));
+    return picked;
   }
 
   /// 再帰的にすべてのコートへのプレイヤーの割り振りを試す

@@ -4,7 +4,6 @@ import 'package:game_member_generator/domain/algorithm/penalty_weights.dart';
 import 'package:game_member_generator/domain/algorithm/session_score.dart';
 
 import '../entities/game.dart';
-import '../entities/gender.dart';
 import '../entities/match_type.dart';
 import '../entities/player_with_stats.dart';
 import '../entities/team.dart';
@@ -178,17 +177,7 @@ class GameEvaluator {
     final targetTypeCount = counts[type] ?? 0;
     final totalMatches = counts.values.fold(0, (sum, count) => sum + count) + 1;
 
-    // 適切な種目かどうか判定
-    bool isAppropriate = false;
-    if (ps.player.gender == Gender.male) {
-      isAppropriate =
-          (type == MatchType.maleDoubles || type == MatchType.mixedDoubles);
-    } else {
-      isAppropriate =
-          (type == MatchType.femaleDoubles || type == MatchType.mixedDoubles);
-    }
-
-    if (!isAppropriate) return 0;
+    if (!type.isAppropriateFor(ps.player.gender)) return 0;
     return (targetTypeCount + 1) / totalMatches;
   }
 
