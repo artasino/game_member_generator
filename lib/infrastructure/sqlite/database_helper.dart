@@ -28,7 +28,7 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'game_member_generator.db');
     return await openDatabase(
       path,
-      version: 6, // バージョンを 6 に上げました (シャトル在庫用)
+      version: 7, // バージョンを 7 に上げました (在庫の単位対応)
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE players(
@@ -65,9 +65,11 @@ class DatabaseHelper {
           CREATE TABLE shuttle_stocks(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
-            price_per_dozens REAL,
+            unit_price REAL,
+            is_per_dozen INTEGER DEFAULT 1,
             payer_id TEXT,
-            purchase_date TEXT
+            purchase_date TEXT,
+            price_per_dozens REAL -- 互換性のため残す
           )
         ''');
       },
@@ -109,6 +111,19 @@ class DatabaseHelper {
               purchase_date TEXT
             )
           ''');
+        }
+        if (oldVersion < 7) {
+          try {
+            await db.execute(
+                'ALTER TABLE shuttle_stocks ADD COLUMN unit_price REAL');
+            await db.execute(
+                'ALTER TABLE shuttle_stocks ADD COLUMN is_per_dozen INTEGER DEFAULT 1');
+            // 既存のデータを移行
+            await db.execute(
+                'UPDATE shuttle_stocks SET unit_price = price_per_dozens');
+          } catch (e) {
+            // カラムが既に存在する場合などのエラーを無視
+          }
         }
       },
     );

@@ -204,7 +204,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
         _entries.add(ExpenseEntry(
           name: type.label,
           type: type,
-          pricePerDozens: 0,
+          unitPrice: 0,
+          isPerDozen: true,
           shuttleCount: 0,
         ));
       });
@@ -258,7 +259,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
         _entries.add(ExpenseEntry(
           name: selected.name,
           type: ExpenseType.shuttle,
-          pricePerDozens: selected.pricePerDozens,
+          unitPrice: selected.unitPrice,
+          isPerDozen: selected.isPerDozen,
           shuttleCount: 0,
           payerId: selected.payerId,
         ));
@@ -270,7 +272,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       _entries.add(ExpenseEntry(
         name: ExpenseType.shuttle.label,
         type: ExpenseType.shuttle,
-        pricePerDozens: 0,
+        unitPrice: 0,
+        isPerDozen: true,
         shuttleCount: 0,
       ));
     });
@@ -712,31 +715,52 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
               const SizedBox(height: 16),
               if (entry.type == ExpenseType.shuttle) ...[
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
+                      flex: 3,
                       child: _modalTextField(
-                        label: '単価/ダース',
+                        label: '単価',
                         suffix: '円',
-                        initialValue: entry.pricePerDozens > 0
-                            ? entry.pricePerDozens.toStringAsFixed(0)
+                        initialValue: entry.unitPrice > 0
+                            ? entry.unitPrice.toStringAsFixed(0)
                             : '',
-                        onChanged: (v) => setModalState(() => setState(() =>
-                            entry.pricePerDozens = double.tryParse(v) ?? 0)),
+                        onChanged: (v) => setModalState(() => setState(() => entry.unitPrice = double.tryParse(v) ?? 0)),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: _modalTextField(
-                        label: '使用数',
-                        suffix: '個',
-                        initialValue: entry.shuttleCount > 0
-                            ? entry.shuttleCount.toString()
-                            : '',
-                        onChanged: (v) => setModalState(() => setState(
-                            () => entry.shuttleCount = int.tryParse(v) ?? 0)),
+                      flex: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: SegmentedButton<bool>(
+                          segments: const [
+                            ButtonSegment(
+                                value: true,
+                                label: Text('ダース',
+                                    style: TextStyle(fontSize: 10))),
+                            ButtonSegment(
+                                value: false,
+                                label:
+                                    Text('個', style: TextStyle(fontSize: 10))),
+                          ],
+                          selected: {entry.isPerDozen},
+                          onSelectionChanged: (v) => setModalState(
+                              () => setState(() => entry.isPerDozen = v.first)),
+                        ),
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                _modalTextField(
+                  label: '使用数',
+                  suffix: '個',
+                  initialValue: entry.shuttleCount > 0
+                      ? entry.shuttleCount.toString()
+                      : '',
+                  onChanged: (v) => setModalState(() => setState(
+                      () => entry.shuttleCount = int.tryParse(v) ?? 0)),
                 ),
                 const SizedBox(height: 8),
                 Center(
@@ -749,7 +773,8 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                         setModalState(() {
                           setState(() {
                             entry.name = s.name;
-                            entry.pricePerDozens = s.pricePerDozens;
+                            entry.unitPrice = s.unitPrice;
+                            entry.isPerDozen = s.isPerDozen;
                             entry.payerId = s.payerId;
                           });
                         });

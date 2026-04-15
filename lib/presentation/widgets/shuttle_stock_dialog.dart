@@ -38,39 +38,77 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
   void _showAddEditDialog({ShuttleStock? stock}) {
     final nameController = TextEditingController(text: stock?.name);
     final priceController =
-        TextEditingController(text: stock?.pricePerDozens.toStringAsFixed(0));
+        TextEditingController(text: stock?.unitPrice.toStringAsFixed(0));
     String? selectedPayerId = stock?.payerId;
+    bool isPerDozen = stock?.isPerDozen ?? true;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(stock == null ? '在庫を登録' : '在庫を編集'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: '名称'),
-              ),
-              TextField(
-                controller: priceController,
-                decoration: const InputDecoration(
-                    labelText: '1ダースあたりの価格', suffixText: '円'),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: selectedPayerId,
-                decoration: const InputDecoration(labelText: '購入者 (支払人)'),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('未指定')),
-                  ...widget.activePlayers.map((p) =>
-                      DropdownMenuItem(value: p.id, child: Text(p.name))),
-                ],
-                onChanged: (v) => setDialogState(() => selectedPayerId = v),
-              ),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: '名称',
+                    hintText: '例: ヨネックス エアロセンサ 700',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('価格設定',
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: priceController,
+                        decoration: const InputDecoration(
+                          labelText: '価格',
+                          suffixText: '円',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 3,
+                      child: SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment(value: true, label: Text('ダース')),
+                          ButtonSegment(value: false, label: Text('1個')),
+                        ],
+                        selected: {isPerDozen},
+                        onSelectionChanged: (v) =>
+                            setDialogState(() => isPerDozen = v.first),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedPayerId,
+                  decoration: const InputDecoration(
+                    labelText: '購入者 (支払人)',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('未指定')),
+                    ...widget.activePlayers.map((p) =>
+                        DropdownMenuItem(value: p.id, child: Text(p.name))),
+                  ],
+                  onChanged: (v) => setDialogState(() => selectedPayerId = v),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -85,7 +123,8 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
                 final newStock = ShuttleStock(
                   id: stock?.id,
                   name: name,
-                  pricePerDozens: price,
+                  unitPrice: price,
+                  isPerDozen: isPerDozen,
                   payerId: selectedPayerId,
                   purchaseDate: stock?.purchaseDate ?? DateTime.now(),
                 );
@@ -106,20 +145,24 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return AlertDialog(
+      titlePadding: const EdgeInsets.fromLTRB(24, 16, 16, 0),
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('在庫一覧', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('シャトル在庫', style: TextStyle(fontWeight: FontWeight.bold)),
           IconButton(
             icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
             onPressed: () => _showAddEditDialog(),
           ),
         ],
       ),
+      contentPadding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
       content: SizedBox(
         width: double.maxFinite,
-        height: 400,
+        height: 450,
         child: FutureBuilder<List<ShuttleStock>>(
           future: _stocksFuture,
           builder: (context, snapshot) {
@@ -128,12 +171,23 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
             }
             final stocks = snapshot.data ?? [];
             if (stocks.isEmpty) {
-              return const Center(child: Text('登録された在庫はありません'));
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.inventory_2_outlined,
+                        size: 48, color: theme.colorScheme.outlineVariant),
+                    const SizedBox(height: 16),
+                    Text('登録された在庫はありません',
+                        style: TextStyle(color: theme.colorScheme.outline)),
+                  ],
+                ),
+              );
             }
 
             return ListView.separated(
               itemCount: stocks.length,
-              separatorBuilder: (context, index) => const Divider(),
+              separatorBuilder: (context, index) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final stock = stocks[index];
                 final payerName = widget.activePlayers
@@ -143,11 +197,48 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
                     '未指定';
 
                 return ListTile(
-                  contentPadding: EdgeInsets.zero,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                   title: Text(stock.name,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(
-                      '¥${stock.pricePerDozens.toStringAsFixed(0)} / ダース | 支払: $payerName'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.secondaryContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '¥${stock.unitPrice.toStringAsFixed(0)}/${stock.isPerDozen ? 'ダース' : '個'}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSecondaryContainer,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text('支払: $payerName',
+                              style: const TextStyle(fontSize: 12)),
+                        ],
+                      ),
+                      if (!stock.isPerDozen)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                              ' (1ダースあたり ¥${(stock.unitPrice * 12).toStringAsFixed(0)})',
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  color: theme.colorScheme.outline)),
+                        ),
+                    ],
+                  ),
                   onTap: widget.isSelectionMode
                       ? () => Navigator.pop(context, stock)
                       : () => _showAddEditDialog(stock: stock),
@@ -159,7 +250,25 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
                           icon: const Icon(Icons.delete_outline,
                               color: Colors.red, size: 20),
                           onPressed: () async {
-                            if (stock.id != null) {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('削除の確認'),
+                                content: Text('「${stock.name}」を削除しますか？'),
+                                actions: [
+                                  TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, false),
+                                      child: const Text('キャンセル')),
+                                  TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, true),
+                                      child: const Text('削除',
+                                          style: TextStyle(color: Colors.red))),
+                                ],
+                              ),
+                            );
+                            if (confirm == true && stock.id != null) {
                               await widget.repository.delete(stock.id!);
                               _refresh();
                             }
