@@ -29,13 +29,15 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
     dev.log('--- マッチ生成開始: 男子必要 $requiredMale, 女子必要 $requiredFemale ---',
         name: 'MatchAlgo');
 
-    // 1. 利用可能なプレイヤー（isMustRest以外）を抽出
+    // 1. 利用可能なプレイヤー（isMustRest以外）を抽出し、性別ごとのプールを固定（最適化）
     final available = playerPool.filterAvailable();
+    final malePool = available.males;
+    final femalePool = available.females;
 
     // 2. セッション選抜状態の初期化
     var session = MatchSessionSelection(
-      male: available.males.splitSelection(requiredMale),
-      female: available.females.splitSelection(requiredFemale),
+      male: malePool.splitSelection(requiredMale),
+      female: femalePool.splitSelection(requiredFemale),
     );
 
     // 3. 制限ペア解消ループ (MatchSessionSelectionに責務を委譲)
@@ -48,11 +50,10 @@ class BalancedMatchAlgorithm implements MatchAlgorithm {
       // 解消
       session = session.resolveConflicts();
 
-      // 補充 (それぞれの性別の元のプールから補充)
+      // 補充 (固定されたプールから補充を行うことで再計算を避ける)
       session = MatchSessionSelection(
-        male: available.males.refillSelection(session.male, requiredMale),
-        female:
-            available.females.refillSelection(session.female, requiredFemale),
+        male: malePool.refillSelection(session.male, requiredMale),
+        female: femalePool.refillSelection(session.female, requiredFemale),
       );
 
       retryCount++;

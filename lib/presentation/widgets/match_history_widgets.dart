@@ -795,12 +795,30 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
       loading = false;
     });
 
-    setState(_updateRequirement);
+    _updateRequirement();
   }
 
   void _updateRequirement() {
     final selectedTypes = isAutoRecommendMode ? currentRecommendTypes : types;
-    _requirementResult = widget.notifier.checkRequirements(selectedTypes);
+    var res = widget.notifier.checkRequirements(selectedTypes);
+
+    final pool = widget.notifier.playerStatsPool;
+    final effective = _requirementService.calculateEffectiveCounts(pool);
+
+    if (effective.restrictedPlayerNames.isNotEmpty) {
+      res = RequirementResult(
+        canGenerate: res.canGenerate,
+        errorMessage: res.errorMessage,
+        predictedRestPlayerNames: {
+          ...res.predictedRestPlayerNames,
+          ...effective.restrictedPlayerNames
+        }.toList(),
+      );
+    }
+
+    setState(() {
+      _requirementResult = res;
+    });
   }
 
   void _refreshAutoRecommendedTypes() {

@@ -111,6 +111,7 @@ class MatchRequirementService {
 
     final idMap = {for (final p in available) p.player.id: p};
     final Set<String> processedIds = {};
+    final List<String> restrictedNames = [];
 
     int m = 0;
     int f = 0;
@@ -127,6 +128,9 @@ class MatchRequirementService {
           // 制限ペア：どちらか一方が休む
           final restPlayer = p.shouldRestOver(partner) ? p : partner;
           final stayPlayer = restPlayer == p ? partner : p;
+
+          restrictedNames.add(restPlayer.name);
+
           if (stayPlayer.player.gender == Gender.male) {
             m++;
           } else {
@@ -146,7 +150,11 @@ class MatchRequirementService {
       processedIds.add(p.player.id);
     }
 
-    return EffectivePlayerCounts(male: m.toDouble(), female: f.toDouble());
+    return EffectivePlayerCounts(
+      male: m.toDouble(),
+      female: f.toDouble(),
+      restrictedPlayerNames: restrictedNames,
+    );
   }
 
   /// 制限解消のシミュレーション
@@ -200,6 +208,11 @@ class RequiredPlayerCounts {
 class EffectivePlayerCounts {
   final double male;
   final double female;
+  final List<String> restrictedPlayerNames;
 
-  const EffectivePlayerCounts({required this.male, required this.female});
+  const EffectivePlayerCounts({
+    required this.male,
+    required this.female,
+    this.restrictedPlayerNames = const [],
+  });
 }
