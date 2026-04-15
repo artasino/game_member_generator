@@ -424,6 +424,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   Widget _buildQuickActions(ThemeData theme) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      // 下側の見切れ（スクロールバー等）対策で垂直方向にも少し余白を持たせる
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           _ActionChip(
@@ -1645,8 +1647,19 @@ class _ActionChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return ActionChip(
       avatar: Icon(icon, size: 18),
-      label: Text(label, style: const TextStyle(fontSize: 12)),
+      label: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          // 文字が詰まりすぎないように調整
+          letterSpacing: 0.5,
+        ),
+      ),
       onPressed: onPressed,
+      // 横方向のパディングを明示的に指定して見切れを防止
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 6),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }
