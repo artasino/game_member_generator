@@ -29,9 +29,3 @@ jobs:
 
       - name: Build Windows
         run: flutter build windows
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: game_member_generator_windows
-          path: build/windows/x64/runner/Release

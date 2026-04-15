@@ -1,4 +1,4 @@
-name: Deploy Flutter Web to Firebase Hosting
+name: Build and Deploy
 
 on:
   pull_request:
@@ -12,36 +12,24 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: firebase-hosting-production
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  version:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
-
+    outputs:
+      version: ${{ steps.vars.outputs.VERSION }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # タグ履歴をすべて取得するために fetch-depth: 0 が必須
           fetch-depth: 0
           ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      # 1. バージョン情報を抽出するロジック
       - name: Extract version info
         id: vars
         run: |
@@ -50,14 +38,33 @@ jobs:
           echo "VERSION=$LATEST_TAG" >> $GITHUB_OUTPUT
           echo "Using version: $LATEST_TAG"
 
+  deploy-web:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      # 2. ビルド引数に動的な値を注入
       - name: Build Flutter Web (release)
         run: |
           flutter build web --release \
-            --build-name=${{ steps.vars.outputs.VERSION }} \
+            --build-name=${{ needs.version.outputs.version }} \
             --build-number=${{ github.run_number }}
 
       - name: Authenticate to Google Cloud
@@ -67,3 +74,50 @@ jobs:
 
       - name: Deploy to Firebase Hosting
         run: npx firebase-tools deploy --only hosting --project game-member-generator
+
+  build-windows:
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable Windows build
+        run: flutter config --enable-windows-desktop
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: |
+          flutter build windows --release `
+            --build-name=${{ needs.version.outputs.version }} `
+            --build-number=${{ github.run_number }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: game_member_generator_windows
+          path: build/windows/x64/runner/Release
+
+      - name: Zip build
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          mkdir release
+          xcopy build\windows\x64\runner\Release\* release\ /E /I
+          Compress-Archive -Path release\* -DestinationPath game_member_generator_windows.zip
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          files: game_member_generator_windows.zip
