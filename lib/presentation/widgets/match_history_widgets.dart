@@ -862,7 +862,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     }
   }
 
-  List<MatchType> _recommendGenderSeparated(double effectiveMen,
+  List<MatchType> _recommendGenderSeparated(
+      double effectiveMen,
       double effectiveWomen,
       int activeMen,
       int activeWomen,
@@ -900,7 +901,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     return result;
   }
 
-  List<MatchType> _recommendBalanced(double effectiveMen,
+  List<MatchType> _recommendBalanced(
+      double effectiveMen,
       double effectiveWomen,
       int activeMen,
       int activeWomen,
@@ -933,7 +935,6 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                   2)
               .toDouble();
           if (courtNum > result.length) {
-            print("courtIncrease $courtNum $md $wd $xd $score");
             minScore = score;
             result = [
               ...List.filled(wd, MatchType.femaleDoubles),
@@ -941,7 +942,6 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               ...List.filled(md, MatchType.maleDoubles)
             ];
           } else if (courtNum == result.length && score < minScore) {
-            print("minScoreUpdate $courtNum $md $wd $xd $score");
             minScore = score;
             result = [
               ...List.filled(wd, MatchType.femaleDoubles),

@@ -110,38 +110,40 @@ class MatchRequirementService {
         .toList();
 
     final idMap = {for (final p in available) p.player.id: p};
-    final Set<String> restrictedIds = {};
+    final Set<String> processedIds = {};
 
     int m = 0;
     int f = 0;
 
     for (final p in available) {
-      if (restrictedIds.contains(p.player.id)) continue;
+      if (processedIds.contains(p.player.id)) continue;
 
       final partnerId = p.player.excludedPartnerId;
       if (partnerId != null) {
         final partner = idMap[partnerId];
         if (partner != null &&
-            partner.player.excludedPartnerId == p.player.id) {
+            partner.player.excludedPartnerId == p.player.id &&
+            !processedIds.contains(partnerId)) {
           // 制限ペア：どちらか一方が休む
           final restPlayer = p.shouldRestOver(partner) ? p : partner;
-          restrictedIds.add(restPlayer.player.id);
-
           final stayPlayer = restPlayer == p ? partner : p;
           if (stayPlayer.player.gender == Gender.male) {
             m++;
           } else {
             f++;
           }
+          processedIds.add(p.player.id);
+          processedIds.add(partner.player.id);
           continue;
         }
       }
-      // 制限なし
+      // 制限なし、または相手がいない/処理済み
       if (p.player.gender == Gender.male) {
         m++;
       } else {
         f++;
       }
+      processedIds.add(p.player.id);
     }
 
     return EffectivePlayerCounts(male: m.toDouble(), female: f.toDouble());
