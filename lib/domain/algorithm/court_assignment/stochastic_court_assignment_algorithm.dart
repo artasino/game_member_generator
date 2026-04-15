@@ -8,8 +8,6 @@ import 'package:game_member_generator/domain/algorithm/session_score.dart';
 import 'package:game_member_generator/domain/entities/match_type.dart';
 import 'package:game_member_generator/domain/entities/player_with_stats.dart';
 
-import '../player_selector_util.dart';
-
 class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
   final GameEvaluator gameEvaluator;
 
@@ -97,10 +95,9 @@ class AlgorithmsState {
     required List<PlayerWithStats> candidateFemales,
     required int requiredFemale,
   }) {
-    final sMales = PlayerSelectorUtil.pickCourtMembers(
-        mustMales, candidateMales, requiredMale);
-    final sFemales = PlayerSelectorUtil.pickCourtMembers(
-        mustFemales, candidateFemales, requiredFemale);
+    final sMales = _pickCourtMembers(mustMales, candidateMales, requiredMale);
+    final sFemales =
+        _pickCourtMembers(mustFemales, candidateFemales, requiredFemale);
 
     return AlgorithmsState(
       selectedMales: sMales,
@@ -111,6 +108,27 @@ class AlgorithmsState {
           candidateFemales.where((p) => !sFemales.contains(p)).toList(),
       candidateFemales: candidateFemales,
     );
+  }
+
+  static List<PlayerWithStats> _pickCourtMembers(
+    List<PlayerWithStats> must,
+    List<PlayerWithStats> candidates,
+    int requiredCount,
+  ) {
+    final random = Random();
+    final picked = List<PlayerWithStats>.from(must);
+    final needed = requiredCount - picked.length;
+    if (needed <= 0) return picked;
+
+    final sortedCandidates = List<PlayerWithStats>.from(candidates);
+    // 偏りを防ぐためにまずシャッフル
+    sortedCandidates.shuffle(random);
+    // 「前の休みからの試合間隔」が短い順（sessionsSinceLastRestが小さい＝直近で休んだ人）にソート
+    sortedCandidates.sort((a, b) =>
+        a.stats.sessionsSinceLastRest.compareTo(b.stats.sessionsSinceLastRest));
+
+    picked.addAll(sortedCandidates.take(needed));
+    return picked;
   }
 
   AlgorithmsState copyWithSwap() {

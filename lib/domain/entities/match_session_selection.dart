@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 
 import 'player_selection.dart';
+import 'player_stats_pool.dart';
 
 /// 1つのセッション（1回のマッチメイキング）における全プレイヤーの選抜状態
 class MatchSessionSelection {
@@ -32,6 +33,34 @@ class MatchSessionSelection {
     }
     _hasConflict = false;
     return false;
+  }
+
+  /// コンフリクトを解消し、必要に応じて補充を行う。
+  /// [maxRetries] 回まで試行する。
+  MatchSessionSelection resolveAndRefill({
+    required int requiredMale,
+    required int requiredFemale,
+    required PlayerStatsPool malePool,
+    required PlayerStatsPool femalePool,
+    int maxRetries = 5,
+  }) {
+    MatchSessionSelection current = this;
+    int retryCount = 0;
+
+    while (current.hasCrossGenderConflict && retryCount < maxRetries) {
+      // 1. コンフリクトしているペアを見つけ、条件の悪い方を排除
+      current = current.resolveConflicts();
+
+      // 2. 排除によって不足した人数を元のプールから補充
+      current = MatchSessionSelection(
+        male: malePool.refillSelection(current.male, requiredMale),
+        female: femalePool.refillSelection(current.female, requiredFemale),
+      );
+
+      retryCount++;
+    }
+
+    return current;
   }
 
   /// コンフリクトしているペアを見つけ、条件の悪い方を排除した新しい選抜状態を返す
