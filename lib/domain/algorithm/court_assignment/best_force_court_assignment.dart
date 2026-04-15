@@ -13,12 +13,15 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
   BestForceCourtAssignmentAlgorithm({required this.gameEvaluator});
 
   @override
-  SessionScore searchBestAssignment(
-      {required List<MatchType> types,
-      required List<PlayerWithStats> mustMales,
-      required List<PlayerWithStats> mustFemales,
-      required List<PlayerWithStats> candidateMales,
-      required List<PlayerWithStats> candidateFemales}) {
+  SessionScore searchBestAssignment({
+    required List<MatchType> types,
+    required List<PlayerWithStats> mustMales,
+    required List<PlayerWithStats> mustFemales,
+    required List<PlayerWithStats> candidateMales,
+    required List<PlayerWithStats> candidateFemales,
+    List<Set<String>> previousMaleSelections = const [],
+    List<Set<String>> previousFemaleSelections = const [],
+  }) {
     var requiredMale = types.requiredPlayerCount(isMale: true);
     var requiredFemale = types.requiredPlayerCount(isMale: false);
 
@@ -26,7 +29,47 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
         mustMales, candidateMales, requiredMale);
     List<PlayerWithStats> selectedFemales = PlayerSelectorUtil.pickCourtMembers(
         mustFemales, candidateFemales, requiredFemale);
-    return _recurseAssignment(types, 0, selectedMales, selectedFemales);
+
+    final selectedMaleSet = selectedMales.toSet();
+    List<PlayerWithStats> benchMales =
+        candidateMales.where((p) => !selectedMaleSet.contains(p)).toList();
+    final selectedFemaleSet = selectedFemales.toSet();
+    List<PlayerWithStats> benchFemales =
+        candidateFemales.where((p) => !selectedFemaleSet.contains(p)).toList();
+
+    double penalty = 0;
+
+    // 同一メンバーペナルティ
+    final currentMaleIds = selectedMales.map((p) => p.player.id).toSet();
+    for (final prev in previousMaleSelections) {
+      if (prev.length == currentMaleIds.length &&
+          prev.every(currentMaleIds.contains)) {
+        penalty += 1000.0;
+        break;
+      }
+    }
+
+    final currentFemaleIds = selectedFemales.map((p) => p.player.id).toSet();
+    for (final prev in previousFemaleSelections) {
+      if (prev.length == currentFemaleIds.length &&
+          prev.every(currentFemaleIds.contains)) {
+        penalty += 1000.0;
+        break;
+      }
+    }
+
+    // 同時に休みペナルティ
+    penalty += gameEvaluator.calculateRestTogetherPenalty(benchMales);
+    penalty += gameEvaluator.calculateRestTogetherPenalty(benchFemales);
+
+    final availablePlayers = [...selectedMales, ...selectedFemales];
+    penalty +=
+        gameEvaluator.calculateSessionsFromLastRestPenalty(availablePlayers);
+
+    final sessionScore =
+        _recurseAssignment(types, 0, selectedMales, selectedFemales);
+
+    return SessionScore(sessionScore.score + penalty, sessionScore.games);
   }
 
   /// 再帰的にすべてのコートへのプレイヤーの割り振りを試す
@@ -44,7 +87,7 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
     double bestScore = double.infinity;
     List<Game> bestGames = [];
 
-    if (type == MatchType.menDoubles) {
+    if (type == MatchType.maleDoubles) {
       final combos = _getCombinations(males, 4);
       for (final selected in combos) {
         final remaining = males.where((m) => !selected.contains(m)).toList();
@@ -56,7 +99,7 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
           bestGames = [gameScore.game, ...next.games];
         }
       }
-    } else if (type == MatchType.womenDoubles) {
+    } else if (type == MatchType.femaleDoubles) {
       final combos = _getCombinations(females, 4);
       for (final selected in combos) {
         final remaining = females.where((f) => !selected.contains(f)).toList();

@@ -23,7 +23,7 @@ class SharedPreferencesCourtSettingsRepository
       legacyKeys: _legacySettingsKeys,
     );
     if (jsonString == null || jsonString.isEmpty) {
-      return CourtSettings([MatchType.menDoubles]);
+      return CourtSettings([MatchType.maleDoubles]);
     }
 
     final dynamic decoded = jsonDecode(jsonString);
@@ -43,7 +43,7 @@ class SharedPreferencesCourtSettingsRepository
         (map['isAutoRecommendMode'] as bool?) ?? false;
 
     return CourtSettings(
-      types.isEmpty ? [MatchType.menDoubles] : types,
+      types.isEmpty ? [MatchType.maleDoubles] : types,
       autoCourtCount: autoCourtCount,
       autoCourtPolicy: AutoCourtPolicy.values[autoCourtPolicyIndex],
       isAutoRecommendMode: isAutoRecommendMode,

@@ -94,8 +94,8 @@ class PlayerChip extends StatelessWidget {
     );
 
     final sameGenderCount = player.gender == Gender.male
-        ? (stats.typeCounts[MatchType.menDoubles] ?? 0)
-        : (stats.typeCounts[MatchType.womenDoubles] ?? 0);
+        ? (stats.typeCounts[MatchType.maleDoubles] ?? 0)
+        : (stats.typeCounts[MatchType.femaleDoubles] ?? 0);
     final mxCount = stats.typeCounts[MatchType.mixedDoubles] ?? 0;
 
     return InkWell(

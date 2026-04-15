@@ -11,5 +11,7 @@ abstract class CourtAssignmentAlgorithm {
     required List<PlayerWithStats> mustFemales,
     required List<PlayerWithStats> candidateMales,
     required List<PlayerWithStats> candidateFemales,
+    List<Set<String>> previousMaleSelections = const [],
+    List<Set<String>> previousFemaleSelections = const [],
   });
 }

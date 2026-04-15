@@ -7,6 +7,9 @@ class MatchSessionSelection {
   final PlayerSelection male;
   final PlayerSelection female;
 
+  // キャッシュ用のフィールド
+  bool? _hasConflict;
+
   MatchSessionSelection({
     required this.male,
     required this.female,
@@ -14,18 +17,20 @@ class MatchSessionSelection {
 
   /// 性別を跨いだ同時出場制限（Excluded Partner）のコンフリクトがあるか
   bool get hasCrossGenderConflict {
-    final maleIds = male.allCandidates.map((p) => p.id).toSet();
+    if (_hasConflict != null) return _hasConflict!;
 
+    final maleIds = male.allCandidateIds;
     for (var f in female.allCandidates) {
       final partnerId = f.player.excludedPartnerId;
       if (partnerId != null && maleIds.contains(partnerId)) {
-        // 相手側も制限しているか（双方向制限の確認）
         final m = male.allCandidates.firstWhereOrNull((p) => p.id == partnerId);
         if (m != null && m.player.excludedPartnerId == f.id) {
+          _hasConflict = true;
           return true;
         }
       }
     }
+    _hasConflict = false;
     return false;
   }
 
@@ -40,12 +45,11 @@ class MatchSessionSelection {
 
       final m = maleMap[partnerId];
       if (m != null && m.player.excludedPartnerId == f.id) {
-        // どちらを休ませるか
-        final bool fShouldRest = f.shouldRestOver(m);
-        final removeId = fShouldRest ? f.id : m.id;
-        toRemoveIds.add(removeId);
+        toRemoveIds.add(f.shouldRestOver(m) ? f.id : m.id);
       }
     }
+
+    if (toRemoveIds.isEmpty) return this;
 
     return MatchSessionSelection(
       male: male.removePlayers(toRemoveIds),

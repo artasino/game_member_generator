@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_member_generator/domain/entities/game.dart';
 import 'package:game_member_generator/domain/entities/gender.dart';
@@ -72,7 +73,7 @@ void main() {
           id: '5', name: 'Rest', yomigana: 'rest', gender: Gender.female);
 
       final game = Game(
-        MatchType.menDoubles,
+        MatchType.maleDoubles,
         Team(p1, p2),
         Team(p3, p4),
       );
@@ -92,7 +93,7 @@ void main() {
 
       expect(recovered.index, 1);
       expect(recovered.games.length, 1);
-      expect(recovered.games.first.type, MatchType.menDoubles);
+      expect(recovered.games.first.type, MatchType.maleDoubles);
       expect(recovered.games.first.teamA.player1.name, 'P1');
       expect(recovered.games.first.teamB.player2.name, 'P4');
       expect(recovered.restingPlayers.first.name, 'Rest');

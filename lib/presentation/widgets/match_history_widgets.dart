@@ -43,8 +43,8 @@ class MatchHistoryLayoutTokens {
 /// 試合形式に応じたテーマカラーを取得
 Color _getMatchTypeColor(BuildContext context, MatchType type) {
   return switch (type) {
-    MatchType.menDoubles => Colors.blue.shade800,
-    MatchType.womenDoubles => Colors.pink.shade700,
+    MatchType.maleDoubles => Colors.blue.shade800,
+    MatchType.femaleDoubles => Colors.pink.shade700,
     MatchType.mixedDoubles => Colors.orange.shade900,
   };
 }
@@ -795,12 +795,30 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
       loading = false;
     });
 
-    setState(_updateRequirement);
+    _updateRequirement();
   }
 
   void _updateRequirement() {
     final selectedTypes = isAutoRecommendMode ? currentRecommendTypes : types;
-    _requirementResult = widget.notifier.checkRequirements(selectedTypes);
+    var res = widget.notifier.checkRequirements(selectedTypes);
+
+    final pool = widget.notifier.playerStatsPool;
+    final effective = _requirementService.calculateEffectiveCounts(pool);
+
+    if (effective.restrictedPlayerNames.isNotEmpty) {
+      res = RequirementResult(
+        canGenerate: res.canGenerate,
+        errorMessage: res.errorMessage,
+        predictedRestPlayerNames: {
+          ...res.predictedRestPlayerNames,
+          ...effective.restrictedPlayerNames
+        }.toList(),
+      );
+    }
+
+    setState(() {
+      _requirementResult = res;
+    });
   }
 
   void _refreshAutoRecommendedTypes() {
@@ -862,7 +880,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     }
   }
 
-  List<MatchType> _recommendGenderSeparated(double effectiveMen,
+  List<MatchType> _recommendGenderSeparated(
+      double effectiveMen,
       double effectiveWomen,
       int activeMen,
       int activeWomen,
@@ -884,15 +903,15 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
         if (courtNum > result.length) {
           minScore = score;
           result = [
-            ...List.filled(wd, MatchType.womenDoubles),
-            ...List.filled(md, MatchType.menDoubles)
+            ...List.filled(wd, MatchType.femaleDoubles),
+            ...List.filled(md, MatchType.maleDoubles)
           ];
         }
         if (courtNum == result.length && score < minScore) {
           minScore = score;
           result = [
-            ...List.filled(wd, MatchType.womenDoubles),
-            ...List.filled(md, MatchType.menDoubles)
+            ...List.filled(wd, MatchType.femaleDoubles),
+            ...List.filled(md, MatchType.maleDoubles)
           ];
         }
       }
@@ -900,7 +919,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     return result;
   }
 
-  List<MatchType> _recommendBalanced(double effectiveMen,
+  List<MatchType> _recommendBalanced(
+      double effectiveMen,
       double effectiveWomen,
       int activeMen,
       int activeWomen,
@@ -933,20 +953,18 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
                   2)
               .toDouble();
           if (courtNum > result.length) {
-            print("courtIncrease $courtNum $md $wd $xd $score");
             minScore = score;
             result = [
-              ...List.filled(wd, MatchType.womenDoubles),
+              ...List.filled(wd, MatchType.femaleDoubles),
               ...List.filled(xd, MatchType.mixedDoubles),
-              ...List.filled(md, MatchType.menDoubles)
+              ...List.filled(md, MatchType.maleDoubles)
             ];
           } else if (courtNum == result.length && score < minScore) {
-            print("minScoreUpdate $courtNum $md $wd $xd $score");
             minScore = score;
             result = [
-              ...List.filled(wd, MatchType.womenDoubles),
+              ...List.filled(wd, MatchType.femaleDoubles),
               ...List.filled(xd, MatchType.mixedDoubles),
-              ...List.filled(md, MatchType.menDoubles)
+              ...List.filled(md, MatchType.maleDoubles)
             ];
           }
         }

@@ -40,7 +40,7 @@ class MockSessionHistoryRepository implements SessionHistoryRepository {
 }
 
 class MockCourtSettingsRepository implements CourtSettingsRepository {
-  CourtSettings settings = CourtSettings([MatchType.menDoubles]);
+  CourtSettings settings = CourtSettings([MatchType.maleDoubles]);
 
   @override
   Future<CourtSettings> get() async => settings;
@@ -85,7 +85,7 @@ class FixedMatchAlgorithm implements MatchAlgorithm {
 
     return [
       Game(
-        MatchType.menDoubles,
+        MatchType.maleDoubles,
         Team(allPlayers[0], allPlayers[1]),
         Team(allPlayers[2], allPlayers[3]),
       )
@@ -128,7 +128,7 @@ void main() {
       await notifier.onPlayersUpdated();
 
       await notifier
-          .generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
+          .generateSessionWithSettings(CourtSettings([MatchType.maleDoubles]));
 
       final stats1 = notifier.playerStatsPool.all
           .firstWhere((p) => p.player.id == '1')
@@ -156,12 +156,12 @@ void main() {
       sessionRepo.sessions = [
         Session(
           1,
-          [Game(MatchType.menDoubles, Team(p1, p3), Team(p2, p4))],
+          [Game(MatchType.maleDoubles, Team(p1, p3), Team(p2, p4))],
           restingPlayers: [p5],
         ),
         Session(
           2,
-          [Game(MatchType.menDoubles, Team(p1, p2), Team(p3, p4))],
+          [Game(MatchType.maleDoubles, Team(p1, p2), Team(p3, p4))],
           restingPlayers: [p5],
         ),
       ];
@@ -209,11 +209,13 @@ void main() {
       await notifier.onPlayersUpdated();
 
       await notifier
-          .generateSessionWithSettings(CourtSettings([MatchType.menDoubles]));
+          .generateSessionWithSettings(CourtSettings([MatchType.maleDoubles]));
 
       final session = notifier.sessions.first;
       // P1 と P5 を入れ替える
-      final newGames = [Game(MatchType.menDoubles, Team(p5, p2), Team(p3, p4))];
+      final newGames = [
+        Game(MatchType.maleDoubles, Team(p5, p2), Team(p3, p4))
+      ];
       await notifier.updateSession(
           session.copyWith(games: newGames, restingPlayers: [p1]));
 
@@ -223,10 +225,8 @@ void main() {
       expect(
           pool.all.firstWhere((p) => p.player.id == '5').stats.totalMatches, 1);
     });
-  });
-
-  group('SessionNotifier - 同時出場制限を考慮したバリデーション', () {
-    test('同時出場制限で人数不足になる構成は生成不可になること', () async {
+    group('SessionNotifier - 同時出場制限を考慮したバリデーション', () {
+      test('同時出場制限で人数不足になる構成は生成不可になること', () async {
       const m1 = Player(
         id: 'm1',
         name: 'M1',
@@ -254,13 +254,14 @@ void main() {
       await notifier.onPlayersUpdated();
 
       final mixedOnly = notifier.checkRequirements([MatchType.mixedDoubles]);
-      final womenOnly = notifier.checkRequirements([MatchType.womenDoubles]);
+        final femaleOnly =
+            notifier.checkRequirements([MatchType.femaleDoubles]);
 
-      expect(mixedOnly.canGenerate, isFalse);
+        expect(mixedOnly.canGenerate, isFalse);
       expect(mixedOnly.errorMessage, contains('同時出場制限'));
       expect(mixedOnly.predictedRestPlayerNames, isNotEmpty);
-      expect(womenOnly.canGenerate, isTrue);
-    });
+        expect(femaleOnly.canGenerate, isTrue);
+      });
 
     test('同時出場制限で外れてもアクティブ人数が足りれば生成可能であること', () async {
       const m1 = Player(
@@ -313,10 +314,11 @@ void main() {
       playerRepo.players = [m1, m2, m3, m4];
       await notifier.onPlayersUpdated();
 
-      final menOnly = notifier.checkRequirements([MatchType.menDoubles]);
+        final maleOnly = notifier.checkRequirements([MatchType.maleDoubles]);
 
-      expect(menOnly.canGenerate, isFalse);
-      expect(menOnly.errorMessage, contains('男性が不足します'));
+        expect(maleOnly.canGenerate, isFalse);
+      expect(maleOnly.errorMessage, contains('男性が不足します'));
+    });
     });
   });
 }

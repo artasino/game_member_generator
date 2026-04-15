@@ -98,27 +98,27 @@ void main() {
       ];
 
       final result = algorithm.generateMatches(
-        matchTypes: [MatchType.menDoubles, MatchType.womenDoubles],
+        matchTypes: [MatchType.maleDoubles, MatchType.femaleDoubles],
         playerPool: toPool([...males, ...females]),
       );
 
       expect(result.length, 2);
-      final menDoubles =
-          result.firstWhere((g) => g.type == MatchType.menDoubles);
-      final womenDoubles =
-          result.firstWhere((g) => g.type == MatchType.womenDoubles);
+      final maleDoubles =
+          result.firstWhere((g) => g.type == MatchType.maleDoubles);
+      final femaleDoubles =
+          result.firstWhere((g) => g.type == MatchType.femaleDoubles);
 
       expect([
-        menDoubles.teamA.player1.gender,
-        menDoubles.teamA.player2.gender,
-        menDoubles.teamB.player1.gender,
-        menDoubles.teamB.player2.gender
+        maleDoubles.teamA.player1.gender,
+        maleDoubles.teamA.player2.gender,
+        maleDoubles.teamB.player1.gender,
+        maleDoubles.teamB.player2.gender
       ], everyElement(Gender.male));
       expect([
-        womenDoubles.teamA.player1.gender,
-        womenDoubles.teamA.player2.gender,
-        womenDoubles.teamB.player1.gender,
-        womenDoubles.teamB.player2.gender
+        femaleDoubles.teamA.player1.gender,
+        femaleDoubles.teamA.player2.gender,
+        femaleDoubles.teamB.player1.gender,
+        femaleDoubles.teamB.player2.gender
       ], everyElement(Gender.female));
     });
 
@@ -179,7 +179,7 @@ void main() {
       ];
 
       final result = algorithm.generateMatches(
-        matchTypes: [MatchType.menDoubles],
+        matchTypes: [MatchType.maleDoubles],
         playerPool: toPool([...males, ...females]),
       );
 
@@ -310,7 +310,7 @@ void main() {
 
       expect(
         () => algorithm.generateMatches(
-          matchTypes: [MatchType.menDoubles],
+          matchTypes: [MatchType.maleDoubles],
           playerPool: toPool([...males, ...females]),
         ),
         throwsA(anyOf(isA<RangeError>(), isA<Exception>())),

@@ -59,16 +59,20 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   /// 現在のアクティブプレイヤーで、指定された試合形式が組めるかチェックする
-  RequirementResult checkRequirements(List<MatchType> types) {
+  RequirementResult checkRequirements(List<MatchType> types,
+      {bool silent = false}) {
     final counts = _requirementService.calculateRequired(types);
     final cacheKey = '${counts.male}-${counts.female}';
 
-    if (_requirementCache.containsKey(cacheKey)) {
+    if (!silent && _requirementCache.containsKey(cacheKey)) {
       return _requirementCache[cacheKey]!;
     }
 
-    final result = _requirementService.check(types, _cachedPool);
-    _requirementCache[cacheKey] = result;
+    final result =
+        _requirementService.check(types, _cachedPool, silent: silent);
+    if (!silent) {
+      _requirementCache[cacheKey] = result;
+    }
     return result;
   }
 
@@ -145,12 +149,17 @@ class SessionNotifier extends ChangeNotifier {
     _isGenerating = true;
     notifyListeners();
 
-    final originalSessions = List<Session>.from(_sessions);
-    _sessions.removeWhere((session) => session.index == sessionIndex);
-    await _updateStats();
+    // 再生成対象を除外した統計情報プールを計算
+    final poolForGeneration = playerStatsCalculator.buildPool(
+      allPlayers: _allPlayersCache,
+      sessions: _sessions.where((s) => s.index != sessionIndex).toList(),
+    );
 
     try {
-      final generated = await _generateSessionData(settings);
+      final generated = await matchMakingService.generateMatchSession(
+        matchTypes: settings.matchTypes,
+        playerStats: poolForGeneration,
+      );
       final updatedSession = Session(
         sessionIndex,
         generated.games,
@@ -159,7 +168,6 @@ class SessionNotifier extends ChangeNotifier {
       _pushUndoState();
       await sessionRepository.update(updatedSession);
 
-      _sessions = originalSessions;
       final index =
           _sessions.indexWhere((session) => session.index == sessionIndex);
       if (index != -1) {
@@ -172,7 +180,7 @@ class SessionNotifier extends ChangeNotifier {
     }
   }
 
-  Future<void> generateSessionWithSettings(CourtSettings settings) async {
+  Future<int?> generateSessionWithSettings(CourtSettings settings) async {
     _isGenerating = true;
     notifyListeners();
 
@@ -190,6 +198,7 @@ class SessionNotifier extends ChangeNotifier {
       _pushUndoState();
       await sessionRepository.add(newSession);
       await _refresh();
+      return nextIndex;
     } finally {
       _isGenerating = false;
       notifyListeners();
