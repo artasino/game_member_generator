@@ -338,6 +338,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   }
 
   void _showSettings(bool isRecalc) async {
+    final targetIndexBefore = _currentIndex;
     final settings = await showDialog<CourtSettings>(
       context: context,
       builder: (context) => MatchSettingsDialog(
@@ -351,14 +352,18 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
 
     try {
       if (isRecalc) {
+        final sessionIndex = widget.notifier.sessions[targetIndexBefore!].index;
         await widget.notifier.recalculateSession(
-          widget.notifier.sessions[_currentIndex!].index,
+          sessionIndex,
           settings,
         );
-        _updateIndexSafely(targetIndex: _currentIndex);
+        _updateIndexSafely(targetIndex: targetIndexBefore);
       } else {
-        await widget.notifier.generateSessionWithSettings(settings);
-        _updateIndexSafely();
+        final newIndex =
+            await widget.notifier.generateSessionWithSettings(settings);
+        if (newIndex != null) {
+          _updateIndexSafely(targetIndex: widget.notifier.sessions.length - 1);
+        }
       }
     } catch (e) {
       _showError(e.toString());
@@ -550,7 +555,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         ),
       );
 
-  Future<void> _showUndoLastConfirm(BuildContext context) => showDialog(
+  Future<void> _undoLastConfirm(BuildContext context) => showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text(
@@ -586,4 +591,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           ],
         ),
       );
+
+  void _showUndoLastConfirm(BuildContext context) {
+    _undoLastConfirm(context);
+  }
 }
