@@ -1407,11 +1407,45 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                               itemBuilder: (context, index) {
                                 final p = candidates[index];
                                 final checked = selectedIds.contains(p.id);
+                                final isMale = p.gender == Gender.male;
+                                final genderColor = isMale
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).colorScheme.secondary;
+
                                 return CheckboxListTile(
                                   dense: true,
                                   value: checked,
-                                  title: Text(p.name),
+                                  title: Row(
+                                    children: [
+                                      Text(p.name,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold)),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: genderColor.withValues(
+                                              alpha: 0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                          border: Border.all(
+                                              color: genderColor.withValues(
+                                                  alpha: 0.5)),
+                                        ),
+                                        child: Text(
+                                          isMale ? '男' : '女',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: genderColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   subtitle: Text(p.yomigana),
+                                  activeColor: genderColor,
                                   onChanged: (v) {
                                     setState(() {
                                       if (v == true) {
@@ -1521,11 +1555,45 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                               itemBuilder: (context, index) {
                                 final p = candidates[index];
                                 final checked = selectedIds.contains(p.id);
+                                final isMale = p.gender == Gender.male;
+                                final genderColor = isMale
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).colorScheme.secondary;
+
                                 return CheckboxListTile(
                                   dense: true,
                                   value: checked,
-                                  title: Text(p.name),
+                                  title: Row(
+                                    children: [
+                                      Text(p.name,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold)),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: genderColor.withValues(
+                                              alpha: 0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                          border: Border.all(
+                                              color: genderColor.withValues(
+                                                  alpha: 0.5)),
+                                        ),
+                                        child: Text(
+                                          isMale ? '男' : '女',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: genderColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   subtitle: Text(p.yomigana),
+                                  activeColor: genderColor,
                                   onChanged: (v) {
                                     setState(() {
                                       if (v == true) {

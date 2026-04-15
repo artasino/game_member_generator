@@ -27,7 +27,8 @@ class ExpenseEntry {
   String name;
   ExpenseType type;
   double amount;
-  double pricePerDozens;
+  double unitPrice;
+  bool isPerDozen;
   int shuttleCount;
   String? payerId;
   SplitTarget target;
@@ -36,7 +37,8 @@ class ExpenseEntry {
     required this.name,
     required this.type,
     this.amount = 0,
-    this.pricePerDozens = 0,
+    this.unitPrice = 0,
+    this.isPerDozen = true,
     this.shuttleCount = 0,
     this.payerId,
     this.target = SplitTarget.all,
@@ -44,7 +46,11 @@ class ExpenseEntry {
 
   double get total {
     if (type == ExpenseType.shuttle) {
-      return (pricePerDozens / 12) * shuttleCount;
+      if (isPerDozen) {
+        return (unitPrice / 12) * shuttleCount;
+      } else {
+        return unitPrice * shuttleCount;
+      }
     }
     return amount;
   }
@@ -54,7 +60,8 @@ class ExpenseEntry {
       'name': name,
       'type': type.index,
       'amount': amount,
-      'pricePerDozens': pricePerDozens,
+      'unitPrice': unitPrice,
+      'isPerDozen': isPerDozen,
       'shuttleCount': shuttleCount,
       'payerId': payerId,
       'target': target.index,
@@ -66,7 +73,9 @@ class ExpenseEntry {
       name: json['name'] as String,
       type: ExpenseType.values[json['type'] as int],
       amount: (json['amount'] as num).toDouble(),
-      pricePerDozens: (json['pricePerDozens'] as num).toDouble(),
+      unitPrice:
+          (json['unitPrice'] ?? json['pricePerDozens'] as num).toDouble(),
+      isPerDozen: json['isPerDozen'] as bool? ?? true,
       shuttleCount: json['shuttleCount'] as int,
       payerId: json['payerId'] as String?,
       target: SplitTarget.values[json['target'] as int? ?? 0],
