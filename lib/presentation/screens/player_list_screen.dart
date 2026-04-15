@@ -422,18 +422,18 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   }
 
   Widget _buildQuickActions(ThemeData theme) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      // 下側の見切れ（スクロールバー等）対策で垂直方向にも少し余白を持たせる
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Wrap(
+        spacing: 12, // 横の間隔
+        runSpacing: 8, // 折り返し時の縦の間隔
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           _ActionChip(
             icon: Icons.playlist_add_outlined,
             label: '登録',
             onPressed: () => _showAddMemberTypeSelector(context),
           ),
-          const SizedBox(width: 8),
           _ActionChip(
             icon: Icons.playlist_remove_outlined,
             label: '削除',
@@ -1646,20 +1646,27 @@ class _ActionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ActionChip(
-      avatar: Icon(icon, size: 18),
+      avatar: Icon(icon, size: 20),
       label: Text(
         label,
         style: const TextStyle(
-          fontSize: 12,
-          // 文字が詰まりすぎないように調整
-          letterSpacing: 0.5,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
         ),
       ),
       onPressed: onPressed,
-      // 横方向のパディングを明示的に指定して見切れを防止
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      labelPadding: const EdgeInsets.symmetric(horizontal: 6),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      // Webでのレンダリング差異（フォント幅の計算誤差）を吸収するために
+      // paddingを十分に確保し、labelPaddingを調整する
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      labelPadding: const EdgeInsets.only(left: 4, right: 8),
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      side: BorderSide(
+        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+        width: 1,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(100),
+      ),
     );
   }
 }
