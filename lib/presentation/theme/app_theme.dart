@@ -35,7 +35,6 @@ class AppTheme {
         foregroundColor: colorScheme.onPrimary,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        height: 60,
         backgroundColor: colorScheme.surface,
         indicatorColor: colorScheme.secondaryContainer,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
