@@ -47,27 +47,26 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      useSafeArea: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => Padding(
           padding: EdgeInsets.fromLTRB(
-              24, 0, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+              24, 8, 24, MediaQuery.of(context).viewInsets.bottom + 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(stock == null ? '在庫を登録' : '在庫を編集',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.bold)),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: -0.5,
+                              )),
+                  const Spacer(),
                   if (stock != null)
-                    IconButton(
+                    IconButton.filledTonal(
                       icon: const Icon(Icons.delete_outline, color: Colors.red),
                       onPressed: () async {
                         final confirm = await showDialog<bool>(
@@ -97,24 +96,20 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
                     ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               TextField(
                 controller: nameController,
                 decoration: InputDecoration(
                   labelText: '名称',
                   hintText: '例: ヨネックス エアロセンサ 700',
+                  prefixIcon: const Icon(Icons.drive_file_rename_outline),
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(16)),
                   filled: true,
-                  fillColor: Colors.grey.withValues(alpha: 0.05),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('価格設定',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey)),
+              _buildSectionTitle(context, '価格設定'),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -123,25 +118,21 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
                     child: TextField(
                       controller: priceController,
                       decoration: InputDecoration(
-                        labelText: '価格',
+                        prefixIcon: const Icon(Icons.payments_outlined),
                         suffixText: '円',
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(16)),
                       ),
                       keyboardType: TextInputType.number,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    flex: 3,
+                    flex: 2,
                     child: SegmentedButton<bool>(
                       segments: const [
-                        ButtonSegment(
-                            value: true,
-                            label: Text('ダース', style: TextStyle(fontSize: 13))),
-                        ButtonSegment(
-                            value: false,
-                            label: Text('1個', style: TextStyle(fontSize: 13))),
+                        ButtonSegment(value: true, label: Text('ダース')),
+                        ButtonSegment(value: false, label: Text('1個')),
                       ],
                       selected: {isPerDozen},
                       onSelectionChanged: (v) =>
@@ -151,19 +142,15 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
                 ],
               ),
               const SizedBox(height: 20),
-              const Text('購入者 (支払人)',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey)),
+              _buildSectionTitle(context, '購入者 (支払人)'),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                initialValue: selectedPayerId,
+                value: selectedPayerId,
                 decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.person_outline),
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      borderRadius: BorderRadius.circular(16)),
+                  filled: true,
                 ),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('未指定')),
@@ -173,32 +160,32 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
                 onChanged: (v) => setDialogState(() => selectedPayerId = v),
               ),
               const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: FilledButton(
-                  onPressed: () async {
-                    final name = nameController.text;
-                    final price = double.tryParse(priceController.text) ?? 0;
-                    if (name.isEmpty || price <= 0) return;
+              FilledButton.icon(
+                onPressed: () async {
+                  final name = nameController.text;
+                  final price = double.tryParse(priceController.text) ?? 0;
+                  if (name.isEmpty || price <= 0) return;
 
-                    final newStock = ShuttleStock(
-                          id: stock?.id,
-                          name: name,
-                          unitPrice: price,
-                          isPerDozen: isPerDozen,
-                          payerId: selectedPayerId,
-                          purchaseDate: stock?.purchaseDate ?? DateTime.now(),
-                        );
+                  final newStock = ShuttleStock(
+                    id: stock?.id,
+                    name: name,
+                    unitPrice: price,
+                    isPerDozen: isPerDozen,
+                    payerId: selectedPayerId,
+                    purchaseDate: stock?.purchaseDate ?? DateTime.now(),
+                  );
 
-                    await widget.repository.save(newStock);
-                    if (!context.mounted) return;
-                    Navigator.pop(context);
-                    _refresh();
-                  },
-                  child: const Text('保存',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  await widget.repository.save(newStock);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+                  _refresh();
+                },
+                icon: const Icon(Icons.check),
+                label: const Text('保存する'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                 ),
               ),
             ],
@@ -208,22 +195,40 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
     );
   }
 
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return AlertDialog(
       titlePadding: const EdgeInsets.fromLTRB(24, 24, 16, 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
       title: Row(
         children: [
-          Icon(Icons.inventory_2_outlined, color: theme.colorScheme.primary),
-          const SizedBox(width: 12),
-          const Text('シャトル在庫', style: TextStyle(fontWeight: FontWeight.w900)),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.inventory_2_rounded,
+                color: theme.colorScheme.onPrimaryContainer),
+          ),
+          const SizedBox(width: 16),
+          const Text('シャトル在庫',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
           const Spacer(),
-          IconButton(
-            icon: Icon(Icons.add_circle,
-                color: theme.colorScheme.primary, size: 28),
+          IconButton.filledTonal(
+            icon: const Icon(Icons.add),
             onPressed: () => _showAddEditDialog(),
           ),
         ],
@@ -231,7 +236,7 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
       contentPadding: EdgeInsets.zero,
       content: SizedBox(
         width: double.maxFinite,
-        height: 500,
+        height: 520,
         child: Column(
           children: [
             const Divider(height: 1),
@@ -244,87 +249,112 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
                   }
                   final stocks = snapshot.data ?? [];
                   if (stocks.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.inventory_2_outlined,
-                              size: 48,
-                              color: theme.colorScheme.outlineVariant),
-                          const SizedBox(height: 16),
-                          Text('登録された在庫はありません',
-                              style:
-                                  TextStyle(color: theme.colorScheme.outline)),
-                        ],
-                      ),
-                    );
+                    return _buildEmptyState(theme);
                   }
 
-                  return ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
                     itemCount: stocks.length,
-                    separatorBuilder: (context, index) =>
-                        const Divider(height: 1, indent: 72),
                     itemBuilder: (context, index) {
                       final stock = stocks[index];
                       final payer = widget.activePlayers
                           .where((p) => p.id == stock.payerId)
                           .firstOrNull;
 
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor:
-                              theme.colorScheme.primary.withValues(alpha: 0.1),
-                          child: Icon(Symbols.badminton,
-                              size: 20, color: theme.colorScheme.primary),
+                      return Card(
+                        elevation: 0,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(
+                              color: theme.colorScheme.outlineVariant),
                         ),
-                        title: Text(stock.name,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 2),
-                            Row(
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: widget.isSelectionMode
+                              ? () => Navigator.pop(context, stock)
+                              : () => _showAddEditDialog(stock: stock),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
                               children: [
-                                Text(
-                                  '¥${stock.unitPrice.toStringAsFixed(0)}/${stock.isPerDozen ? 'ダース' : '個'}',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
-                                    color: theme.colorScheme.secondary,
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor:
+                                      theme.colorScheme.surfaceContainer,
+                                  child: Icon(Symbols.badminton,
+                                      size: 24,
+                                      color: theme.colorScheme.primary),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(stock.name,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16)),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            '¥${stock.unitPrice.toStringAsFixed(0)}',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w900,
+                                              color: theme.colorScheme.primary,
+                                            ),
+                                          ),
+                                          Text(
+                                            ' / ${stock.isPerDozen ? 'ダース' : '個'}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: theme
+                                                  .colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                          if (payer != null) ...[
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme
+                                                    .surfaceContainerHighest,
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                payer.name,
+                                                style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: theme.colorScheme
+                                                        .onSurfaceVariant),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                if (payer != null)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: theme
-                                          .colorScheme.surfaceContainerHighest,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      payer.name,
-                                      style: TextStyle(
-                                          fontSize: 10,
-                                          color: theme
-                                              .colorScheme.onSurfaceVariant),
-                                    ),
-                                  ),
+                                Icon(
+                                  widget.isSelectionMode
+                                      ? Icons.check_circle_outline
+                                      : Icons.chevron_right,
+                                  color: widget.isSelectionMode
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.outline,
+                                ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
-                        trailing: widget.isSelectionMode
-                            ? const Icon(Icons.check_circle_outline,
-                                color: Colors.blue)
-                            : Icon(Icons.edit_outlined,
-                                size: 20, color: theme.colorScheme.outline),
-                        onTap: widget.isSelectionMode
-                            ? () => Navigator.pop(context, stock)
-                            : () => _showAddEditDialog(stock: stock),
                       );
                     },
                   );
@@ -340,6 +370,33 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
             child: const Text('閉じる',
                 style: TextStyle(fontWeight: FontWeight.bold))),
       ],
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainer,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.inventory_2_outlined,
+                size: 48, color: theme.colorScheme.outline),
+          ),
+          const SizedBox(height: 16),
+          Text('登録された在庫はありません',
+              style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500)),
+          const SizedBox(height: 8),
+          Text('右上の「＋」から追加してください',
+              style: TextStyle(color: theme.colorScheme.outline, fontSize: 12)),
+        ],
+      ),
     );
   }
 }
