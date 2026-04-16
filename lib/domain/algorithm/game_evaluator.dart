@@ -158,14 +158,16 @@ class GameEvaluator {
   double calculateConsecutiveRestPenalty(List<PlayerWithStats> restingPlayers) {
     double penalty = 0.0;
     for (var ps in restingPlayers) {
-      // stats.consecutiveRests は「直前までに連続で休んだ回数」
-      // 今回も休み（bench入り）の場合、合計で stats.consecutiveRests + 1 回連続休みになる
-      if (ps.stats.consecutiveRests >= 2) {
-        // 3回以上連続でお休みになる場合にペナルティを課す
-        // (n-1)^2 * weight とすることで、回数が増えるほど急激にペナルティを高くする（比例＋α）
-        final multiplier = ps.stats.consecutiveRests - 1;
-        penalty +=
-            multiplier * multiplier * PenaltyWeights.consecutiveRestPenalty;
+      if (ps.stats.restedLastTime) {
+        // 2回連続以上でお休みになる場合に重いペナルティを課す
+        penalty += PenaltyWeights.consecutiveRestPenalty;
+
+        // 3回目以降はさらに累乗で重くする
+        if (ps.stats.consecutiveRests >= 2) {
+          final multiplier = ps.stats.consecutiveRests;
+          penalty +=
+              multiplier * multiplier * PenaltyWeights.consecutiveRestPenalty;
+        }
       }
     }
     return penalty;
