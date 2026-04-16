@@ -7,4 +7,5 @@ class PenaltyWeights {
   static const double restTogether = 50.0;
   static const double restTogetherMaxBonus = 200.0;
   static const double identicalSelectionPenalty = 1000.0;
+  static const double consecutiveRestPenalty = 2000.0;
 }
