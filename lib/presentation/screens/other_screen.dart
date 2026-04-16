@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../constants/release_notes.dart';
+import '../../config/app_config.dart';
+import '../../domain/entities/release_note.dart';
 import 'manual_screen.dart';
 
 class OtherScreen extends StatefulWidget {
@@ -16,11 +20,37 @@ class _OtherScreenState extends State<OtherScreen> {
   static const String _versionFallbackText = '取得できませんでした';
 
   String _versionText = _versionFallbackText;
+  List<ReleaseNote> _loadedReleaseNotes = [];
 
   @override
   void initState() {
     super.initState();
-    _loadVersion();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    await Future.wait([
+      _loadVersion(),
+      _loadNotes(),
+    ]);
+  }
+
+  Future<void> _loadNotes() async {
+    try {
+      final String response =
+          await rootBundle.loadString('assets/changelog.json');
+      final List<dynamic> data = json.decode(response);
+      final notes = data
+          .map((json) => ReleaseNote.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      if (!mounted) return;
+      setState(() {
+        _loadedReleaseNotes = notes;
+      });
+    } catch (e) {
+      debugPrint('Failed to load changelog: $e');
+    }
   }
 
   Future<void> _loadVersion() async {
@@ -50,10 +80,10 @@ class _OtherScreenState extends State<OtherScreen> {
   }
 
   String get _latestReleaseVersionText {
-    if (releaseNotes.isEmpty) {
+    if (_loadedReleaseNotes.isEmpty) {
       return _versionFallbackText;
     }
-    return 'v${releaseNotes.first.version}';
+    return 'v${_loadedReleaseNotes.first.version}';
   }
 
   Future<void> _showReleaseNotes() async {
@@ -77,16 +107,36 @@ class _OtherScreenState extends State<OtherScreen> {
                 Flexible(
                   child: ListView.separated(
                     shrinkWrap: true,
-                    itemCount: releaseNotes.length,
+                    itemCount: _loadedReleaseNotes.length,
                     separatorBuilder: (_, __) => const Divider(height: 20),
                     itemBuilder: (context, index) {
-                      final note = releaseNotes[index];
+                      final note = _loadedReleaseNotes[index];
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'v${note.version}',
-                            style: Theme.of(context).textTheme.titleMedium,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'v${note.version}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              Text(
+                                note.date,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color:
+                                          Theme.of(context).colorScheme.outline,
+                                    ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 8),
                           ...note.changes.map(
@@ -138,7 +188,7 @@ class _OtherScreenState extends State<OtherScreen> {
           ListTile(
             leading: const Icon(Icons.tag_outlined),
             title: const Text('バージョン'),
-            subtitle: Text(_versionText),
+            subtitle: Text('$_versionText (Build: ${AppConfig.buildDate})'),
             trailing: const Icon(Icons.chevron_right),
             onTap: _showReleaseNotes,
           ),

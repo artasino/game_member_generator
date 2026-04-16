@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 
 class AppConfig {
   static int loopCount = 10000;
+  static const String buildDate =
+      String.fromEnvironment('BUILD_DATE', defaultValue: 'Unknown');
 
   static Future<void> load() async {
     try {

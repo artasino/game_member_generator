@@ -63,9 +63,11 @@ jobs:
 
       - name: Build Flutter Web (release)
         run: |
+          BUILD_DATE=$(date +'%Y/%m/%d')
           flutter build web --release \
             --build-name=${{ needs.version.outputs.version }} \
-            --build-number=${{ github.run_number }}
+            --build-number=${{ github.run_number }} \
+            --dart-define=BUILD_DATE=$BUILD_DATE
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -98,9 +100,11 @@ jobs:
 
       - name: Build Windows
         run: |
+          $BUILD_DATE = Get-Date -Format "yyyy/MM/dd"
           flutter build windows --release `
             --build-name=${{ needs.version.outputs.version }} `
-            --build-number=${{ github.run_number }}
+            --build-number=${{ github.run_number }} `
+            --dart-define=BUILD_DATE=$BUILD_DATE
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

@@ -40,6 +40,7 @@ class ShuttleCalculationScreen extends StatefulWidget {
 class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   List<ExpenseEntry> _entries = [];
   bool _useGenderSplit = false;
+  DateTime _selectedDate = DateTime.now();
 
   int? _manualMaleCollection;
   int? _manualFemaleCollection;
@@ -114,7 +115,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     }
 
     await widget.shuttleRepository.save(ShuttleUsageRecord(
-      date: DateTime.now(),
+      date: _selectedDate,
       totalShuttles: totalShuttles,
       matchTypeCounts: typeCounts,
     ));
@@ -294,45 +295,73 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
         return Scaffold(
           backgroundColor: theme.colorScheme.surface,
           appBar: AppBar(
-            title: const Text('費用計算',
-                style:
-                    TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+            title: InkWell(
+              onTap: _selectDate,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('費用計算',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.2)),
+                    Text(
+                      '${_selectedDate.year}/${_selectedDate.month}/${_selectedDate.day}',
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.normal),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             centerTitle: true,
             backgroundColor: theme.colorScheme.primary,
             foregroundColor: theme.colorScheme.onPrimary,
             elevation: 0,
             actions: [
               IconButton(
+                icon: const Icon(Icons.inventory_2_outlined),
+                tooltip: '在庫管理',
+                onPressed: _showStockManager,
+              ),
+              IconButton(
                 icon: const Icon(Icons.history),
                 tooltip: '履歴',
                 onPressed: _showHistory,
               ),
               PopupMenuButton<String>(
-                onSelected: (value) {
+                onSelected: (value) async {
                   if (value == 'reset') {
-                    setState(() {
-                      _entries.clear();
-                      _manualMaleCollection = null;
-                      _manualFemaleCollection = null;
-                    });
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('リセットの確認'),
+                        content: const Text('入力した費用をすべて削除してもよろしいですか？'),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('キャンセル')),
+                          TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('リセット',
+                                  style: TextStyle(color: Colors.red))),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      setState(() {
+                        _entries.clear();
+                        _manualMaleCollection = null;
+                        _manualFemaleCollection = null;
+                      });
+                    }
                   }
-                  if (value == 'stock') _showStockManager();
-                  if (value == 'save') _saveRecord();
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
-                      value: 'save',
-                      child: ListTile(
-                          leading: Icon(Icons.save),
-                          title: Text('消費記録を保存'),
-                          contentPadding: EdgeInsets.zero)),
-                  const PopupMenuItem(
-                      value: 'stock',
-                      child: ListTile(
-                          leading: Icon(Icons.inventory_2_outlined),
-                          title: Text('在庫管理'),
-                          contentPadding: EdgeInsets.zero)),
-                  const PopupMenuDivider(),
                   const PopupMenuItem(
                       value: 'reset',
                       child: ListTile(
@@ -401,6 +430,18 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
             style: TextStyle(color: Colors.grey, fontSize: 13)),
       ],
     );
+  }
+
+  Future<void> _selectDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
   }
 
   Widget _buildModeSelectorHeader() {
@@ -622,6 +663,10 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
             _manualMaleCollection = m;
             _manualFemaleCollection = f;
           });
+        },
+        onConfirm: () async {
+          await _saveRecord();
+          if (mounted) Navigator.pop(context);
         },
       ),
     );
@@ -858,6 +903,7 @@ class _SettlementSheet extends StatefulWidget {
   final int? manualMaleCollection;
   final int? manualFemaleCollection;
   final Function(int?, int?) onManualCollectionChanged;
+  final VoidCallback onConfirm;
 
   const _SettlementSheet({
     required this.totalAmount,
@@ -867,6 +913,7 @@ class _SettlementSheet extends StatefulWidget {
     required this.manualMaleCollection,
     required this.manualFemaleCollection,
     required this.onManualCollectionChanged,
+    required this.onConfirm,
   });
 
   @override
@@ -984,9 +1031,10 @@ class _SettlementSheetState extends State<_SettlementSheet> {
           SizedBox(
             width: double.infinity,
             height: 54,
-            child: FilledButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('完了',
+            child: FilledButton.icon(
+              onPressed: widget.onConfirm,
+              icon: const Icon(Icons.check_circle_outline),
+              label: const Text('支払確定・記録を保存',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
