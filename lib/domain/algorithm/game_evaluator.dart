@@ -31,8 +31,8 @@ class GameEvaluator {
     // 2. 休み関連のペナルティ/ゲイン
     score += calculateRestTogetherPenalty(benchMales);
     score += calculateRestTogetherPenalty(benchFemales);
-    score += _calculateConsecutiveRestPenalty(benchMales);
-    score += _calculateConsecutiveRestPenalty(benchFemales);
+    score += calculateConsecutiveRestPenalty(benchMales);
+    score += calculateConsecutiveRestPenalty(benchFemales);
     score += calculateSessionsFromLastRestPenalty(
         [...selectedMales, ...selectedFemales]);
 
@@ -155,8 +155,7 @@ class GameEvaluator {
     return score;
   }
 
-  double _calculateConsecutiveRestPenalty(
-      List<PlayerWithStats> restingPlayers) {
+  double calculateConsecutiveRestPenalty(List<PlayerWithStats> restingPlayers) {
     double penalty = 0.0;
     for (var ps in restingPlayers) {
       // stats.consecutiveRests は「直前までに連続で休んだ回数」
