@@ -46,7 +46,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         stockRepository: widget.repositories.shuttleStockRepository,
         expenseRepository: widget.repositories.expenseRepository,
       ),
-      OtherScreen(inquiryRepository: widget.repositories.inquiryRepository),
+      const OtherScreen(),
     ];
   }
 
