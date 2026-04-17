@@ -1,16 +1,23 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_config.dart';
+import '../../domain/entities/inquiry.dart';
 import '../../domain/entities/release_note.dart';
+import '../../domain/repository/inquiry_repository.dart';
 import 'manual_screen.dart';
 
 class OtherScreen extends StatefulWidget {
-  const OtherScreen({super.key});
+  final InquiryRepository inquiryRepository;
+
+  const OtherScreen({super.key, required this.inquiryRepository});
 
   @override
   State<OtherScreen> createState() => _OtherScreenState();
@@ -158,6 +165,167 @@ class _OtherScreenState extends State<OtherScreen> {
     );
   }
 
+  Future<void> _showInquiryForm() async {
+    final formKey = GlobalKey<FormState>();
+    final emailController = TextEditingController();
+    final messageController = TextEditingController();
+    InquiryCategory selectedCategory = InquiryCategory.bug;
+    bool isSending = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'ご意見・お問い合わせ',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 20),
+                        DropdownButtonFormField<InquiryCategory>(
+                          value: selectedCategory,
+                          decoration: const InputDecoration(
+                            labelText: 'カテゴリ',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: InquiryCategory.values.map((category) {
+                            return DropdownMenuItem(
+                              value: category,
+                              child: Text(category.label),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setModalState(() => selectedCategory = value);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: emailController,
+                          decoration: const InputDecoration(
+                            labelText: 'メールアドレス',
+                            hintText: '返信が必要な場合は入力してください',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: messageController,
+                          decoration: const InputDecoration(
+                            labelText: '内容',
+                            hintText: '不具合の詳細や改善の要望をご記入ください',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 5,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return '内容を入力してください';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: isSending
+                              ? null
+                              : () async {
+                                  if (formKey.currentState?.validate() ??
+                                      false) {
+                                    setModalState(() => isSending = true);
+                                    try {
+                                      final packageInfo =
+                                          await PackageInfo.fromPlatform();
+                                      String osVersion = 'Unknown';
+                                      if (kIsWeb) {
+                                        osVersion = 'Web';
+                                      } else if (Platform.isAndroid) {
+                                        final androidInfo =
+                                            await DeviceInfoPlugin()
+                                                .androidInfo;
+                                        osVersion =
+                                            'Android ${androidInfo.version.release}';
+                                      } else if (Platform.isIOS) {
+                                        final iosInfo =
+                                            await DeviceInfoPlugin().iosInfo;
+                                        osVersion =
+                                            'iOS ${iosInfo.systemVersion}';
+                                      }
+
+                                      final inquiry = Inquiry(
+                                        email: emailController.text,
+                                        category: selectedCategory,
+                                        message: messageController.text,
+                                        osVersion: osVersion,
+                                        appVersion: packageInfo.version,
+                                      );
+
+                                      await widget.inquiryRepository
+                                          .sendInquiry(inquiry);
+
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                              content:
+                                                  Text('送信しました。ありがとうございます！')),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                              content: Text('送信に失敗しました: $e')),
+                                        );
+                                      }
+                                    } finally {
+                                      if (context.mounted) {
+                                        setModalState(() => isSending = false);
+                                      }
+                                    }
+                                  }
+                                },
+                          child: isSending
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text('送信する'),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -183,6 +351,14 @@ class _OtherScreenState extends State<OtherScreen> {
                 ),
               );
             },
+          ),
+          const Divider(height: 0),
+          ListTile(
+            leading: const Icon(Icons.feedback_outlined),
+            title: const Text('ご意見・お問い合わせ'),
+            subtitle: const Text('不具合の報告や機能改善の要望はこちら'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _showInquiryForm,
           ),
           const Divider(height: 0),
           ListTile(

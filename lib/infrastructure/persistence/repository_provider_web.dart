@@ -1,4 +1,5 @@
 import 'package:game_member_generator/infrastructure/persistence/app_repositories.dart';
+import 'package:game_member_generator/infrastructure/persistence/firestore_inquiry_repository.dart';
 import 'package:game_member_generator/infrastructure/shared_preferences/shared_preferences_court_settings_repository.dart';
 import 'package:game_member_generator/infrastructure/shared_preferences/shared_preferences_expense_repository.dart';
 import 'package:game_member_generator/infrastructure/shared_preferences/shared_preferences_player_repository.dart';
@@ -14,5 +15,6 @@ Future<AppRepositories> createRepositories() async {
     shuttleStockRepository: SharedPreferencesShuttleStockRepository(),
     shuttleUsageRepository: SharedPreferencesShuttleUsageRepository(),
     expenseRepository: SharedPreferencesExpenseRepository(),
+    inquiryRepository: FirestoreInquiryRepository(),
   );
 }
