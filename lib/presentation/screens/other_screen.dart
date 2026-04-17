@@ -326,6 +326,57 @@ class _OtherScreenState extends State<OtherScreen> {
     );
   }
 
+  Future<void> _showPrivacyPolicy() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'プライバシーポリシー',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 16),
+                const Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('1. 情報の収集',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                            '本アプリでは、お問い合わせ時にメールアドレス、端末情報（OSバージョン、機種名）、およびお問い合わせ内容を収集します。'),
+                        SizedBox(height: 12),
+                        Text('2. 利用目的',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('収集した情報は、不具合の調査、機能改善の検討、およびお問い合わせへの回答のみに利用します。'),
+                        SizedBox(height: 12),
+                        Text('3. 第三者提供',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('法令に基づく場合を除き、取得した個人情報を第三者に提供することはありません。'),
+                        SizedBox(height: 12),
+                        Text('4. データの管理',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('収集したデータは、Google Cloud Firestore にて適切に管理・保存されます。'),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -367,6 +418,26 @@ class _OtherScreenState extends State<OtherScreen> {
             subtitle: Text('$_versionText (Build: ${AppConfig.buildDate})'),
             trailing: const Icon(Icons.chevron_right),
             onTap: _showReleaseNotes,
+          ),
+          const Divider(height: 0),
+          ListTile(
+            leading: const Icon(Icons.description_outlined),
+            title: const Text('プライバシーポリシー'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _showPrivacyPolicy,
+          ),
+          const Divider(height: 0),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('ライセンス情報'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              showLicensePage(
+                context: context,
+                applicationName: 'Game Member Generator',
+                applicationVersion: _versionText,
+              );
+            },
           ),
           const Divider(height: 0),
           ListTile(
