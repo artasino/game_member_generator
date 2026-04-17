@@ -9,15 +9,21 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_config.dart';
-import '../../domain/entities/inquiry.dart';
 import '../../domain/entities/release_note.dart';
-import '../../domain/repository/inquiry_repository.dart';
 import 'manual_screen.dart';
 
-class OtherScreen extends StatefulWidget {
-  final InquiryRepository inquiryRepository;
+enum InquiryCategory {
+  bug('不具合'),
+  request('機能改善要望'),
+  other('その他');
 
-  const OtherScreen({super.key, required this.inquiryRepository});
+  final String label;
+
+  const InquiryCategory(this.label);
+}
+
+class OtherScreen extends StatefulWidget {
+  const OtherScreen({super.key});
 
   @override
   State<OtherScreen> createState() => _OtherScreenState();
@@ -165,165 +171,80 @@ class _OtherScreenState extends State<OtherScreen> {
     );
   }
 
-  Future<void> _showInquiryForm() async {
-    final formKey = GlobalKey<FormState>();
-    final emailController = TextEditingController();
-    final messageController = TextEditingController();
-    InquiryCategory selectedCategory = InquiryCategory.bug;
-    bool isSending = false;
-
+  Future<void> _showInquiryOptions() async {
     await showModalBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
+      showDragHandle: true,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Form(
-                    key: formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'ご意見・お問い合わせ',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 20),
-                        DropdownButtonFormField<InquiryCategory>(
-                          value: selectedCategory,
-                          decoration: const InputDecoration(
-                            labelText: 'カテゴリ',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: InquiryCategory.values.map((category) {
-                            return DropdownMenuItem(
-                              value: category,
-                              child: Text(category.label),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setModalState(() => selectedCategory = value);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'メールアドレス',
-                            hintText: '返信が必要な場合は入力してください',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: messageController,
-                          decoration: const InputDecoration(
-                            labelText: '内容',
-                            hintText: '不具合の詳細や改善の要望をご記入ください',
-                            border: OutlineInputBorder(),
-                          ),
-                          maxLines: 5,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return '内容を入力してください';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: isSending
-                              ? null
-                              : () async {
-                                  if (formKey.currentState?.validate() ??
-                                      false) {
-                                    setModalState(() => isSending = true);
-                                    try {
-                                      final packageInfo =
-                                          await PackageInfo.fromPlatform();
-                                      String osVersion = 'Unknown';
-                                      if (kIsWeb) {
-                                        osVersion = 'Web';
-                                      } else if (Platform.isAndroid) {
-                                        final androidInfo =
-                                            await DeviceInfoPlugin()
-                                                .androidInfo;
-                                        osVersion =
-                                            'Android ${androidInfo.version.release}';
-                                      } else if (Platform.isIOS) {
-                                        final iosInfo =
-                                            await DeviceInfoPlugin().iosInfo;
-                                        osVersion =
-                                            'iOS ${iosInfo.systemVersion}';
-                                      }
-
-                                      final inquiry = Inquiry(
-                                        email: emailController.text,
-                                        category: selectedCategory,
-                                        message: messageController.text,
-                                        osVersion: osVersion,
-                                        appVersion: packageInfo.version,
-                                      );
-
-                                      await widget.inquiryRepository
-                                          .sendInquiry(inquiry);
-
-                                      if (context.mounted) {
-                                        Navigator.pop(context);
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                              content:
-                                                  Text('送信しました。ありがとうございます！')),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                              content: Text('送信に失敗しました: $e')),
-                                        );
-                                      }
-                                    } finally {
-                                      if (context.mounted) {
-                                        setModalState(() => isSending = false);
-                                      }
-                                    }
-                                  }
-                                },
-                          child: isSending
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text('送信する'),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                    ),
-                  ),
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'ご意見・お問い合わせ',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
-            );
-          },
+              ListTile(
+                leading: const Icon(Icons.bug_report_outlined),
+                title: const Text('不具合を報告する'),
+                onTap: () => _launchInquiry(InquiryCategory.bug),
+              ),
+              ListTile(
+                leading: const Icon(Icons.lightbulb_outline),
+                title: const Text('機能改善を要望する'),
+                onTap: () => _launchInquiry(InquiryCategory.request),
+              ),
+              ListTile(
+                leading: const Icon(Icons.chat_outlined),
+                title: const Text('その他のお問い合わせ'),
+                onTap: () => _launchInquiry(InquiryCategory.other),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         );
       },
     );
+  }
+
+  Future<void> _launchInquiry(InquiryCategory category) async {
+    Navigator.pop(context);
+
+    final packageInfo = await PackageInfo.fromPlatform();
+    String osVersion = 'Unknown';
+    if (kIsWeb) {
+      osVersion = 'Web';
+    } else if (Platform.isAndroid) {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      osVersion = 'Android ${androidInfo.version.release}';
+    } else if (Platform.isIOS) {
+      final iosInfo = await DeviceInfoPlugin().iosInfo;
+      osVersion = 'iOS ${iosInfo.systemVersion}';
+    }
+
+    // Google Form の URL
+    const String formBaseUrl =
+        'https://docs.google.com/forms/d/e/1FAIpQLScSUXfMzuuritwD9rcNPlak6ELnwiVTFPnn2RaRBkNzkP02vQ/viewform';
+
+    final Uri url = Uri.parse(formBaseUrl).replace(queryParameters: {
+      'usp': 'pp_url',
+      'entry.371796673': category.label, // カテゴリ
+      'entry.1693838828':
+          '【環境情報】\nApp: v${packageInfo.version}\nOS: $osVersion\n\n【お問い合わせ内容】\n', // 内容（自動挿入）
+    });
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('フォームを開けませんでした')),
+        );
+      }
+    }
   }
 
   Future<void> _showPrivacyPolicy() async {
@@ -409,7 +330,7 @@ class _OtherScreenState extends State<OtherScreen> {
             title: const Text('ご意見・お問い合わせ'),
             subtitle: const Text('不具合の報告や機能改善の要望はこちら'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: _showInquiryForm,
+            onTap: _showInquiryOptions,
           ),
           const Divider(height: 0),
           ListTile(
