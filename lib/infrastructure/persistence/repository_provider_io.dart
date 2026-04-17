@@ -1,4 +1,5 @@
 import 'package:game_member_generator/infrastructure/persistence/app_repositories.dart';
+import 'package:game_member_generator/infrastructure/persistence/firestore_inquiry_repository.dart';
 import 'package:game_member_generator/infrastructure/sqlite/database_helper.dart';
 import 'package:game_member_generator/infrastructure/sqlite/sqlite_court_settings_repository.dart';
 import 'package:game_member_generator/infrastructure/sqlite/sqlite_expense_repository.dart';
@@ -16,5 +17,6 @@ Future<AppRepositories> createRepositories() async {
     shuttleStockRepository: SqliteShuttleStockRepository(),
     shuttleUsageRepository: SqliteShuttleUsageRepository(),
     expenseRepository: SqliteExpenseRepository(),
+    inquiryRepository: FirestoreInquiryRepository(),
   );
 }

@@ -411,13 +411,33 @@ class TeamColumn extends StatelessWidget {
   }
 
   Widget _buildPlayerTag(Player player, double maxWidth) {
-    return PlayerTag(
-      player: player,
-      isSelected: selectedPlayer?.id == player.id,
-      onTap: () => onPlayerTap(player),
-      onLongPress: () => onPlayerLongPress(player),
-      scale: scale,
-      maxWidth: maxWidth,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        PlayerTag(
+          player: player,
+          isSelected: selectedPlayer?.id == player.id,
+          onTap: () => onPlayerTap(player),
+          onLongPress: () => onPlayerLongPress(player),
+          scale: scale,
+          maxWidth: maxWidth,
+        ),
+        if (player.isMustRest)
+          Positioned(
+            top: -4 * scale,
+            right: -4 * scale,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 2)],
+              ),
+              child: Icon(Icons.coffee_outlined,
+                  size: 14 * scale, color: Colors.brown),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -619,11 +639,24 @@ class RestingChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (player.isMustRest) ...[
+              const Icon(Icons.coffee_outlined, size: 14, color: Colors.brown),
+              const SizedBox(width: 4),
+            ],
             if (isRestingByConstraint) ...[
               const Icon(Icons.child_care, size: 14, color: Colors.orange),
               const SizedBox(width: 4),
             ] else if (consecutiveRests >= 2) ...[
               Icon(Icons.bedtime, size: 14, color: color),
+              const SizedBox(width: 4),
+              Text(
+                '$consecutiveRests',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
               const SizedBox(width: 4),
             ],
             Text(
