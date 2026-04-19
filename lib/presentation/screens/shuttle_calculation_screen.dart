@@ -94,7 +94,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
     _persistState();
   }
 
-  Future<void> _saveRecord() async {
+  Future<bool> _saveRecord() async {
     final sessions = widget.sessionNotifier.sessions;
     final Map<MatchType, int> typeCounts = {};
     for (var s in sessions) {
@@ -111,19 +111,28 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('シャトルの使用数が0です')),
       );
-      return;
+      return false;
     }
 
-    await widget.shuttleRepository.save(ShuttleUsageRecord(
-      date: _selectedDate,
-      totalShuttles: totalShuttles,
-      matchTypeCounts: typeCounts,
-    ));
+    try {
+      await widget.shuttleRepository.save(ShuttleUsageRecord(
+        date: _selectedDate,
+        totalShuttles: totalShuttles,
+        matchTypeCounts: typeCounts,
+      ));
+    } catch (_) {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('保存に失敗しました。もう一度お試しください')),
+      );
+      return false;
+    }
 
-    if (!mounted) return;
+    if (!mounted) return true;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('消費記録を保存しました')),
     );
+    return true;
   }
 
   void _showHistory() {
@@ -665,8 +674,10 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
           });
         },
         onConfirm: () async {
-          await _saveRecord();
-          if (mounted) Navigator.pop(context);
+          final saved = await _saveRecord();
+          if (saved && mounted) {
+            Navigator.pop(context);
+          }
         },
       ),
     );
