@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.vars.outputs.VERSION }}
+      build_number: ${{ steps.vars.outputs.BUILD_NUMBER }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,9 +31,25 @@ jobs:
         id: vars
         run: |
           # 最新のタグ (v1.1.0等) を取得。タグがない場合は 0.0.0 を使用
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/v//' || echo "0.0.0")
+          RAW_LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          LATEST_TAG=${RAW_LATEST_TAG#v}
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="0.0.0"
+          fi
+
+          # タグビルドは常に 0、ブランチビルドは直近タグからのコミット数を採用
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            BUILD_NUMBER=0
+          elif [ -n "$RAW_LATEST_TAG" ]; then
+            BUILD_NUMBER=$(git rev-list --count "${RAW_LATEST_TAG}..HEAD")
+          else
+            BUILD_NUMBER=$(git rev-list --count HEAD)
+          fi
+
           echo "VERSION=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_OUTPUT
           echo "Using version: $LATEST_TAG"
+          echo "Using build number: $BUILD_NUMBER"
 
   deploy-web:
     needs: version
@@ -60,7 +77,7 @@ jobs:
           BUILD_DATE=$(date +'%Y/%m/%d')
           flutter build web --release \
             --build-name=${{ needs.version.outputs.version }} \
-            --build-number=${{ github.run_number }} \
+            --build-number=${{ needs.version.outputs.build_number }} \
             --dart-define=BUILD_DATE=$BUILD_DATE
 
       - name: Authenticate to Google Cloud
@@ -97,7 +114,7 @@ jobs:
           $BUILD_DATE = Get-Date -Format "yyyy/MM/dd"
           flutter build windows --release `
             --build-name=${{ needs.version.outputs.version }} `
-            --build-number=${{ github.run_number }} `
+            --build-number=${{ needs.version.outputs.build_number }} `
             --dart-define=BUILD_DATE=$BUILD_DATE
 
       - name: Upload artifact
