@@ -18,6 +18,19 @@ class InMemoryPlayerRepository implements PlayerRepository {
   }
 
   @override
+  Future<void> addAll(List<Player> players) async {
+    if (players.isEmpty) return;
+
+    final existingById = {for (final player in _players) player.id: player};
+    for (final player in players) {
+      existingById[player.id] = player;
+    }
+    _players
+      ..clear()
+      ..addAll(existingById.values);
+  }
+
+  @override
   Future<void> update(Player player) async {
     final index = _players.indexWhere((p) => p.id == player.id);
     if (index != -1) {
@@ -26,7 +39,20 @@ class InMemoryPlayerRepository implements PlayerRepository {
   }
 
   @override
+  Future<void> updateAll(List<Player> players) async {
+    await addAll(players);
+  }
+
+  @override
   Future<void> remove(String id) async {
     _players.removeWhere((p) => p.id == id);
+  }
+
+  @override
+  Future<void> removeAll(List<String> ids) async {
+    if (ids.isEmpty) return;
+
+    final idSet = ids.toSet();
+    _players.removeWhere((p) => idSet.contains(p.id));
   }
 }
