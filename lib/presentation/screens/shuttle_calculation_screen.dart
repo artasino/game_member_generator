@@ -14,20 +14,17 @@ import '../../domain/entities/shuttle_usage_record.dart';
 import '../../domain/repository/expense_repository.dart';
 import '../../domain/repository/shuttle_stock_repository.dart';
 import '../../domain/repository/shuttle_usage_repository.dart';
+import '../di/app_scope.dart';
 import '../widgets/shuttle_history_dialog.dart';
 import '../widgets/shuttle_stock_dialog.dart';
 
 class ShuttleCalculationScreen extends StatefulWidget {
-  final PlayerNotifier playerNotifier;
-  final SessionNotifier sessionNotifier;
   final ShuttleUsageRepository shuttleRepository;
   final ShuttleStockRepository stockRepository;
   final ExpenseRepository expenseRepository;
 
   const ShuttleCalculationScreen({
     super.key,
-    required this.playerNotifier,
-    required this.sessionNotifier,
     required this.shuttleRepository,
     required this.stockRepository,
     required this.expenseRepository,
@@ -39,6 +36,10 @@ class ShuttleCalculationScreen extends StatefulWidget {
 
 class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   List<ExpenseEntry> _entries = [];
+
+  late final PlayerNotifier _playerNotifier;
+  late final SessionNotifier _sessionNotifier;
+  bool _providersBound = false;
   bool _useGenderSplit = false;
   DateTime _selectedDate = DateTime.now();
 
@@ -46,6 +47,16 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   int? _manualFemaleCollection;
 
   Timer? _saveTimer;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_providersBound) return;
+    final scope = AppScope.of(context);
+    _playerNotifier = scope.playerNotifier;
+    _sessionNotifier = scope.sessionNotifier;
+    _providersBound = true;
+  }
 
   @override
   void initState() {
@@ -95,7 +106,7 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   }
 
   Future<bool> _saveRecord() async {
-    final sessions = widget.sessionNotifier.sessions;
+    final sessions = _sessionNotifier.sessions;
     final Map<MatchType, int> typeCounts = {};
     for (var s in sessions) {
       for (var g in s.games) {
@@ -149,14 +160,14 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
       builder: (context) => ShuttleStockDialog(
         repository: widget.stockRepository,
         activePlayers:
-            widget.playerNotifier.players.where((p) => p.isActive).toList(),
+            _playerNotifier.players.where((p) => p.isActive).toList(),
       ),
     );
   }
 
   Future<ShuttleStock?> _pickStock() async {
     final activePlayers =
-        widget.playerNotifier.players.where((p) => p.isActive).toList();
+        _playerNotifier.players.where((p) => p.isActive).toList();
     return showDialog<ShuttleStock>(
       context: context,
       builder: (context) => ShuttleStockDialog(
@@ -293,11 +304,11 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final activePlayers =
-        widget.playerNotifier.players.where((p) => p.isActive).toList();
+        _playerNotifier.players.where((p) => p.isActive).toList();
 
     return ListenableBuilder(
       listenable:
-          Listenable.merge([widget.playerNotifier, widget.sessionNotifier]),
+          Listenable.merge([_playerNotifier, _sessionNotifier]),
       builder: (context, _) {
         final totalAmount = _entries.fold(0.0, (sum, item) => sum + item.total);
 
