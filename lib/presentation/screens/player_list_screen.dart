@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/player_with_stats.dart';
+import '../di/app_scope.dart';
 import '../notifiers/player_notifier.dart';
 import '../notifiers/session_notifier.dart';
 import '../theme/app_theme.dart';
@@ -31,8 +31,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_providersBound) return;
-    _playerNotifier = context.read<PlayerNotifier>();
-    _sessionNotifier = context.read<SessionNotifier>();
+    final scope = AppScope.of(context);
+    _playerNotifier = scope.playerNotifier;
+    _sessionNotifier = scope.sessionNotifier;
     _providersBound = true;
   }
 

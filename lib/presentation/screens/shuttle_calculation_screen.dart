@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:game_member_generator/presentation/notifiers/player_notifier.dart';
 import 'package:game_member_generator/presentation/notifiers/session_notifier.dart';
-import 'package:provider/provider.dart';
 
 import '../../domain/entities/expense_item.dart';
 import '../../domain/entities/gender.dart';
@@ -15,6 +14,7 @@ import '../../domain/entities/shuttle_usage_record.dart';
 import '../../domain/repository/expense_repository.dart';
 import '../../domain/repository/shuttle_stock_repository.dart';
 import '../../domain/repository/shuttle_usage_repository.dart';
+import '../di/app_scope.dart';
 import '../widgets/shuttle_history_dialog.dart';
 import '../widgets/shuttle_stock_dialog.dart';
 
@@ -52,8 +52,9 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_providersBound) return;
-    _playerNotifier = context.read<PlayerNotifier>();
-    _sessionNotifier = context.read<SessionNotifier>();
+    final scope = AppScope.of(context);
+    _playerNotifier = scope.playerNotifier;
+    _sessionNotifier = scope.sessionNotifier;
     _providersBound = true;
   }
 
@@ -944,15 +945,6 @@ class _SettlementSheet extends StatefulWidget {
 class _SettlementSheetState extends State<_SettlementSheet> {
   late int? _m;
   late int? _f;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_providersBound) return;
-    _playerNotifier = context.read<PlayerNotifier>();
-    _sessionNotifier = context.read<SessionNotifier>();
-    _providersBound = true;
-  }
 
   @override
   void initState() {

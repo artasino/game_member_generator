@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/presentation/screens/shuttle_calculation_screen.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import 'package:provider/provider.dart';
-
-import '../../infrastructure/persistence/app_repositories.dart';
+import '../di/app_scope.dart';
 import 'match_history_screen.dart';
 import 'other_screen.dart';
 import 'player_list_screen.dart';
@@ -25,7 +23,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_isInitialized) return;
-    final repositories = context.read<AppRepositories>();
+    final repositories = AppScope.of(context).repositories;
     _screens = [
       const PlayerListScreen(),
       const MatchHistoryScreen(),

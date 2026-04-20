@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/session.dart';
+import '../di/app_scope.dart';
 import '../notifiers/session_notifier.dart';
 import '../theme/app_theme.dart';
 import '../widgets/match_history_widgets.dart';
@@ -43,7 +43,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_providersBound) return;
-    _sessionNotifier = context.read<SessionNotifier>();
+    _sessionNotifier = AppScope.of(context).sessionNotifier;
     _providersBound = true;
   }
 
