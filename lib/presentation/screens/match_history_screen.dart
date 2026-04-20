@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/player.dart';
@@ -25,9 +26,7 @@ extension LayoutScale on BoxConstraints {
 }
 
 class MatchHistoryScreen extends StatefulWidget {
-  final SessionNotifier notifier;
-
-  const MatchHistoryScreen({super.key, required this.notifier});
+  const MatchHistoryScreen({super.key});
 
   @override
   State<MatchHistoryScreen> createState() => _MatchHistoryScreenState();
@@ -37,10 +36,21 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   int? _currentIndex;
   Player? _selectedPlayer;
 
+  late final SessionNotifier _sessionNotifier;
+  bool _providersBound = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_providersBound) return;
+    _sessionNotifier = context.read<SessionNotifier>();
+    _providersBound = true;
+  }
+
   void _updateIndexSafely({int? targetIndex}) {
     if (!mounted) return;
     setState(() {
-      final count = widget.notifier.sessions.length;
+      final count = _sessionNotifier.sessions.length;
       if (count == 0) {
         _currentIndex = null;
       } else {
@@ -56,9 +66,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     final colorScheme = theme.colorScheme;
 
     return AnimatedBuilder(
-      animation: widget.notifier,
+      animation: _sessionNotifier,
       builder: (context, _) {
-        final sessions = widget.notifier.sessions;
+        final sessions = _sessionNotifier.sessions;
 
         if (sessions.isEmpty) {
           _currentIndex = null;
@@ -85,7 +95,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                 ? null
                 : IconButton(
                     icon: const Icon(Icons.undo_rounded),
-                    onPressed: widget.notifier.canUndo
+                    onPressed: _sessionNotifier.canUndo
                         ? () => _showUndoLastConfirm(context)
                         : null,
                     tooltip: 'やり直し',
@@ -195,7 +205,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
       );
 
   Session? _currentSessionOrNull() {
-    final sessions = widget.notifier.sessions;
+    final sessions = _sessionNotifier.sessions;
     if (_currentIndex == null ||
         _currentIndex! < 0 ||
         _currentIndex! >= sessions.length) {
@@ -209,7 +219,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           final theme = Theme.of(context);
           final scale = constraints.calculateMatchScale(session.games.length);
           final scopedPool =
-              widget.notifier.getPlayerStatsPoolUpToSession(session.index);
+              _sessionNotifier.getPlayerStatsPoolUpToSession(session.index);
 
           return Column(
             children: [
@@ -305,7 +315,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                 elevation: 2,
                 backgroundColor: colorScheme.secondaryContainer,
                 foregroundColor: colorScheme.onSecondaryContainer,
-                onPressed: widget.notifier.isGenerating
+                onPressed: _sessionNotifier.isGenerating
                     ? null
                     : () => _showSettings(true),
                 child: const Icon(Icons.refresh_rounded),
@@ -316,7 +326,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               heroTag: 'add_match',
               elevation: 4,
               tooltip: '試合を作成',
-              onPressed: widget.notifier.isGenerating
+              onPressed: _sessionNotifier.isGenerating
                   ? null
                   : () => _showSettings(false),
               child: Icon(session == null
@@ -332,7 +342,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
       return;
     }
     if (_selectedPlayer!.id != p.id) {
-      await widget.notifier.swapPlayers(session, _selectedPlayer!, p);
+      await _sessionNotifier.swapPlayers(session, _selectedPlayer!, p);
     }
     setState(() => _selectedPlayer = null);
   }
@@ -342,27 +352,27 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     final settings = await showDialog<CourtSettings>(
       context: context,
       builder: (context) => MatchSettingsDialog(
-        notifier: widget.notifier,
+        notifier: _sessionNotifier,
         isRecalc: isRecalc,
         currentSession:
-            isRecalc ? widget.notifier.sessions[_currentIndex!] : null,
+            isRecalc ? _sessionNotifier.sessions[_currentIndex!] : null,
       ),
     );
     if (settings == null) return;
 
     try {
       if (isRecalc) {
-        final sessionIndex = widget.notifier.sessions[targetIndexBefore!].index;
-        await widget.notifier.recalculateSession(
+        final sessionIndex = _sessionNotifier.sessions[targetIndexBefore!].index;
+        await _sessionNotifier.recalculateSession(
           sessionIndex,
           settings,
         );
         _updateIndexSafely(targetIndex: targetIndexBefore);
       } else {
         final newIndex =
-            await widget.notifier.generateSessionWithSettings(settings);
+            await _sessionNotifier.generateSessionWithSettings(settings);
         if (newIndex != null) {
-          _updateIndexSafely(targetIndex: widget.notifier.sessions.length - 1);
+          _updateIndexSafely(targetIndex: _sessionNotifier.sessions.length - 1);
         }
       }
     } catch (e) {
@@ -452,7 +462,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               ),
               onPressed: () async {
                 Navigator.pop(ctx); // ダイアログを閉じる
-                await widget.notifier.clearHistory();
+                await _sessionNotifier.clearHistory();
                 _updateIndexSafely();
               },
               child: const Text(
@@ -543,7 +553,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               ),
               onPressed: () async {
                 Navigator.pop(ctx);
-                await widget.notifier.deleteSession(sessionIndex);
+                await _sessionNotifier.deleteSession(sessionIndex);
                 _updateIndexSafely(targetIndex: _currentIndex);
               },
               child: const Text(
@@ -576,7 +586,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             TextButton(
               onPressed: () async {
                 Navigator.pop(ctx);
-                await widget.notifier.revertToPreviousState();
+                await _sessionNotifier.revertToPreviousState();
                 _updateIndexSafely();
               },
               child: Text(

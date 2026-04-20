@@ -1,25 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:game_member_generator/infrastructure/persistence/app_repositories.dart';
 import 'package:game_member_generator/presentation/screens/shuttle_calculation_screen.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:provider/provider.dart';
 
-import '../notifiers/player_notifier.dart';
-import '../notifiers/session_notifier.dart';
+import '../../infrastructure/persistence/app_repositories.dart';
 import 'match_history_screen.dart';
 import 'other_screen.dart';
 import 'player_list_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
-  final PlayerNotifier playerNotifier;
-  final SessionNotifier sessionNotifier;
-  final AppRepositories repositories;
-
-  const MainNavigationScreen({
-    super.key,
-    required this.playerNotifier,
-    required this.sessionNotifier,
-    required this.repositories,
-  });
+  const MainNavigationScreen({super.key});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -28,26 +18,25 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  late final List<Widget> _screens;
+  late List<Widget> _screens;
+  bool _isInitialized = false;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInitialized) return;
+    final repositories = context.read<AppRepositories>();
     _screens = [
-      PlayerListScreen(
-        notifier: widget.playerNotifier,
-        sessionNotifier: widget.sessionNotifier,
-      ),
-      MatchHistoryScreen(notifier: widget.sessionNotifier),
+      const PlayerListScreen(),
+      const MatchHistoryScreen(),
       ShuttleCalculationScreen(
-        playerNotifier: widget.playerNotifier,
-        sessionNotifier: widget.sessionNotifier,
-        shuttleRepository: widget.repositories.shuttleUsageRepository,
-        stockRepository: widget.repositories.shuttleStockRepository,
-        expenseRepository: widget.repositories.expenseRepository,
+        shuttleRepository: repositories.shuttleUsageRepository,
+        stockRepository: repositories.shuttleStockRepository,
+        expenseRepository: repositories.expenseRepository,
       ),
       const OtherScreen(),
     ];
+    _isInitialized = true;
   }
 
   @override

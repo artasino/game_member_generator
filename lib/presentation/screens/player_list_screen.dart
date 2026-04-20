@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../domain/entities/gender.dart';
 import '../../domain/entities/player.dart';
@@ -12,14 +13,7 @@ const _kUiAnimationDuration = Duration(milliseconds: 180);
 const _kUiAnimationCurve = Curves.easeOutCubic;
 
 class PlayerListScreen extends StatefulWidget {
-  final PlayerNotifier notifier;
-  final SessionNotifier sessionNotifier;
-
-  const PlayerListScreen({
-    super.key,
-    required this.notifier,
-    required this.sessionNotifier,
-  });
+  const PlayerListScreen({super.key});
 
   @override
   State<PlayerListScreen> createState() => _PlayerListScreenState();
@@ -29,6 +23,19 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  late final PlayerNotifier _playerNotifier;
+  late final SessionNotifier _sessionNotifier;
+  bool _providersBound = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_providersBound) return;
+    _playerNotifier = context.read<PlayerNotifier>();
+    _sessionNotifier = context.read<SessionNotifier>();
+    _providersBound = true;
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -36,7 +43,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   }
 
   Future<void> _handleExportClipboard() async {
-    await widget.notifier.exportPlayersToClipboard();
+    await _playerNotifier.exportPlayersToClipboard();
     if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('クリップボードにコピーしました')));
@@ -44,7 +51,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   }
 
   Future<void> _handleImportClipboard() async {
-    final message = await widget.notifier.importPlayersFromClipboard();
+    final message = await _playerNotifier.importPlayersFromClipboard();
     if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
@@ -52,11 +59,11 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   }
 
   Future<void> _handleExportFile(String format) async {
-    await widget.notifier.exportPlayersToFile(format);
+    await _playerNotifier.exportPlayersToFile(format);
   }
 
   Future<void> _handleImportFile() async {
-    final message = await widget.notifier.importPlayersFromFile();
+    final message = await _playerNotifier.importPlayersFromFile();
     if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
@@ -169,9 +176,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         ],
       ),
       body: AnimatedBuilder(
-        animation: Listenable.merge([widget.notifier, widget.sessionNotifier]),
+        animation: Listenable.merge([_playerNotifier, _sessionNotifier]),
         builder: (context, _) {
-          final pool = widget.sessionNotifier.playerStatsPool;
+          final pool = _sessionNotifier.playerStatsPool;
           if (pool.all.isEmpty) {
             return _buildEmptyState();
           }
@@ -756,7 +763,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
             AppActionButton(
               label: 'OK',
               onPressed: () async {
-                await widget.notifier.toggleActive(player);
+                await _playerNotifier.toggleActive(player);
                 if (context.mounted) Navigator.pop(context);
               },
               isPrimary: true,
@@ -855,7 +862,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       ),
                       title: Text(
                         currentExcludedPartnerId != null
-                            ? 'ペア: ${widget.notifier.getPlayerNameById(currentExcludedPartnerId!)}'
+                            ? 'ペア: ${_playerNotifier.getPlayerNameById(currentExcludedPartnerId!)}'
                             : 'ペア相手を設定していません',
                         style: const TextStyle(fontSize: 14),
                       ),
@@ -903,7 +910,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   AppActionButton(
                     label: '削除',
                     onPressed: () {
-                      widget.notifier.removePlayer(player.id);
+                      _playerNotifier.removePlayer(player.id);
                       Navigator.pop(context);
                     },
                     isPrimary: false,
@@ -920,7 +927,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                     String finalPlayerId;
                     if (isEdit) {
                       finalPlayerId = player.id;
-                      await widget.notifier.updatePlayer(player.copyWith(
+                      await _playerNotifier.updatePlayer(player.copyWith(
                         name: name,
                         yomigana: yomigana,
                         gender: selectedGender,
@@ -929,7 +936,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                     } else {
                       finalPlayerId =
                           DateTime.now().millisecondsSinceEpoch.toString();
-                      await widget.notifier.addPlayer(Player(
+                      await _playerNotifier.addPlayer(Player(
                         id: finalPlayerId,
                         name: name,
                         yomigana: yomigana,
@@ -941,9 +948,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                     final originalPartnerId = player?.excludedPartnerId;
                     if (currentExcludedPartnerId != originalPartnerId) {
                       if (currentExcludedPartnerId == null) {
-                        await widget.notifier.unlinkPartner(finalPlayerId);
+                        await _playerNotifier.unlinkPartner(finalPlayerId);
                       } else {
-                        await widget.notifier.linkPartner(
+                        await _playerNotifier.linkPartner(
                             finalPlayerId, currentExcludedPartnerId!);
                       }
                     }
@@ -968,7 +975,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     String? currentPartnerId,
     ValueChanged<String?> onSelected,
   ) {
-    final allPlayers = widget.notifier.players;
+    final allPlayers = _playerNotifier.players;
     final TextEditingController selectorSearchController =
         TextEditingController();
     String selectorQuery = '';
@@ -1282,7 +1289,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
 
                     if (players.isEmpty) return;
                     final result =
-                        await widget.notifier.addPlayersBulk(players);
+                        await _playerNotifier.addPlayersBulk(players);
                     if (!context.mounted) return;
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1360,7 +1367,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            final candidates = widget.notifier.players.where((p) {
+            final candidates = _playerNotifier.players.where((p) {
               if (query.isEmpty) return true;
               return p.name.contains(query) || p.yomigana.contains(query);
             }).toList()
@@ -1475,7 +1482,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   onPressed: selectedIds.isEmpty
                       ? null
                       : () async {
-                          final removed = await widget.notifier
+                          final removed = await _playerNotifier
                               .removePlayersBulk(selectedIds.toList());
                           if (!context.mounted) return;
                           Navigator.pop(context);
@@ -1504,7 +1511,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            final candidates = widget.notifier.players.where((p) {
+            final candidates = _playerNotifier.players.where((p) {
               if (p.isActive == isToActivate) return false;
               if (query.isEmpty) return true;
               return p.name.contains(query) || p.yomigana.contains(query);
@@ -1621,7 +1628,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   onPressed: selectedIds.isEmpty
                       ? null
                       : () async {
-                          final updated = await widget.notifier.setActiveBulk(
+                          final updated = await _playerNotifier.setActiveBulk(
                               selectedIds.toList(), isToActivate);
                           if (!context.mounted) return;
                           Navigator.pop(context);
