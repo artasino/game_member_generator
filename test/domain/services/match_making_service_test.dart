@@ -41,6 +41,11 @@ class FakePlayerRepository implements PlayerRepository {
   Future<void> add(Player player) async => players.add(player);
 
   @override
+  Future<void> addAll(List<Player> players) async {
+    this.players.addAll(players);
+  }
+
+  @override
   Future<List<Player>> getActive() async =>
       players.where((p) => p.isActive).toList(growable: false);
 
@@ -51,10 +56,23 @@ class FakePlayerRepository implements PlayerRepository {
   Future<void> remove(String id) async => players.removeWhere((p) => p.id == id);
 
   @override
+  Future<void> removeAll(List<String> ids) async {
+    final idSet = ids.toSet();
+    players.removeWhere((p) => idSet.contains(p.id));
+  }
+
+  @override
   Future<void> update(Player player) async {
     final i = players.indexWhere((p) => p.id == player.id);
     if (i != -1) {
       players[i] = player;
+    }
+  }
+
+  @override
+  Future<void> updateAll(List<Player> players) async {
+    for (final player in players) {
+      await update(player);
     }
   }
 }

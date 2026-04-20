@@ -63,13 +63,31 @@ class MockPlayerRepository implements PlayerRepository {
   Future<void> add(Player player) async => players.add(player);
 
   @override
+  Future<void> addAll(List<Player> players) async {
+    this.players.addAll(players);
+  }
+
+  @override
   Future<void> remove(String id) async =>
       players.removeWhere((p) => p.id == id);
+
+  @override
+  Future<void> removeAll(List<String> ids) async {
+    final idSet = ids.toSet();
+    players.removeWhere((p) => idSet.contains(p.id));
+  }
 
   @override
   Future<void> update(Player player) async {
     final index = players.indexWhere((p) => p.id == player.id);
     if (index != -1) players[index] = player;
+  }
+
+  @override
+  Future<void> updateAll(List<Player> players) async {
+    for (final player in players) {
+      await update(player);
+    }
   }
 }
 

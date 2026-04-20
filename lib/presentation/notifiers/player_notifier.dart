@@ -46,18 +46,22 @@ class PlayerNotifier extends ChangeNotifier {
 
   Future<(int added, int skipped)> addPlayersBulk(List<Player> players) async {
     await _refresh();
+    final existingIds = _players.map((p) => p.id).toSet();
     int added = 0;
     int skipped = 0;
+    final playersToAdd = <Player>[];
 
     for (final player in players) {
-      if (_players.any((p) => p.id == player.id) || _exists(player)) {
+      if (existingIds.contains(player.id) || _exists(player)) {
         skipped++;
         continue;
       }
-      await repository.add(player);
+      playersToAdd.add(player);
+      existingIds.add(player.id);
       added++;
     }
 
+    await repository.addAll(playersToAdd);
     await _refresh();
     return (added, skipped);
   }
@@ -74,13 +78,15 @@ class PlayerNotifier extends ChangeNotifier {
   Future<int> setActiveBulk(List<String> ids, bool isActive) async {
     final uniqueIds = ids.toSet();
     int updated = 0;
+    final playersToUpdate = <Player>[];
     for (final player in _players) {
       if (!uniqueIds.contains(player.id) || player.isActive == isActive) {
         continue;
       }
-      await repository.update(player.copyWith(isActive: isActive));
+      playersToUpdate.add(player.copyWith(isActive: isActive));
       updated++;
     }
+    await repository.updateAll(playersToUpdate);
     await _refresh();
     return updated;
   }
@@ -91,19 +97,14 @@ class PlayerNotifier extends ChangeNotifier {
   }
 
   Future<int> removePlayersBulk(List<String> ids) async {
-    int removed = 0;
-    for (final id in ids.toSet()) {
-      await repository.remove(id);
-      removed++;
-    }
+    final uniqueIds = ids.toSet();
+    await repository.removeAll(uniqueIds.toList());
     await _refresh();
-    return removed;
+    return uniqueIds.length;
   }
 
   Future<void> _updatePlayers(List<Player> updatedList) async {
-    for (var p in updatedList) {
-      await repository.update(p);
-    }
+    await repository.updateAll(updatedList);
     await _refresh();
   }
 
@@ -170,22 +171,25 @@ class PlayerNotifier extends ChangeNotifier {
 
   Future<String> _applyImportedList(List<Player> list) async {
     await _refresh();
+    final existingIds = _players.map((p) => p.id).toSet();
     int count = 0;
     int skipCount = 0;
-    for (var player in list) {
-      final existingById = _players.any((p) => p.id == player.id);
-      if (existingById) {
-        await repository.update(player);
+    final playersToUpsert = <Player>[];
+    for (final player in list) {
+      if (existingIds.contains(player.id)) {
+        playersToUpsert.add(player);
         count++;
         continue;
       }
-      if (_exists(player)) {
+      if (_exists(player) || playersToUpsert.contains(player)) {
         skipCount++;
         continue;
       }
-      await repository.add(player);
+      playersToUpsert.add(player);
+      existingIds.add(player.id);
       count++;
     }
+    await repository.addAll(playersToUpsert);
     await _refresh();
     String msg = '$count名のメンバーをインポートしました';
     if (skipCount > 0) msg += ' ($skipCount名は重複のためスキップ)';

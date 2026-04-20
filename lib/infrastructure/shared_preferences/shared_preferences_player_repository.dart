@@ -25,6 +25,18 @@ class SharedPreferencesPlayerRepository implements PlayerRepository {
   }
 
   @override
+  Future<void> addAll(List<Player> players) async {
+    if (players.isEmpty) return;
+
+    final currentPlayers = await getAll();
+    final playerById = {for (final p in currentPlayers) p.id: p};
+    for (final player in players) {
+      playerById[player.id] = player;
+    }
+    await _saveAll(playerById.values.toList());
+  }
+
+  @override
   Future<List<Player>> getActive() async {
     final players = await getAll();
     return players.where((p) => p.isActive).toList();
@@ -56,6 +68,21 @@ class SharedPreferencesPlayerRepository implements PlayerRepository {
   @override
   Future<void> update(Player player) async {
     await add(player);
+  }
+
+  @override
+  Future<void> updateAll(List<Player> players) async {
+    await addAll(players);
+  }
+
+  @override
+  Future<void> removeAll(List<String> ids) async {
+    if (ids.isEmpty) return;
+
+    final idSet = ids.toSet();
+    final players = await getAll();
+    players.removeWhere((player) => idSet.contains(player.id));
+    await _saveAll(players);
   }
 
   Future<void> _saveAll(List<Player> players) async {
