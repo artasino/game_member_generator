@@ -22,14 +22,15 @@ class PlayerNotifier extends ChangeNotifier {
 
   List<Player> get players => _players;
 
-  Future<void> _refresh() async {
-    _players = await repository.getAll();
+  Future<void> _publishPlayers(List<Player> nextPlayers) async {
+    _players = nextPlayers;
     notifyListeners();
     await _sessionNotifier?.onPlayersUpdated();
   }
 
-  bool _exists(Player player) {
-    return _players.contains(player);
+  Future<void> _refresh() async {
+    final snapshot = await repository.getAll();
+    await _publishPlayers(snapshot);
   }
 
   String? getPlayerNameById(String id) {
@@ -37,33 +38,38 @@ class PlayerNotifier extends ChangeNotifier {
   }
 
   Future<bool> addPlayer(Player player) async {
-    await _refresh();
-    if (_exists(player)) return false;
+    final snapshot = await repository.getAll();
+    if (snapshot.contains(player)) return false;
+
     await repository.add(player);
-    await _refresh();
+    await _publishPlayers([...snapshot, player]);
     return true;
   }
 
   Future<(int added, int skipped)> addPlayersBulk(List<Player> players) async {
-    await _refresh();
-    final existingIds = _players.map((p) => p.id).toSet();
-    int added = 0;
-    int skipped = 0;
+    final snapshot = await repository.getAll();
+    final existingIds = snapshot.map((p) => p.id).toSet();
     final playersToAdd = <Player>[];
+    int skipped = 0;
 
     for (final player in players) {
-      if (existingIds.contains(player.id) || _exists(player)) {
+      if (
+          existingIds.contains(player.id) ||
+          snapshot.contains(player) ||
+          playersToAdd.contains(player)) {
         skipped++;
         continue;
       }
       playersToAdd.add(player);
       existingIds.add(player.id);
-      added++;
     }
 
-    await repository.addAll(playersToAdd);
-    await _refresh();
-    return (added, skipped);
+    if (playersToAdd.isNotEmpty) {
+      await repository.addAll(playersToAdd);
+    }
+
+    await _publishPlayers([...snapshot, ...playersToAdd]);
+    return (playersToAdd.length, skipped);
   }
 
   Future<void> updatePlayer(Player player) async {
@@ -148,40 +154,41 @@ class PlayerNotifier extends ChangeNotifier {
   // --- Import / Export ---
 
   Future<void> exportPlayersToClipboard() async {
-    await _refresh();
-    await _exchangeService.exportToClipboard(_players);
+    final snapshot = await repository.getAll();
+    await _exchangeService.exportToClipboard(snapshot);
   }
 
   Future<String> importPlayersFromClipboard() async {
     final imported = await _exchangeService.importFromClipboard();
     if (imported == null) return 'インポートに失敗しました';
-    return await _applyImportedList(imported);
+    return _applyImportedList(imported);
   }
 
   Future<void> exportPlayersToFile(String format) async {
-    await _refresh();
-    await _exchangeService.exportToFile(_players, format);
+    final snapshot = await repository.getAll();
+    await _exchangeService.exportToFile(snapshot, format);
   }
 
   Future<String> importPlayersFromFile() async {
     final imported = await _exchangeService.importFromFile();
     if (imported == null) return 'ファイルが選択されなかったか、インポートに失敗しました';
-    return await _applyImportedList(imported);
+    return _applyImportedList(imported);
   }
 
   Future<String> _applyImportedList(List<Player> list) async {
-    await _refresh();
-    final existingIds = _players.map((p) => p.id).toSet();
+    final snapshot = await repository.getAll();
+    final existingIds = snapshot.map((p) => p.id).toSet();
+    final playersToUpsert = <Player>[];
     int count = 0;
     int skipCount = 0;
-    final playersToUpsert = <Player>[];
+
     for (final player in list) {
       if (existingIds.contains(player.id)) {
         playersToUpsert.add(player);
         count++;
         continue;
       }
-      if (_exists(player) || playersToUpsert.contains(player)) {
+      if (snapshot.contains(player) || playersToUpsert.contains(player)) {
         skipCount++;
         continue;
       }
@@ -189,8 +196,18 @@ class PlayerNotifier extends ChangeNotifier {
       existingIds.add(player.id);
       count++;
     }
-    await repository.addAll(playersToUpsert);
-    await _refresh();
+
+    if (playersToUpsert.isNotEmpty) {
+      await repository.addAll(playersToUpsert);
+    }
+
+    final upsertById = {for (final player in playersToUpsert) player.id: player};
+    final nextPlayers = [
+      for (final player in snapshot) upsertById.remove(player.id) ?? player,
+      ...upsertById.values,
+    ];
+    await _publishPlayers(nextPlayers);
+
     String msg = '$count名のメンバーをインポートしました';
     if (skipCount > 0) msg += ' ($skipCount名は重複のためスキップ)';
     return msg;
