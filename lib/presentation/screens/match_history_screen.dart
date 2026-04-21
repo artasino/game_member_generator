@@ -287,16 +287,6 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               ),
             ),
           ),
-          if (isSwapping)
-            TextButton(
-              onPressed: () => setState(() => _selectedPlayer = null),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: const Text('キャンセル', style: TextStyle(fontSize: 11)),
-            ),
         ],
       ),
     );
@@ -362,7 +352,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
 
     try {
       if (isRecalc) {
-        final sessionIndex = _sessionNotifier.sessions[targetIndexBefore!].index;
+        final sessionIndex =
+            _sessionNotifier.sessions[targetIndexBefore!].index;
         await _sessionNotifier.recalculateSession(
           sessionIndex,
           settings,
@@ -385,7 +376,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         builder: (ctx) => AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
+              Icon(Icons.error_outline,
+                  color: Theme.of(context).colorScheme.error),
               SizedBox(width: 12),
               Text('エラー', style: TextStyle(fontWeight: FontWeight.w900))
             ],
