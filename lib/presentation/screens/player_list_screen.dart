@@ -202,7 +202,6 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 return _buildPlayerList(
                   data: memoized,
                   totalCount: pool.all.length,
-                  theme: theme,
                 );
               },
             ),
@@ -315,11 +314,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   Widget _buildPlayerList({
     required _MemoizedPlayerListData data,
     required int totalCount,
-    required ThemeData theme,
   }) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final bool useSingleColumn = screenWidth < 900;
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final contentWidth = constraints.maxWidth.clamp(0.0, 1100.0).toDouble();
@@ -327,132 +322,10 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           alignment: Alignment.topCenter,
           child: SizedBox(
             width: contentWidth,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg,
-                  AppSpacing.lg, AppSpacing.fabBottomOffset + AppSpacing.sm),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildTodayMemberHeader(
-                      data.activeMales.length, data.activeFemales.length),
-                  const SizedBox(height: 12),
-                  if (data.activeMales.isNotEmpty ||
-                      data.activeFemales.isNotEmpty) ...[
-                    useSingleColumn
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (data.activeMales.isNotEmpty) ...[
-                                GenderLabel(
-                                  label: '男性 ${data.activeMales.length}名',
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(height: 8),
-                                _buildWrap(data.activeMales, showStats: true),
-                                const SizedBox(height: 16),
-                              ],
-                              if (data.activeFemales.isNotEmpty) ...[
-                                GenderLabel(
-                                  label: '女性 ${data.activeFemales.length}名',
-                                  color: theme.colorScheme.secondary,
-                                ),
-                                const SizedBox(height: 8),
-                                _buildWrap(data.activeFemales, showStats: true),
-                              ],
-                            ],
-                          )
-                        : Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (data.activeMales.isNotEmpty) ...[
-                                      GenderLabel(
-                                        label: '男性 ${data.activeMales.length}名',
-                                        color: theme.colorScheme.primary,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      _buildWrap(data.activeMales,
-                                          showStats: true),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (data.activeFemales.isNotEmpty) ...[
-                                      GenderLabel(
-                                        label: '女性 ${data.activeFemales.length}名',
-                                        color: theme.colorScheme.secondary,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      _buildWrap(data.activeFemales,
-                                          showStats: true),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                      child: Divider(),
-                    ),
-                  ],
-                  _buildAllMembersHeader(
-                    hitCount: data.filteredPool.length,
-                    totalCount: totalCount,
-                    query: _searchQueryNotifier.value,
-                  ),
-                  const SizedBox(height: 16),
-                  AnimatedSwitcher(
-                    duration: _kUiAnimationDuration,
-                    reverseDuration: _kUiAnimationDuration,
-                    switchInCurve: _kUiAnimationCurve,
-                    switchOutCurve: _kUiAnimationCurve,
-                    transitionBuilder: (child, animation) {
-                      final offsetAnimation = Tween<Offset>(
-                        begin: const Offset(0.0, 0.03),
-                        end: Offset.zero,
-                      ).animate(animation);
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: offsetAnimation,
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: data.maleLabels.isEmpty && data.femaleLabels.isEmpty
-                        ? Padding(
-                            key: const ValueKey('empty-search-result'),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.xl + AppSpacing.sm,
-                            ),
-                            child: Center(
-                              child: Text(
-                                '該当するメンバーが見つかりません',
-                                style: TextStyle(
-                                  color: theme.colorScheme.outline,
-                                ),
-                              ),
-                            ),
-                          )
-                        : _buildGroupedMembersSection(
-                            useSingleColumn: useSingleColumn,
-                            groupedMales: data.groupedMales,
-                            maleLabels: data.maleLabels,
-                            groupedFemales: data.groupedFemales,
-                            femaleLabels: data.femaleLabels,
-                            theme: theme,
-                          ),
-                  ),
-                ],
+            child: CustomScrollView(
+              slivers: _buildPlayerListSlivers(
+                data: data,
+                totalCount: totalCount,
               ),
             ),
           ),
@@ -652,101 +525,212 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     );
   }
 
-  Widget _buildGroupedList(Map<String, List<PlayerWithStats>> grouped,
-      List<String> labels, ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: labels.map((label) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(
-                  left: AppSpacing.xs, bottom: AppSpacing.sm),
+  List<Widget> _buildPlayerListSlivers({
+    required _MemoizedPlayerListData data,
+    required int totalCount,
+  }) {
+    final theme = Theme.of(context);
+    final slivers = <Widget>[
+      const SliverPadding(padding: EdgeInsets.only(top: AppSpacing.lg)),
+      SliverToBoxAdapter(
+        child: _buildTodayMemberHeader(
+          data.activeMales.length,
+          data.activeFemales.length,
+        ),
+      ),
+      const SliverToBoxAdapter(child: SizedBox(height: 12)),
+    ];
+
+    if (data.activeMales.isNotEmpty || data.activeFemales.isNotEmpty) {
+      if (data.activeMales.isNotEmpty) {
+        slivers.addAll(
+          _buildGenderSectionSlivers(
+            title: '男性 ${data.activeMales.length}名',
+            color: theme.colorScheme.primary,
+            players: data.activeMales,
+            showStats: true,
+          ),
+        );
+      }
+      if (data.activeFemales.isNotEmpty) {
+        slivers.addAll(
+          _buildGenderSectionSlivers(
+            title: '女性 ${data.activeFemales.length}名',
+            color: theme.colorScheme.secondary,
+            players: data.activeFemales,
+            showStats: true,
+          ),
+        );
+      }
+      slivers.add(
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+            child: Divider(),
+          ),
+        ),
+      );
+    }
+
+    slivers.add(
+      SliverToBoxAdapter(
+        child: _buildAllMembersHeader(
+          hitCount: data.filteredPool.length,
+          totalCount: totalCount,
+          query: _searchQueryNotifier.value,
+        ),
+      ),
+    );
+    slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 16)));
+
+    if (data.maleLabels.isEmpty && data.femaleLabels.isEmpty) {
+      slivers.add(
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.xl + AppSpacing.sm,
+            ),
+            child: Center(
               child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.primary.withAlpha(153), // alpha 0.6
-                ),
+                '該当するメンバーが見つかりません',
+                style: TextStyle(color: theme.colorScheme.outline),
               ),
             ),
-            _buildWrap(grouped[label]!, showCheckbox: true),
-            const SizedBox(height: 24),
-          ],
-        );
-      }).toList(),
+          ),
+        ),
+      );
+    } else {
+      slivers.addAll(
+        _buildIndexedGroupSlivers(
+          sectionTitle: '男性メンバー',
+          grouped: data.groupedMales,
+          labels: data.maleLabels,
+          color: theme.colorScheme.primary,
+        ),
+      );
+      slivers.addAll(
+        _buildIndexedGroupSlivers(
+          sectionTitle: '女性メンバー',
+          grouped: data.groupedFemales,
+          labels: data.femaleLabels,
+          color: theme.colorScheme.secondary,
+        ),
+      );
+    }
+
+    slivers.add(
+      const SliverPadding(
+        padding: EdgeInsets.only(bottom: AppSpacing.fabBottomOffset + AppSpacing.sm),
+      ),
     );
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        sliver: SliverMainAxisGroup(slivers: slivers),
+      ),
+    ];
   }
 
-  Widget _buildGroupedMembersSection({
-    required bool useSingleColumn,
-    required Map<String, List<PlayerWithStats>> groupedMales,
-    required List<String> maleLabels,
-    required Map<String, List<PlayerWithStats>> groupedFemales,
-    required List<String> femaleLabels,
-    required ThemeData theme,
+  List<Widget> _buildGenderSectionSlivers({
+    required String title,
+    required Color color,
+    required List<PlayerWithStats> players,
+    bool showStats = false,
   }) {
-    return AnimatedSwitcher(
-      duration: _kUiAnimationDuration,
-      reverseDuration: _kUiAnimationDuration,
-      switchInCurve: _kUiAnimationCurve,
-      switchOutCurve: _kUiAnimationCurve,
-      transitionBuilder: (child, animation) {
-        final offsetAnimation = Tween<Offset>(
-          begin: const Offset(0.0, 0.02),
-          end: Offset.zero,
-        ).animate(animation);
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(position: offsetAnimation, child: child),
-        );
-      },
-      child: useSingleColumn
-          ? Column(
-              key: const ValueKey('grouped-single-column'),
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildGroupedList(groupedMales, maleLabels, theme),
-                const SizedBox(height: 8),
-                _buildGroupedList(groupedFemales, femaleLabels, theme),
-              ],
-            )
-          : Row(
-              key: const ValueKey('grouped-two-columns'),
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _buildGroupedList(groupedMales, maleLabels, theme),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildGroupedList(groupedFemales, femaleLabels, theme),
-                ),
-              ],
+    return [
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: GenderLabel(label: title, color: color),
+        ),
+      ),
+      SliverList.builder(
+        itemCount: players.length,
+        itemBuilder: (context, index) {
+          final player = players[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _buildPlayerChip(
+              player,
+              showStats: showStats,
             ),
-    );
+          );
+        },
+      ),
+      const SliverToBoxAdapter(child: SizedBox(height: 16)),
+    ];
   }
 
-  Widget _buildWrap(List<PlayerWithStats> players,
-      {bool showCheckbox = false, bool showStats = false}) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: players.map((p) {
-        return PlayerChip(
-          playerWithStats: p,
-          onTap: () {
-            _showActivateDeactivateDialog(context, p.player);
+  List<Widget> _buildIndexedGroupSlivers({
+    required String sectionTitle,
+    required Map<String, List<PlayerWithStats>> grouped,
+    required List<String> labels,
+    required Color color,
+  }) {
+    if (labels.isEmpty) return const [];
+    final slivers = <Widget>[
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: GenderLabel(
+            label: '$sectionTitle ${labels.fold<int>(0, (sum, label) => sum + (grouped[label]?.length ?? 0))}名',
+            color: color,
+          ),
+        ),
+      ),
+    ];
+    for (final label in labels) {
+      final players = grouped[label]!;
+      slivers.add(
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.only(
+              left: AppSpacing.xs,
+              bottom: AppSpacing.sm,
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                color: color.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+        ),
+      );
+      slivers.add(
+        SliverList.builder(
+          itemCount: players.length,
+          itemBuilder: (context, index) {
+            final player = players[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildPlayerChip(
+                player,
+                showCheckbox: true,
+              ),
+            );
           },
-          onLongPress: () {
-            _showAddEditDialog(context, player: p.player);
-          },
-          showCheckbox: showCheckbox,
-          showStats: showStats,
-        );
-      }).toList(),
+        ),
+      );
+      slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
+    }
+    return slivers;
+  }
+
+  Widget _buildPlayerChip(
+    PlayerWithStats playerWithStats, {
+    bool showCheckbox = false,
+    bool showStats = false,
+  }) {
+    return PlayerChip(
+      key: ValueKey(playerWithStats.player.id),
+      playerWithStats: playerWithStats,
+      onTap: () => _showActivateDeactivateDialog(context, playerWithStats.player),
+      onLongPress: () => _showAddEditDialog(context, player: playerWithStats.player),
+      showCheckbox: showCheckbox,
+      showStats: showStats,
     );
   }
 

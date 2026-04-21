@@ -67,18 +67,20 @@ class GenderLabel extends StatelessWidget {
 
 class PlayerChip extends StatelessWidget {
   final PlayerWithStats playerWithStats;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final bool showCheckbox;
   final bool showStats;
+  final bool enableInteraction;
 
   const PlayerChip({
     super.key,
     required this.playerWithStats,
-    required this.onTap,
-    required this.onLongPress,
+    this.onTap,
+    this.onLongPress,
     this.showCheckbox = false,
     this.showStats = false,
+    this.enableInteraction = true,
   });
 
   @override
@@ -98,64 +100,66 @@ class PlayerChip extends StatelessWidget {
         : (stats.typeCounts[MatchType.femaleDoubles] ?? 0);
     final mxCount = stats.typeCounts[MatchType.mixedDoubles] ?? 0;
 
-    return InkWell(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      onDoubleTap: onLongPress,
-      borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: Padding(
-        padding: showCheckbox
-            ? const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xs,
-                vertical: AppSpacing.xs,
-              )
-            : EdgeInsets.zero,
-        child: AnimatedOpacity(
-          duration: _kPlayerChipAnimationDuration,
-          curve: _kPlayerChipAnimationCurve,
-          opacity: token.opacity,
-          child: AnimatedContainer(
+    return RepaintBoundary(
+      child: InkWell(
+        onTap: enableInteraction ? onTap : null,
+        onLongPress: enableInteraction ? onLongPress : null,
+        onDoubleTap: enableInteraction ? onLongPress : null,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: Padding(
+          padding: showCheckbox
+              ? const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: AppSpacing.xs,
+                )
+              : EdgeInsets.zero,
+          child: AnimatedOpacity(
             duration: _kPlayerChipAnimationDuration,
             curve: _kPlayerChipAnimationCurve,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              color: token.backgroundColor,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(
-                color: token.borderColor,
-                width: token.borderWidth,
+            opacity: token.opacity,
+            child: AnimatedContainer(
+              duration: _kPlayerChipAnimationDuration,
+              curve: _kPlayerChipAnimationCurve,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (showCheckbox) ...[
-                  _PlayerChipSelectionIcon(token: token),
-                  const SizedBox(width: AppSpacing.xs),
-                ],
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _PlayerChipHeader(player: player, token: token),
-                      if (showStats) ...[
-                        const SizedBox(height: AppSpacing.xs + 2),
-                        _PlayerChipStats(
-                          player: player,
-                          stats: stats,
-                          sameGenderCount: sameGenderCount,
-                          mxCount: mxCount,
-                          token: token,
-                        ),
-                      ]
-                    ],
-                  ),
+              decoration: BoxDecoration(
+                color: token.backgroundColor,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(
+                  color: token.borderColor,
+                  width: token.borderWidth,
                 ),
-              ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (showCheckbox) ...[
+                    _PlayerChipSelectionIcon(token: token),
+                    const SizedBox(width: AppSpacing.xs),
+                  ],
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _PlayerChipHeader(player: player, token: token),
+                        if (showStats) ...[
+                          const SizedBox(height: AppSpacing.xs + 2),
+                          _PlayerChipStats(
+                            player: player,
+                            stats: stats,
+                            sameGenderCount: sameGenderCount,
+                            mxCount: mxCount,
+                            token: token,
+                          ),
+                        ]
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
