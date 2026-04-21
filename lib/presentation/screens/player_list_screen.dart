@@ -21,11 +21,14 @@ class PlayerListScreen extends StatefulWidget {
 
 class _PlayerListScreenState extends State<PlayerListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
+  final ValueNotifier<String> _searchQueryNotifier = ValueNotifier<String>('');
 
   late final PlayerNotifier _playerNotifier;
   late final SessionNotifier _sessionNotifier;
   bool _providersBound = false;
+  int? _cachedPoolHash;
+  String? _cachedQuery;
+  _MemoizedPlayerListData? _cachedPlayerListData;
 
   @override
   void didChangeDependencies() {
@@ -40,6 +43,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchQueryNotifier.dispose();
     super.dispose();
   }
 
@@ -176,24 +180,69 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           ),
         ],
       ),
-      body: AnimatedBuilder(
-        animation: Listenable.merge([_playerNotifier, _sessionNotifier]),
-        builder: (context, _) {
-          final pool = _sessionNotifier.playerStatsPool;
-          if (pool.all.isEmpty) {
-            return _buildEmptyState();
-          }
+      body: Column(
+        children: [
+          _buildFixedHeader(theme),
+          Expanded(
+            child: ListenableBuilder(
+              listenable: Listenable.merge([
+                _playerNotifier,
+                _sessionNotifier,
+                _searchQueryNotifier,
+              ]),
+              builder: (context, _) {
+                final pool = _sessionNotifier.playerStatsPool;
+                if (pool.all.isEmpty) {
+                  return _buildEmptyState();
+                }
+                final memoized = _getMemoizedPlayerListData(
+                  allPlayers: pool.all,
+                  query: _searchQueryNotifier.value,
+                );
+                return _buildPlayerList(
+                  data: memoized,
+                  totalCount: pool.all.length,
+                  theme: theme,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-          final filteredPool = _searchQuery.isEmpty
-              ? pool.all
-              : pool.all
-                  .where((p) =>
-                      p.player.name.contains(_searchQuery) ||
-                      p.player.yomigana.contains(_searchQuery))
-                  .toList();
-
-          return _buildPlayerList(filteredPool, pool.all.length, theme);
-        },
+  Widget _buildFixedHeader(ThemeData theme) {
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.sm,
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final contentWidth = constraints.maxWidth.clamp(0.0, 1100.0).toDouble();
+            return Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: contentWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSearchField(theme),
+                    const SizedBox(height: 12),
+                    _buildQuickActions(theme),
+                    const SizedBox(height: 8),
+                    _buildHintChip(theme),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -263,30 +312,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     );
   }
 
-  Widget _buildPlayerList(
-      List<PlayerWithStats> filteredPool, int totalCount, ThemeData theme) {
+  Widget _buildPlayerList({
+    required _MemoizedPlayerListData data,
+    required int totalCount,
+    required ThemeData theme,
+  }) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final bool useSingleColumn = screenWidth < 900;
-
-    final activeMales = filteredPool
-        .where((p) => p.player.isActive && p.player.gender == Gender.male)
-        .toList()
-      ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
-
-    final activeFemales = filteredPool
-        .where((p) => p.player.isActive && p.player.gender == Gender.female)
-        .toList()
-      ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
-
-    final groupedMales = _getGrouped(
-        filteredPool.where((p) => p.player.gender == Gender.male).toList());
-    final groupedFemales = _getGrouped(
-        filteredPool.where((p) => p.player.gender == Gender.female).toList());
-
-    final maleLabels = groupedMales.keys.toList()
-      ..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
-    final femaleLabels = groupedFemales.keys.toList()
-      ..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -301,36 +333,31 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSearchField(theme),
-                  const SizedBox(height: 12),
-                  _buildQuickActions(theme),
-                  const SizedBox(height: 8),
-                  _buildHintChip(theme),
-                  const SizedBox(height: 20),
                   _buildTodayMemberHeader(
-                      activeMales.length, activeFemales.length),
+                      data.activeMales.length, data.activeFemales.length),
                   const SizedBox(height: 12),
-                  if (activeMales.isNotEmpty || activeFemales.isNotEmpty) ...[
+                  if (data.activeMales.isNotEmpty ||
+                      data.activeFemales.isNotEmpty) ...[
                     useSingleColumn
                         ? Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (activeMales.isNotEmpty) ...[
+                              if (data.activeMales.isNotEmpty) ...[
                                 GenderLabel(
-                                  label: '男性 ${activeMales.length}名',
+                                  label: '男性 ${data.activeMales.length}名',
                                   color: theme.colorScheme.primary,
                                 ),
                                 const SizedBox(height: 8),
-                                _buildWrap(activeMales, showStats: true),
+                                _buildWrap(data.activeMales, showStats: true),
                                 const SizedBox(height: 16),
                               ],
-                              if (activeFemales.isNotEmpty) ...[
+                              if (data.activeFemales.isNotEmpty) ...[
                                 GenderLabel(
-                                  label: '女性 ${activeFemales.length}名',
+                                  label: '女性 ${data.activeFemales.length}名',
                                   color: theme.colorScheme.secondary,
                                 ),
                                 const SizedBox(height: 8),
-                                _buildWrap(activeFemales, showStats: true),
+                                _buildWrap(data.activeFemales, showStats: true),
                               ],
                             ],
                           )
@@ -341,13 +368,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    if (activeMales.isNotEmpty) ...[
+                                    if (data.activeMales.isNotEmpty) ...[
                                       GenderLabel(
-                                        label: '男性 ${activeMales.length}名',
+                                        label: '男性 ${data.activeMales.length}名',
                                         color: theme.colorScheme.primary,
                                       ),
                                       const SizedBox(height: 8),
-                                      _buildWrap(activeMales, showStats: true),
+                                      _buildWrap(data.activeMales,
+                                          showStats: true),
                                     ],
                                   ],
                                 ),
@@ -357,13 +385,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    if (activeFemales.isNotEmpty) ...[
+                                    if (data.activeFemales.isNotEmpty) ...[
                                       GenderLabel(
-                                        label: '女性 ${activeFemales.length}名',
+                                        label: '女性 ${data.activeFemales.length}名',
                                         color: theme.colorScheme.secondary,
                                       ),
                                       const SizedBox(height: 8),
-                                      _buildWrap(activeFemales,
+                                      _buildWrap(data.activeFemales,
                                           showStats: true),
                                     ],
                                   ],
@@ -376,7 +404,11 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       child: Divider(),
                     ),
                   ],
-                  _buildAllMembersHeader(filteredPool.length, totalCount),
+                  _buildAllMembersHeader(
+                    hitCount: data.filteredPool.length,
+                    totalCount: totalCount,
+                    query: _searchQueryNotifier.value,
+                  ),
                   const SizedBox(height: 16),
                   AnimatedSwitcher(
                     duration: _kUiAnimationDuration,
@@ -396,7 +428,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                         ),
                       );
                     },
-                    child: maleLabels.isEmpty && femaleLabels.isEmpty
+                    child: data.maleLabels.isEmpty && data.femaleLabels.isEmpty
                         ? Padding(
                             key: const ValueKey('empty-search-result'),
                             padding: const EdgeInsets.symmetric(
@@ -413,10 +445,10 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                           )
                         : _buildGroupedMembersSection(
                             useSingleColumn: useSingleColumn,
-                            groupedMales: groupedMales,
-                            maleLabels: maleLabels,
-                            groupedFemales: groupedFemales,
-                            femaleLabels: femaleLabels,
+                            groupedMales: data.groupedMales,
+                            maleLabels: data.maleLabels,
+                            groupedFemales: data.groupedFemales,
+                            femaleLabels: data.femaleLabels,
                             theme: theme,
                           ),
                   ),
@@ -477,43 +509,106 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   }
 
   Widget _buildSearchField(ThemeData theme) {
-    return TextField(
-      controller: _searchController,
-      textInputAction: TextInputAction.search,
-      decoration: InputDecoration(
-        prefixIcon: const Icon(Icons.search),
-        hintText: '名前・よみがなで検索...',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.md),
-        ),
-        suffixIcon: _searchQuery.isEmpty
-            ? null
-            : IconButton(
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() => _searchQuery = '');
-                },
-                icon: const Icon(Icons.close),
-                tooltip: '検索をクリア',
-              ),
-        filled: true,
-        fillColor:
-            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-      ),
-      onChanged: (value) {
-        setState(() => _searchQuery = value.trim());
+    return ValueListenableBuilder<String>(
+      valueListenable: _searchQueryNotifier,
+      builder: (context, searchQuery, _) {
+        return TextField(
+          controller: _searchController,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.search),
+            hintText: '名前・よみがなで検索...',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.md),
+            ),
+            suffixIcon: searchQuery.isEmpty
+                ? null
+                : IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      _searchQueryNotifier.value = '';
+                    },
+                    icon: const Icon(Icons.close),
+                    tooltip: '検索をクリア',
+                  ),
+            filled: true,
+            fillColor: theme.colorScheme.surfaceContainerHighest
+                .withValues(alpha: 0.35),
+          ),
+          onChanged: (value) {
+            _searchQueryNotifier.value = value.trim();
+          },
+        );
       },
     );
   }
 
-  Widget _buildAllMembersHeader(int hitCount, int totalCount) {
+  _MemoizedPlayerListData _getMemoizedPlayerListData({
+    required List<PlayerWithStats> allPlayers,
+    required String query,
+  }) {
+    final poolHash = Object.hashAll(allPlayers);
+    if (_cachedPoolHash == poolHash &&
+        _cachedQuery == query &&
+        _cachedPlayerListData != null) {
+      return _cachedPlayerListData!;
+    }
+
+    final filteredPool = query.isEmpty
+        ? allPlayers
+        : allPlayers
+            .where((p) =>
+                p.player.name.contains(query) || p.player.yomigana.contains(query))
+            .toList(growable: false);
+
+    final activeMales = filteredPool
+        .where((p) => p.player.isActive && p.player.gender == Gender.male)
+        .toList()
+      ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
+    final activeFemales = filteredPool
+        .where((p) => p.player.isActive && p.player.gender == Gender.female)
+        .toList()
+      ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
+
+    final groupedMales = _getGrouped(
+      filteredPool.where((p) => p.player.gender == Gender.male).toList(),
+    );
+    final groupedFemales = _getGrouped(
+      filteredPool.where((p) => p.player.gender == Gender.female).toList(),
+    );
+
+    final maleLabels = groupedMales.keys.toList()
+      ..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
+    final femaleLabels = groupedFemales.keys.toList()
+      ..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
+
+    final memoized = _MemoizedPlayerListData(
+      filteredPool: filteredPool,
+      activeMales: activeMales,
+      activeFemales: activeFemales,
+      groupedMales: groupedMales,
+      groupedFemales: groupedFemales,
+      maleLabels: maleLabels,
+      femaleLabels: femaleLabels,
+    );
+    _cachedPoolHash = poolHash;
+    _cachedQuery = query;
+    _cachedPlayerListData = memoized;
+    return memoized;
+  }
+
+  Widget _buildAllMembersHeader({
+    required int hitCount,
+    required int totalCount,
+    required String query,
+  }) {
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: 12,
       runSpacing: 8,
       children: [
         const AppSectionHeader(title: '全メンバー', subtitle: '五十音順'),
-        if (_searchQuery.isNotEmpty)
+        if (query.isNotEmpty)
           Text(
             '$hitCount件 / 全$totalCount件',
             style: TextStyle(
@@ -1695,6 +1790,26 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       },
     );
   }
+}
+
+class _MemoizedPlayerListData {
+  final List<PlayerWithStats> filteredPool;
+  final List<PlayerWithStats> activeMales;
+  final List<PlayerWithStats> activeFemales;
+  final Map<String, List<PlayerWithStats>> groupedMales;
+  final Map<String, List<PlayerWithStats>> groupedFemales;
+  final List<String> maleLabels;
+  final List<String> femaleLabels;
+
+  const _MemoizedPlayerListData({
+    required this.filteredPool,
+    required this.activeMales,
+    required this.activeFemales,
+    required this.groupedMales,
+    required this.groupedFemales,
+    required this.maleLabels,
+    required this.femaleLabels,
+  });
 }
 
 class _BulkAddRowInput {
