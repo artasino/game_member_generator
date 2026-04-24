@@ -12,21 +12,20 @@ import 'package:game_member_generator/domain/repository/player_repository/player
 import 'package:game_member_generator/domain/services/match_making_service.dart';
 
 class RecordingAlgorithm implements MatchAlgorithm {
-  List<String> receivedIds = [];
-
   @override
   List<Game> generateMatches({
     required List<MatchType> matchTypes,
     required PlayerStatsPool playerPool,
   }) {
-    receivedIds = playerPool.all.map((p) => p.player.id).toList()..sort();
+    final players = playerPool.all.map((p) => p.player).toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
 
-    final players = playerPool.all.map((p) => p.player).toList();
+    final selected = players.sublist(players.length - 4);
     return [
       Game(
         matchTypes.first,
-        Team(players[0], players[1]),
-        Team(players[2], players[3]),
+        Team(selected[0], selected[1]),
+        Team(selected[2], selected[3]),
       ),
     ];
   }
@@ -124,9 +123,16 @@ void main() {
         playerStats: playerStats,
       );
 
-      expect(algorithm.receivedIds, ['1', '2', '3', '4', '5']);
+      final playingIds = [
+        result.games.first.teamA.player1.id,
+        result.games.first.teamA.player2.id,
+        result.games.first.teamB.player1.id,
+        result.games.first.teamB.player2.id,
+      ]..sort();
+
       expect(result.games, hasLength(1));
-      expect(result.restingPlayers.map((p) => p.id), ['5']);
+      expect(playingIds, ['2', '3', '4', '5']);
+      expect(result.restingPlayers.map((p) => p.id), ['1']);
     });
   });
 }
