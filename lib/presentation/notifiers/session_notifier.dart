@@ -33,6 +33,7 @@ class SessionNotifier extends ChangeNotifier {
 
   PlayerStatsPool _cachedPool = PlayerStatsPool([]);
   List<Player> _allPlayersCache = [];
+  final Map<int, PlayerStatsPool> _scopedPoolCache = {};
 
   /// 全プレイヤーの出場統計プールを返す
   PlayerStatsPool get playerStatsPool => _cachedPool;
@@ -77,6 +78,7 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   Future<void> onPlayersUpdated() async {
+    _invalidateStatsCaches();
     await _updateStats();
     notifyListeners();
   }
@@ -85,6 +87,7 @@ class SessionNotifier extends ChangeNotifier {
     final allPlayers = await matchMakingService.playerRepository.getAll();
     _allPlayersCache = allPlayers;
     _cachedPool = _buildPoolForSessions(allPlayers, _sessions);
+    _scopedPoolCache.clear();
     _requirementCache.clear();
   }
 
@@ -121,10 +124,17 @@ class SessionNotifier extends ChangeNotifier {
 
   /// 指定セッション(含む)までの履歴のみを使って統計プールを作る
   PlayerStatsPool getPlayerStatsPoolUpToSession(int sessionIndex) {
+    final cached = _scopedPoolCache[sessionIndex];
+    if (cached != null) {
+      return cached;
+    }
+
     final scopedSessions = _sessions
         .where((session) => session.index <= sessionIndex)
         .toList(growable: false);
-    return _buildPoolForSessions(_allPlayersCache, scopedSessions);
+    final pool = _buildPoolForSessions(_allPlayersCache, scopedSessions);
+    _scopedPoolCache[sessionIndex] = pool;
+    return pool;
   }
 
   PlayerStatsPool _buildPoolForSessions(
@@ -140,6 +150,7 @@ class SessionNotifier extends ChangeNotifier {
   Future<void> _refresh() async {
     final fetchedSessions = await sessionRepository.getAll();
     _sessions = List.from(fetchedSessions);
+    _invalidateStatsCaches();
     await _updateStats();
     notifyListeners();
   }
@@ -263,6 +274,7 @@ class SessionNotifier extends ChangeNotifier {
   Future<void> clearHistory() async {
     if (_sessions.isEmpty) return;
     _pushUndoState();
+    _invalidateStatsCaches();
     await sessionRepository.clear();
     await _refresh();
   }
@@ -270,6 +282,7 @@ class SessionNotifier extends ChangeNotifier {
   Future<void> deleteSession(int sessionIndex) async {
     if (_sessions.every((session) => session.index != sessionIndex)) return;
     _pushUndoState();
+    _invalidateStatsCaches();
     final remaining = _sessions
         .where((session) => session.index != sessionIndex)
         .toList(growable: false);
@@ -289,9 +302,15 @@ class SessionNotifier extends ChangeNotifier {
 
   Future<void> revertToPreviousState() async {
     if (_undoStack.isEmpty) return;
+    _invalidateStatsCaches();
     final previous = _undoStack.removeLast();
     await _replaceAllSessions(previous);
     await _refresh();
+  }
+
+  void _invalidateStatsCaches() {
+    _scopedPoolCache.clear();
+    _requirementCache.clear();
   }
 
   void _pushUndoState() {
