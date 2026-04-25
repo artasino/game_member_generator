@@ -498,7 +498,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'タップで本日の参加切替、長押しでメンバー情報の修正',
+              'タップで本日の参加切替、⋯ボタン/長押しでメンバー編集',
               style: TextStyle(
                   fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -743,10 +743,87 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           onLongPress: () {
             _showAddEditDialog(context, player: p.player);
           },
+          onOpenMenu: () => _showPlayerQuickMenu(context, p.player),
           showCheckbox: showCheckbox,
           showStats: showStats,
         );
       }).toList(),
+    );
+  }
+
+  void _showPlayerQuickMenu(BuildContext context, Player player) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('メンバー情報を編集'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showAddEditDialog(context, player: player);
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                    player.isActive ? Icons.person_remove : Icons.person_add),
+                title: Text(
+                    player.isActive ? '本日の参加から外す' : '本日の参加に追加'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showActivateDeactivateDialog(context, player);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.delete_outline,
+                    color: Theme.of(context).colorScheme.error),
+                title: Text(
+                  'メンバーを削除',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showDeleteConfirm(context, player);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirm(BuildContext context, Player player) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text(
+          'メンバー削除',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        content: Text('「${player.name}」を削除しますか？'),
+        actions: [
+          AppActionButton(
+            label: 'キャンセル',
+            onPressed: () => Navigator.pop(dialogContext),
+            isPrimary: false,
+          ),
+          AppActionButton(
+            label: '削除',
+            onPressed: () {
+              _playerNotifier.removePlayer(player.id);
+              Navigator.pop(dialogContext);
+            },
+            isPrimary: true,
+            color: Theme.of(context).colorScheme.error,
+          ),
+        ],
+      ),
     );
   }
 

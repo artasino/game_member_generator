@@ -69,6 +69,7 @@ class PlayerChip extends StatelessWidget {
   final PlayerWithStats playerWithStats;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback? onOpenMenu;
   final bool showCheckbox;
   final bool showStats;
 
@@ -77,6 +78,7 @@ class PlayerChip extends StatelessWidget {
     required this.playerWithStats,
     required this.onTap,
     required this.onLongPress,
+    this.onOpenMenu,
     this.showCheckbox = false,
     this.showStats = false,
   });
@@ -141,7 +143,11 @@ class PlayerChip extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _PlayerChipHeader(player: player, token: token),
+                      _PlayerChipHeader(
+                        player: player,
+                        token: token,
+                        onOpenMenu: onOpenMenu,
+                      ),
                       if (showStats) ...[
                         const SizedBox(height: AppSpacing.xs + 2),
                         _PlayerChipStats(
@@ -167,10 +173,12 @@ class PlayerChip extends StatelessWidget {
 class _PlayerChipHeader extends StatelessWidget {
   final Player player;
   final _PlayerChipVisualToken token;
+  final VoidCallback? onOpenMenu;
 
   const _PlayerChipHeader({
     required this.player,
     required this.token,
+    this.onOpenMenu,
   });
 
   @override
@@ -199,6 +207,16 @@ class _PlayerChipHeader extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Icon(Icons.coffee_outlined, size: 14, color: token.mustRestIconColor),
         ],
+        const SizedBox(width: AppSpacing.xs),
+        InkResponse(
+          onTap: onOpenMenu,
+          radius: 18,
+          child: Icon(
+            Icons.more_horiz,
+            size: 18,
+            color: token.nameColor.withValues(alpha: 0.75),
+          ),
+        ),
       ],
     );
   }
