@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/player.dart';
@@ -33,8 +34,11 @@ class MatchHistoryScreen extends StatefulWidget {
 }
 
 class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
+  static const _coachMarkKey = 'coach_mark_swap_mode_v1_shown';
+
   int? _currentIndex;
   Player? _selectedPlayer;
+  bool _coachMarkCheckStarted = false;
 
   late final SessionNotifier _sessionNotifier;
   bool _providersBound = false;
@@ -44,7 +48,46 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     super.didChangeDependencies();
     if (_providersBound) return;
     _sessionNotifier = AppScope.of(context).sessionNotifier;
+    _showCoachMarkIfNeeded();
     _providersBound = true;
+  }
+
+  Future<void> _showCoachMarkIfNeeded() async {
+    if (_coachMarkCheckStarted) return;
+    _coachMarkCheckStarted = true;
+
+    final prefs = await SharedPreferences.getInstance();
+    final hasShown = prefs.getBool(_coachMarkKey) ?? false;
+    if (hasShown || !mounted) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('はじめての操作ガイド',
+              style: TextStyle(fontWeight: FontWeight.w900)),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('・「選手を入れ替える」ボタンで入れ替えモードを開始できます。'),
+              SizedBox(height: 8),
+              Text('・選手を長押しすると、その選手を起点にすぐ入れ替えできます。'),
+              SizedBox(height: 8),
+              Text('・入れ替え中は、交換したい相手をタップしてください。'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      await prefs.setBool(_coachMarkKey, true);
+    });
   }
 
   void _updateIndexSafely({int? targetIndex}) {
@@ -223,7 +266,11 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
 
           return Column(
             children: [
-              _buildInstructionBanner(theme, _selectedPlayer != null),
+              _buildInstructionBanner(
+                theme,
+                _selectedPlayer != null,
+                session: session,
+              ),
               Expanded(
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -258,7 +305,11 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         },
       );
 
-  Widget _buildInstructionBanner(ThemeData theme, bool isSwapping) {
+  Widget _buildInstructionBanner(
+    ThemeData theme,
+    bool isSwapping, {
+    required Session session,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -277,7 +328,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              isSwapping ? '入れ替える相手をタップしてください' : '長押しで選手を入れ替えられます',
+              isSwapping
+                  ? '入れ替える相手をタップしてください'
+                  : '「選手を入れ替える」または長押しで開始できます',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isSwapping ? FontWeight.bold : FontWeight.normal,
@@ -287,9 +340,60 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               ),
             ),
           ),
+          if (!isSwapping)
+            TextButton.icon(
+              onPressed: () => _showSwapSourceSelector(session),
+              icon: const Icon(Icons.swap_horiz, size: 16),
+              label: const Text('選手を入れ替える'),
+            )
+          else
+            TextButton(
+              onPressed: () => setState(() => _selectedPlayer = null),
+              child: const Text('終了'),
+            ),
         ],
       ),
     );
+  }
+
+  Future<void> _showSwapSourceSelector(Session session) async {
+    final players = <Player>[
+      ...session.games.expand((game) => [
+            game.teamA.player1,
+            game.teamA.player2,
+            game.teamB.player1,
+            game.teamB.player2,
+          ]),
+      ...session.restingPlayers,
+    ];
+    final uniquePlayers = <String, Player>{for (final p in players) p.id: p}.values
+        .toList()
+      ..sort((a, b) => a.yomigana.compareTo(b.yomigana));
+    if (uniquePlayers.isEmpty || !mounted) return;
+
+    final selected = await showModalBottomSheet<Player>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: uniquePlayers.length,
+            itemBuilder: (context, index) {
+              final player = uniquePlayers[index];
+              return ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: Text(player.name),
+                subtitle: Text(player.yomigana),
+                onTap: () => Navigator.pop(sheetContext, player),
+              );
+            },
+          ),
+        );
+      },
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _selectedPlayer = selected);
   }
 
   Widget _buildFABs(Session? session, ColorScheme colorScheme) => Padding(
