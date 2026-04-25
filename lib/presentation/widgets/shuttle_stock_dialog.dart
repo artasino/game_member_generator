@@ -330,11 +330,15 @@ class _ShuttleStockDialogState extends State<ShuttleStockDialog> {
                                               ),
                                               child: Text(
                                                 payer.name,
-                                                style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: theme.colorScheme
-                                                        .onSurfaceVariant),
+                                                style: theme
+                                                    .textTheme
+                                                    .labelMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color: theme.colorScheme
+                                                          .onSurfaceVariant,
+                                                    ),
                                               ),
                                             ),
                                           ],

@@ -53,6 +53,8 @@ class AppBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 2 * scale),
       decoration: BoxDecoration(
@@ -75,11 +77,11 @@ class AppBadge extends StatelessWidget {
           ],
           Text(
             label,
-            style: TextStyle(
-              fontSize: 10 * scale,
+            textScaler: textScaler,
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontSize: (theme.textTheme.labelSmall?.fontSize ?? 11) * scale,
               fontWeight: FontWeight.w900,
-              color:
-                  isFilled ? Theme.of(context).colorScheme.onPrimary : color,
+              color: isFilled ? theme.colorScheme.onPrimary : color,
             ),
           ),
         ],

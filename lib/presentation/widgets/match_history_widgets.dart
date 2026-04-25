@@ -651,11 +651,10 @@ class RestingChip extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 '$consecutiveRests',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
               ),
               const SizedBox(width: 4),
             ],
@@ -721,6 +720,7 @@ class MatchHistoryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textScaler = MediaQuery.textScalerOf(context);
     if (isSwapping) {
       return Row(children: [
         const Icon(Icons.swap_horiz, color: Colors.white, size: 28),
@@ -750,17 +750,27 @@ class MatchHistoryHeader extends StatelessWidget {
           onPressed:
               currentIndex! > 0 ? () => onIndexChange(currentIndex! - 1) : null,
         ),
-        Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(
-            'MATCH ${session!.index}',
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          Text(
-            '$total 試合中 ${currentIndex! + 1} 試合目',
-            style: const TextStyle(color: Colors.white70, fontSize: 10),
-          ),
-        ]),
+        Flexible(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(
+              'MATCH ${session!.index}',
+              textScaler: textScaler,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18),
+            ),
+            Text(
+              '$total 試合中 ${currentIndex! + 1} 試合目',
+              textScaler: textScaler,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Colors.white70,
+                  ),
+            ),
+          ]),
+        ),
         IconButton(
           icon: const Icon(Icons.chevron_right, color: Colors.white),
           onPressed: currentIndex! < total - 1

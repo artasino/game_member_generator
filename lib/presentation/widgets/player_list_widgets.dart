@@ -261,8 +261,7 @@ class _PlayerChipStats extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Text(
               '${player.gender == Gender.male ? "男" : "女"}$sameGenderCount 混$mxCount',
-              style: TextStyle(
-                fontSize: 10,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: token.statsTextColor,
                 fontWeight: FontWeight.w600,
               ),

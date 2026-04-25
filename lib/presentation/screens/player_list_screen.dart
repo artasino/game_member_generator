@@ -499,8 +499,9 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
           Expanded(
             child: Text(
               'タップで本日の参加切替、⋯ボタン/長押しでメンバー編集',
-              style: TextStyle(
-                  fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -1286,8 +1287,10 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                   ),
                                 ),
                                 title: Text(candidate.name),
-                                subtitle: Text(candidate.yomigana,
-                                    style: const TextStyle(fontSize: 11)),
+                                subtitle: Text(
+                                  candidate.yomigana,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
                                 trailing: isCurrentPartner
                                     ? Icon(Icons.check_circle,
                                         color: Theme.of(context)
@@ -1615,11 +1618,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                         ),
                                         child: Text(
                                           isMale ? '男' : '女',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: genderColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall
+                                              ?.copyWith(
+                                                color: genderColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                         ),
                                       ),
                                     ],
@@ -1763,11 +1768,13 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                                         ),
                                         child: Text(
                                           isMale ? '男' : '女',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: genderColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall
+                                              ?.copyWith(
+                                                color: genderColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                         ),
                                       ),
                                     ],
