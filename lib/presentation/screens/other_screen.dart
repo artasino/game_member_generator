@@ -10,17 +10,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_config.dart';
 import '../../domain/entities/release_note.dart';
+import '../../l10n/app_localizations.dart';
 import 'manual_screen.dart';
 
-enum InquiryCategory {
-  bug('不具合'),
-  request('機能改善要望'),
-  other('その他');
-
-  final String label;
-
-  const InquiryCategory(this.label);
-}
+enum InquiryCategory { bug, request, other }
 
 class OtherScreen extends StatefulWidget {
   const OtherScreen({super.key});
@@ -30,9 +23,7 @@ class OtherScreen extends StatefulWidget {
 }
 
 class _OtherScreenState extends State<OtherScreen> {
-  static const String _versionFallbackText = '取得できませんでした';
-
-  String _versionText = _versionFallbackText;
+  String _versionText = '';
   List<ReleaseNote> _loadedReleaseNotes = [];
 
   @override
@@ -42,6 +33,9 @@ class _OtherScreenState extends State<OtherScreen> {
   }
 
   Future<void> _loadInitialData() async {
+    if (mounted) {
+      _versionText = AppLocalizations.of(context).otherVersionFallback;
+    }
     await Future.wait([
       _loadVersion(),
       _loadNotes(),
@@ -94,12 +88,21 @@ class _OtherScreenState extends State<OtherScreen> {
 
   String get _latestReleaseVersionText {
     if (_loadedReleaseNotes.isEmpty) {
-      return _versionFallbackText;
+      return AppLocalizations.of(context).otherVersionFallback;
     }
     return 'v${_loadedReleaseNotes.first.version}';
   }
 
+  String _inquiryLabel(AppLocalizations l10n, InquiryCategory category) {
+    return switch (category) {
+      InquiryCategory.bug => l10n.otherInquiryBug,
+      InquiryCategory.request => l10n.otherInquiryRequest,
+      InquiryCategory.other => l10n.otherInquiryOther,
+    };
+  }
+
   Future<void> _showReleaseNotes() async {
+    final l10n = AppLocalizations.of(context);
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -113,7 +116,7 @@ class _OtherScreenState extends State<OtherScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'アップデート履歴',
+                  l10n.otherUpdateHistory,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 12),
@@ -172,6 +175,7 @@ class _OtherScreenState extends State<OtherScreen> {
   }
 
   Future<void> _showInquiryOptions() async {
+    final l10n = AppLocalizations.of(context);
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -183,23 +187,23 @@ class _OtherScreenState extends State<OtherScreen> {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'ご意見・お問い合わせ',
+                  l10n.otherInquiryTitle,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
               ListTile(
                 leading: const Icon(Icons.bug_report_outlined),
-                title: const Text('不具合を報告する'),
+                title: Text(l10n.otherInquiryReportBug),
                 onTap: () => _launchInquiry(InquiryCategory.bug),
               ),
               ListTile(
                 leading: const Icon(Icons.lightbulb_outline),
-                title: const Text('機能改善を要望する'),
+                title: Text(l10n.otherInquiryRequestFeature),
                 onTap: () => _launchInquiry(InquiryCategory.request),
               ),
               ListTile(
                 leading: const Icon(Icons.chat_outlined),
-                title: const Text('その他のお問い合わせ'),
+                title: Text(l10n.otherInquiryElse),
                 onTap: () => _launchInquiry(InquiryCategory.other),
               ),
               const SizedBox(height: 16),
@@ -213,27 +217,26 @@ class _OtherScreenState extends State<OtherScreen> {
   Future<void> _launchInquiry(InquiryCategory category) async {
     Navigator.pop(context);
 
+    final l10n = AppLocalizations.of(context);
     final packageInfo = await PackageInfo.fromPlatform();
-    String osVersion = 'Unknown';
+    String osVersion = l10n.otherUnknown;
     if (kIsWeb) {
-      osVersion = 'Web';
+      osVersion = l10n.otherWeb;
     } else if (Platform.isAndroid) {
       final androidInfo = await DeviceInfoPlugin().androidInfo;
-      osVersion = 'Android ${androidInfo.version.release}';
+      osVersion = l10n.otherAndroid(androidInfo.version.release);
     } else if (Platform.isIOS) {
       final iosInfo = await DeviceInfoPlugin().iosInfo;
-      osVersion = 'iOS ${iosInfo.systemVersion}';
+      osVersion = l10n.otherIos(iosInfo.systemVersion);
     }
 
-    // Google Form の URL
     const String formBaseUrl =
         'https://docs.google.com/forms/d/e/1FAIpQLScSUXfMzuuritwD9rcNPlak6ELnwiVTFPnn2RaRBkNzkP02vQ/viewform';
 
     final Uri url = Uri.parse(formBaseUrl).replace(queryParameters: {
       'usp': 'pp_url',
-      'entry.371796673': category.label, // カテゴリ
-      'entry.1693838828':
-          '【環境情報】\nApp: v${packageInfo.version}\nOS: $osVersion\n\n【お問い合わせ内容】\n', // 内容（自動挿入）
+      'entry.371796673': _inquiryLabel(l10n, category),
+      'entry.1693838828': l10n.otherInquiryTemplate(packageInfo.version, osVersion),
     });
 
     if (await canLaunchUrl(url)) {
@@ -241,13 +244,14 @@ class _OtherScreenState extends State<OtherScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('フォームを開けませんでした')),
+          SnackBar(content: Text(l10n.otherOpenFormFailed)),
         );
       }
     }
   }
 
   Future<void> _showPrivacyPolicy() async {
+    final l10n = AppLocalizations.of(context);
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -261,31 +265,30 @@ class _OtherScreenState extends State<OtherScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'プライバシーポリシー',
+                  l10n.otherPrivacyPolicy,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
-                const Flexible(
+                Flexible(
                   child: SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('1. 情報の収集',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text(
-                            '本アプリでは、お問い合わせ時にメールアドレス、端末情報（OSバージョン、機種名）、およびお問い合わせ内容を収集します。'),
-                        SizedBox(height: 12),
-                        Text('2. 利用目的',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text('収集した情報は、不具合の調査、機能改善の検討、およびお問い合わせへの回答のみに利用します。'),
-                        SizedBox(height: 12),
-                        Text('3. 第三者提供',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text('法令に基づく場合を除き、取得した個人情報を第三者に提供することはありません。'),
-                        SizedBox(height: 12),
-                        Text('4. データの管理',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text('収集したデータは、Google Cloud Firestore にて適切に管理・保存されます。'),
+                        Text(l10n.otherPrivacySection1Title,
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(l10n.otherPrivacySection1Body),
+                        const SizedBox(height: 12),
+                        Text(l10n.otherPrivacySection2Title,
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(l10n.otherPrivacySection2Body),
+                        const SizedBox(height: 12),
+                        Text(l10n.otherPrivacySection3Title,
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(l10n.otherPrivacySection3Body),
+                        const SizedBox(height: 12),
+                        Text(l10n.otherPrivacySection4Title,
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(l10n.otherPrivacySection4Body),
                       ],
                     ),
                   ),
@@ -302,10 +305,12 @@ class _OtherScreenState extends State<OtherScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('その他'),
+        title: Text(l10n.otherScreenTitle),
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
         centerTitle: true,
@@ -314,7 +319,7 @@ class _OtherScreenState extends State<OtherScreen> {
         children: [
           ListTile(
             leading: const Icon(Icons.menu_book_outlined),
-            title: const Text('マニュアル'),
+            title: Text(l10n.otherManual),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               Navigator.of(context).push(
@@ -327,35 +332,35 @@ class _OtherScreenState extends State<OtherScreen> {
           const Divider(height: 0),
           ListTile(
             leading: const Icon(Icons.feedback_outlined),
-            title: const Text('ご意見・お問い合わせ'),
-            subtitle: const Text('不具合の報告や機能改善の要望はこちら'),
+            title: Text(l10n.otherInquiry),
+            subtitle: Text(l10n.otherInquirySubtitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: _showInquiryOptions,
           ),
           const Divider(height: 0),
           ListTile(
             leading: const Icon(Icons.tag_outlined),
-            title: const Text('バージョン'),
-            subtitle: Text('$_versionText (Build: ${AppConfig.buildDate})'),
+            title: Text(l10n.otherVersion),
+            subtitle: Text(l10n.otherVersionBuild(_versionText, AppConfig.buildDate)),
             trailing: const Icon(Icons.chevron_right),
             onTap: _showReleaseNotes,
           ),
           const Divider(height: 0),
           ListTile(
             leading: const Icon(Icons.description_outlined),
-            title: const Text('プライバシーポリシー'),
+            title: Text(l10n.otherPrivacyPolicy),
             trailing: const Icon(Icons.chevron_right),
             onTap: _showPrivacyPolicy,
           ),
           const Divider(height: 0),
           ListTile(
             leading: const Icon(Icons.info_outline),
-            title: const Text('ライセンス情報'),
+            title: Text(l10n.otherLicenseInfo),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               showLicensePage(
                 context: context,
-                applicationName: 'Game Member Generator',
+                applicationName: l10n.appTitle,
                 applicationVersion: _versionText,
               );
             },
@@ -363,22 +368,22 @@ class _OtherScreenState extends State<OtherScreen> {
           const Divider(height: 0),
           ListTile(
             leading: const Icon(Icons.volunteer_activism_outlined),
-            title: const Text('🏸 応援する'),
-            subtitle: const Text('開発者が無償で作成しています。\n練習のお供に役立ったら、ぜひ応援をお願いします！'),
+            title: Text(l10n.otherSupportTitle),
+            subtitle: Text(l10n.otherSupportSubtitle),
             onTap: () async {
               final ok = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('外部サイトへ移動'),
-                  content: const Text('応援ページ（外部サイト）へ移動します。よろしいですか？'),
+                  title: Text(l10n.otherMoveToExternal),
+                  content: Text(l10n.otherMoveToExternalDescription),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('キャンセル'),
+                      child: Text(l10n.commonCancel),
                     ),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('移動する'),
+                      child: Text(l10n.otherMove),
                     ),
                   ],
                 ),

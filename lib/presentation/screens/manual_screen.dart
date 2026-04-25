@@ -1,51 +1,54 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 class ManualScreen extends StatelessWidget {
   const ManualScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('使い方ガイド'),
+        title: Text(l10n.manualGuideTitle),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
           _HeroGuideCard(theme: theme),
           const SizedBox(height: 16),
-          const _GuideSection(
-            title: '1. メンバー画面で準備する',
+          _GuideSection(
+            title: l10n.manualStep1Title,
             icon: Icons.group_add,
             items: [
-              '「メンバー」タブで + ボタンから登録し、参加メンバーをONにします。',
-              '同時出場制限を設定すると、夫婦でどちらかが小さい子供を見る必要がある場合などにどちらかは必ず休みになります。',
-              '検索バーで名前・よみがなをすぐに探せます。',
-              '右上メニューからCSV/JSONで保存・読み込み、複数メンバーの登録・削除ができます。',
+              l10n.manualStep1Item1,
+              l10n.manualStep1Item2,
+              l10n.manualStep1Item3,
+              l10n.manualStep1Item4,
             ],
           ),
           const SizedBox(height: 12),
-          const _GuideSection(
-            title: '2. 試合履歴画面で進行する',
+          _GuideSection(
+            title: l10n.manualStep2Title,
             icon: Icons.sports_tennis,
             items: [
-              '自動で試合タイプを提案(男女の入る回数を平滑化)し、必要なら手動で編集できます。',
-              'ペア回数の記録を見える化し、偏りの確認がしやすいです。',
-              'できるだけ連続休みを避けつつ、種目バランス・ペア回数・敵になる回数を考慮して試合生成します。',
-              '履歴は時系列で追えるので、進行が見失いにくいです。',
+              l10n.manualStep2Item1,
+              l10n.manualStep2Item2,
+              l10n.manualStep2Item3,
+              l10n.manualStep2Item4,
             ],
           ),
           const SizedBox(height: 12),
-          const _GuideSection(
-            title: '3. 費用計算画面で精算する',
+          _GuideSection(
+            title: l10n.manualStep3Title,
             icon: Icons.calculate,
             items: [
-              '予め買っておいたシャトル・ボールの価格を登録しておけます。',
-              '当日使った個数を入力すると、消耗分の費用を自動計算できます。',
-              'コート代など他の費用も追加して、1人あたり金額をまとめて算出できます。',
-              '男子/女子/全員など分担対象を切り替えられます。',
+              l10n.manualStep3Item1,
+              l10n.manualStep3Item2,
+              l10n.manualStep3Item3,
+              l10n.manualStep3Item4,
             ],
           ),
           const SizedBox(height: 12),
@@ -56,19 +59,19 @@ class ManualScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '使いこなしのコツ',
+                    l10n.manualTipsTitle,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Wrap(
+                  Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      Chip(label: Text('まずは8〜12人を登録')),
-                      Chip(label: Text('今日のコート数を設定')),
-                      Chip(label: Text('試合生成画面で自動で試合生成！')),
+                      Chip(label: Text(l10n.manualTipsChipRegister)),
+                      Chip(label: Text(l10n.manualTipsChipCourt)),
+                      Chip(label: Text(l10n.manualTipsChipGenerate)),
                     ],
                   ),
                 ],
@@ -88,6 +91,8 @@ class _HeroGuideCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -110,7 +115,7 @@ class _HeroGuideCard extends StatelessWidget {
                   color: theme.colorScheme.onPrimary, size: 28),
               const SizedBox(width: 8),
               Text(
-                'はじめてでも3ステップ',
+                l10n.manualHeroTitle,
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: theme.colorScheme.onPrimary,
                   fontWeight: FontWeight.bold,
@@ -120,7 +125,7 @@ class _HeroGuideCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '''メンバー登録 → 試合生成 → 試合開始！''',
+            l10n.manualHeroSubtitle,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onPrimary,
               height: 1.5,

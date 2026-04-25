@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:game_member_generator/presentation/screens/shuttle_calculation_screen.dart';
 import 'package:material_symbols_icons/symbols.dart';
+
+import '../../l10n/app_localizations.dart';
 import '../di/app_scope.dart';
 import 'match_history_screen.dart';
 import 'other_screen.dart';
@@ -58,22 +60,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           selectedIndex: _selectedIndex,
           onDestinationSelected: (index) =>
               setState(() => _selectedIndex = index),
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.people),
-              label: 'メンバー',
+              icon: const Icon(Icons.people),
+              label: AppLocalizations.of(context).navMembers,
             ),
             NavigationDestination(
-              icon: Icon(Symbols.badminton),
-              label: '試合履歴',
+              icon: const Icon(Symbols.badminton),
+              label: AppLocalizations.of(context).navMatchHistory,
             ),
             NavigationDestination(
-              icon: Icon(Icons.currency_yen),
-              label: '費用計算',
+              icon: const Icon(Icons.currency_yen),
+              label: AppLocalizations.of(context).navExpense,
             ),
             NavigationDestination(
-              icon: Icon(Icons.help_outline),
-              label: 'その他',
+              icon: const Icon(Icons.help_outline),
+              label: AppLocalizations.of(context).navOther,
             ),
           ],
         ),
