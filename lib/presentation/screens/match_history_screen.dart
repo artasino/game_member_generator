@@ -331,8 +331,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
               isSwapping
                   ? '入れ替える相手をタップしてください'
                   : '「選手を入れ替える」または長押しで開始できます',
-              style: TextStyle(
-                fontSize: 11,
+              style: theme.textTheme.bodySmall?.copyWith(
                 fontWeight: isSwapping ? FontWeight.bold : FontWeight.normal,
                 color: isSwapping
                     ? theme.colorScheme.onTertiaryContainer

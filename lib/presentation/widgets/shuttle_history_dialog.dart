@@ -167,9 +167,10 @@ class _ShuttleHistoryDialogState extends State<ShuttleHistoryDialog> {
                                       ),
                                       Text(
                                         '使用シャトル',
-                                        style: TextStyle(
-                                            fontSize: 11,
-                                            color: theme.colorScheme.outline),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                          color: theme.colorScheme.outline,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -197,10 +198,11 @@ class _ShuttleHistoryDialogState extends State<ShuttleHistoryDialog> {
                                       children: [
                                         Text(
                                           e.key.displayName,
-                                          style: TextStyle(
-                                              fontSize: 11,
-                                              color: theme.colorScheme
-                                                  .onSurfaceVariant),
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                            color: theme
+                                                .colorScheme.onSurfaceVariant,
+                                          ),
                                         ),
                                         const SizedBox(width: 4),
                                         Text(

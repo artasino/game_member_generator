@@ -25,6 +25,18 @@ class AppTheme {
       secondary: Colors.pink.shade600,
       tertiary: Colors.orange.shade700,
     );
+    final textTheme = GoogleFonts.notoSansJpTextTheme(
+      Theme.of(context).textTheme,
+    ).copyWith(
+      displayMedium: GoogleFonts.notoSansJp(
+        fontWeight: FontWeight.w900,
+        letterSpacing: 2.0,
+        color: const Color(0xFF2C3E50),
+      ),
+      labelLarge: GoogleFonts.kanit(
+        fontWeight: FontWeight.bold,
+      ),
+    );
 
     return ThemeData(
       colorScheme: colorScheme,
@@ -38,7 +50,10 @@ class AppTheme {
         backgroundColor: colorScheme.surface,
         indicatorColor: colorScheme.secondaryContainer,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          final style = TextStyle(fontSize: 11, fontWeight: FontWeight.w500);
+          final style = textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ) ??
+              const TextStyle(fontWeight: FontWeight.w500);
           if (states.contains(WidgetState.selected)) {
             return style.copyWith(
               color: colorScheme.primary,
@@ -95,18 +110,7 @@ class AppTheme {
           ),
         ),
       ),
-      textTheme: GoogleFonts.notoSansJpTextTheme(
-        Theme.of(context).textTheme,
-      ).copyWith(
-        displayMedium: GoogleFonts.notoSansJp(
-          fontWeight: FontWeight.w900,
-          letterSpacing: 2.0,
-          color: const Color(0xFF2C3E50),
-        ),
-        labelLarge: GoogleFonts.kanit(
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      textTheme: textTheme,
     );
   }
 }

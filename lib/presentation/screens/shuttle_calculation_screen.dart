@@ -585,8 +585,9 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                     if (entry.type == ExpenseType.shuttle)
                       Text(
                         '${entry.shuttleCount}個使用',
-                        style: TextStyle(
-                            fontSize: 11, color: theme.colorScheme.outline),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
                       ),
                   ],
                 ),
@@ -767,8 +768,10 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                               ? Colors.blue
                               : Colors.pink,
                           child: Text(p.name.substring(0, 1),
-                              style: const TextStyle(
-                                  fontSize: 10, color: Colors.white)),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(color: Colors.white)),
                         ),
                         label: Text(p.name),
                         selected: entry.payerId == p.id,
@@ -804,12 +807,10 @@ class ShuttleCalculationPageState extends State<ShuttleCalculationScreen> {
                           segments: const [
                             ButtonSegment(
                                 value: true,
-                                label: Text('ダース',
-                                    style: TextStyle(fontSize: 10))),
+                                label: Text('ダース')),
                             ButtonSegment(
                                 value: false,
-                                label:
-                                    Text('個', style: TextStyle(fontSize: 10))),
+                                label: Text('個')),
                           ],
                           selected: {entry.isPerDozen},
                           onSelectionChanged: (v) => setModalState(
@@ -1143,7 +1144,9 @@ class _SettlementSheetState extends State<_SettlementSheet> {
                         color: color)),
                 const SizedBox(height: 4),
                 Text('算定額: ¥$suggested',
-                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey,
+                        )),
               ],
             ),
           ),
