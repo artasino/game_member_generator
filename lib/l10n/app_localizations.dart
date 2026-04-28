@@ -72,7 +72,31 @@ class AppLocalizations {
     'otherManual': 'マニュアル',
     'otherInquiry': 'ご意見・お問い合わせ',
     'otherInquirySubtitle': '不具合の報告や機能改善の要望はこちら',
+    'otherInquiryCta': 'カテゴリを選択',
+    'otherInquirySemantic': 'ご意見・お問い合わせ。1タップでカテゴリ選択へ進みます。',
+    'otherInquirySemanticHint': 'タップしてお問い合わせカテゴリを選択します。',
+    'otherInquiryBottomSheetHint': 'タップして外部フォームを開きます。',
     'otherVersion': 'バージョン',
+    'otherNoReleaseHistory': '更新履歴はまだありません。',
+    'otherLatestUpdateDetails': '最新アップデートの詳細',
+    'otherViewAllUpdateHistory': 'すべての履歴を見る',
+    'otherReleaseDetailsSemanticHint': 'タップして更新内容の詳細モーダルを開きます。',
+    'otherManualSubtitle': '基本操作と進行手順を確認できます。',
+    'otherManualSemantic': 'マニュアル。アプリの使い方ガイドを開きます。',
+    'otherOpenScreenSemanticHint': 'タップして画面を開きます。',
+    'otherSupportSectionTitle': 'サポート',
+    'otherSupportSectionSubtitle': 'お問い合わせや使い方ガイドにすぐアクセスできます。',
+    'otherAppInfoSectionTitle': 'アプリ情報',
+    'otherAppInfoSectionSubtitle': 'バージョンや更新内容、ポリシーを確認できます。',
+    'otherPrivacySubtitle': '個人情報の取り扱い方針を確認できます。',
+    'otherPrivacySemantic': 'プライバシーポリシー。情報の収集と利用方針を表示します。',
+    'otherOpenSheetSemanticHint': 'タップしてモーダルを開きます。',
+    'otherLicenseSubtitle': '利用ライブラリのライセンス一覧を確認できます。',
+    'otherLicenseSemantic': 'ライセンス情報。OSSライセンス一覧を開きます。',
+    'otherCommunitySectionTitle': 'コミュニティ / 応援',
+    'otherCommunitySectionSubtitle': 'アプリの継続開発を応援できます。',
+    'otherCommunitySupportSemantic': '応援ページ。外部サイトで開発者を支援します。',
+    'otherExternalLinkSemanticHint': 'タップすると外部サイトへ移動確認ダイアログを表示します。',
     'otherLicenseInfo': 'ライセンス情報',
     'otherSupportTitle': '🏸 応援する',
     'otherSupportSubtitle': '開発者が無償で作成しています。\n練習のお供に役立ったら、ぜひ応援をお願いします！',
@@ -140,7 +164,34 @@ class AppLocalizations {
   String get otherManual => _text('otherManual');
   String get otherInquiry => _text('otherInquiry');
   String get otherInquirySubtitle => _text('otherInquirySubtitle');
+  String get otherInquiryCta => _text('otherInquiryCta');
+  String get otherInquirySemantic => _text('otherInquirySemantic');
+  String get otherInquirySemanticHint => _text('otherInquirySemanticHint');
+  String get otherInquiryBottomSheetHint => _text('otherInquiryBottomSheetHint');
   String get otherVersion => _text('otherVersion');
+  String otherLatestUpdateInline(String version, String date, String highlight) =>
+      '最新 v$version ($date)\n$highlight';
+  String get otherNoReleaseHistory => _text('otherNoReleaseHistory');
+  String get otherLatestUpdateDetails => _text('otherLatestUpdateDetails');
+  String get otherViewAllUpdateHistory => _text('otherViewAllUpdateHistory');
+  String otherVersionSemantic(String version) => 'バージョン情報 $version と最新更新内容を表示します。';
+  String get otherReleaseDetailsSemanticHint => _text('otherReleaseDetailsSemanticHint');
+  String get otherManualSubtitle => _text('otherManualSubtitle');
+  String get otherManualSemantic => _text('otherManualSemantic');
+  String get otherOpenScreenSemanticHint => _text('otherOpenScreenSemanticHint');
+  String get otherSupportSectionTitle => _text('otherSupportSectionTitle');
+  String get otherSupportSectionSubtitle => _text('otherSupportSectionSubtitle');
+  String get otherAppInfoSectionTitle => _text('otherAppInfoSectionTitle');
+  String get otherAppInfoSectionSubtitle => _text('otherAppInfoSectionSubtitle');
+  String get otherPrivacySubtitle => _text('otherPrivacySubtitle');
+  String get otherPrivacySemantic => _text('otherPrivacySemantic');
+  String get otherOpenSheetSemanticHint => _text('otherOpenSheetSemanticHint');
+  String get otherLicenseSubtitle => _text('otherLicenseSubtitle');
+  String get otherLicenseSemantic => _text('otherLicenseSemantic');
+  String get otherCommunitySectionTitle => _text('otherCommunitySectionTitle');
+  String get otherCommunitySectionSubtitle => _text('otherCommunitySectionSubtitle');
+  String get otherCommunitySupportSemantic => _text('otherCommunitySupportSemantic');
+  String get otherExternalLinkSemanticHint => _text('otherExternalLinkSemanticHint');
   String otherVersionBuild(String version, String buildDate) => '$version (Build: $buildDate)';
   String get otherLicenseInfo => _text('otherLicenseInfo');
   String get otherSupportTitle => _text('otherSupportTitle');

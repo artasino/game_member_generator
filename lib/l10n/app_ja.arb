@@ -39,11 +39,32 @@
   "otherUnknown": "Unknown",
   "otherWeb": "Web",
   "otherAndroid": "Android {release}",
-  "@otherAndroid": {"placeholders": {"release": {"type": "String"}}},
+  "@otherAndroid": {
+    "placeholders": {
+      "release": {
+        "type": "String"
+      }
+    }
+  },
   "otherIos": "iOS {version}",
-  "@otherIos": {"placeholders": {"version": {"type": "String"}}},
+  "@otherIos": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "otherInquiryTemplate": "【環境情報】\nApp: v{appVersion}\nOS: {osVersion}\n\n【お問い合わせ内容】\n",
-  "@otherInquiryTemplate": {"placeholders": {"appVersion": {"type": "String"}, "osVersion": {"type": "String"}}},
+  "@otherInquiryTemplate": {
+    "placeholders": {
+      "appVersion": {
+        "type": "String"
+      },
+      "osVersion": {
+        "type": "String"
+      }
+    }
+  },
   "otherOpenFormFailed": "フォームを開けませんでした",
   "otherPrivacyPolicy": "プライバシーポリシー",
   "otherPrivacySection1Title": "1. 情報の収集",
@@ -60,12 +81,67 @@
   "otherInquirySubtitle": "不具合の報告や機能改善の要望はこちら",
   "otherVersion": "バージョン",
   "otherVersionBuild": "{version} (Build: {buildDate})",
-  "@otherVersionBuild": {"placeholders": {"version": {"type": "String"}, "buildDate": {"type": "String"}}},
+  "@otherVersionBuild": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "buildDate": {
+        "type": "String"
+      }
+    }
+  },
   "otherLicenseInfo": "ライセンス情報",
   "otherSupportTitle": "🏸 応援する",
   "otherSupportSubtitle": "開発者が無償で作成しています。\n練習のお供に役立ったら、ぜひ応援をお願いします！",
   "otherMoveToExternal": "外部サイトへ移動",
   "otherMoveToExternalDescription": "応援ページ（外部サイト）へ移動します。よろしいですか？",
+  "otherSupportSectionTitle": "サポート",
+  "otherSupportSectionSubtitle": "お問い合わせや使い方ガイドにすぐアクセスできます。",
+  "otherInquiryCta": "カテゴリを選択",
+  "otherInquirySemantic": "ご意見・お問い合わせ。1タップでカテゴリ選択へ進みます。",
+  "otherInquirySemanticHint": "タップしてお問い合わせカテゴリを選択します。",
+  "otherInquiryBottomSheetHint": "タップして外部フォームを開きます。",
+  "otherManualSubtitle": "基本操作と進行手順を確認できます。",
+  "otherManualSemantic": "マニュアル。アプリの使い方ガイドを開きます。",
+  "otherOpenScreenSemanticHint": "タップして画面を開きます。",
+  "otherAppInfoSectionTitle": "アプリ情報",
+  "otherAppInfoSectionSubtitle": "バージョンや更新内容、ポリシーを確認できます。",
+  "otherLatestUpdateInline": "最新 v{version} ({date})\n{highlight}",
+  "@otherLatestUpdateInline": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "highlight": {
+        "type": "String"
+      }
+    }
+  },
+  "otherNoReleaseHistory": "更新履歴はまだありません。",
+  "otherLatestUpdateDetails": "最新アップデートの詳細",
+  "otherViewAllUpdateHistory": "すべての履歴を見る",
+  "otherVersionSemantic": "バージョン情報 {version} と最新更新内容を表示します。",
+  "@otherVersionSemantic": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "otherReleaseDetailsSemanticHint": "タップして更新内容の詳細モーダルを開きます。",
+  "otherPrivacySubtitle": "個人情報の取り扱い方針を確認できます。",
+  "otherPrivacySemantic": "プライバシーポリシー。情報の収集と利用方針を表示します。",
+  "otherOpenSheetSemanticHint": "タップしてモーダルを開きます。",
+  "otherLicenseSubtitle": "利用ライブラリのライセンス一覧を確認できます。",
+  "otherLicenseSemantic": "ライセンス情報。OSSライセンス一覧を開きます。",
+  "otherCommunitySectionTitle": "コミュニティ / 応援",
+  "otherCommunitySectionSubtitle": "アプリの継続開発を応援できます。",
+  "otherCommunitySupportSemantic": "応援ページ。外部サイトで開発者を支援します。",
+  "otherExternalLinkSemanticHint": "タップすると外部サイトへ移動確認ダイアログを表示します。",
   "commonCancel": "キャンセル",
   "otherMove": "移動する"
 }
