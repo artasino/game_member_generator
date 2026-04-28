@@ -1,4 +1,50 @@
 {
   "@@locale": "en",
-  "appTitle": "Game Member Generator"
+  "appTitle": "Game Member Generator",
+  "otherSupportSectionTitle": "Support",
+  "otherSupportSectionSubtitle": "Quick access to inquiries and the user guide.",
+  "otherInquiryCta": "Choose category",
+  "otherInquirySemantic": "Inquiry and feedback. Opens category selection in one tap.",
+  "otherInquirySemanticHint": "Tap to choose an inquiry category.",
+  "otherInquiryBottomSheetHint": "Tap to open the external form.",
+  "otherManualSubtitle": "Review basic operations and workflow.",
+  "otherManualSemantic": "Manual. Opens the app usage guide.",
+  "otherOpenScreenSemanticHint": "Tap to open the screen.",
+  "otherAppInfoSectionTitle": "App info",
+  "otherAppInfoSectionSubtitle": "Check version, updates, and policy details.",
+  "otherLatestUpdateInline": "Latest v{version} ({date})\\n{highlight}",
+  "@otherLatestUpdateInline": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "highlight": {
+        "type": "String"
+      }
+    }
+  },
+  "otherNoReleaseHistory": "No release history yet.",
+  "otherLatestUpdateDetails": "Latest update details",
+  "otherViewAllUpdateHistory": "View full history",
+  "otherVersionSemantic": "Version info {version} and latest updates.",
+  "@otherVersionSemantic": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "otherReleaseDetailsSemanticHint": "Tap to open update details in a modal.",
+  "otherPrivacySubtitle": "Review the privacy handling policy.",
+  "otherPrivacySemantic": "Privacy policy. Shows data collection and usage policy.",
+  "otherOpenSheetSemanticHint": "Tap to open a modal sheet.",
+  "otherLicenseSubtitle": "View licenses for third-party libraries.",
+  "otherLicenseSemantic": "License information. Opens OSS license list.",
+  "otherCommunitySectionTitle": "Community / Support",
+  "otherCommunitySectionSubtitle": "Support the app’s ongoing development.",
+  "otherCommunitySupportSemantic": "Support page. Helps the developer on an external site.",
+  "otherExternalLinkSemanticHint": "Tap to show a confirmation dialog before opening an external site."
 }

@@ -24,18 +24,24 @@ class OtherScreen extends StatefulWidget {
 
 class _OtherScreenState extends State<OtherScreen> {
   String _versionText = '';
+  String _versionFallbackText = '';
   List<ReleaseNote> _loadedReleaseNotes = [];
+  bool _isInitialized = false;
+
+  ReleaseNote? get _latestReleaseNote =>
+      _loadedReleaseNotes.isEmpty ? null : _loadedReleaseNotes.first;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInitialized) return;
+    _isInitialized = true;
+    _versionFallbackText = AppLocalizations.of(context).otherVersionFallback;
+    _versionText = _versionFallbackText;
     _loadInitialData();
   }
 
   Future<void> _loadInitialData() async {
-    if (mounted) {
-      _versionText = AppLocalizations.of(context).otherVersionFallback;
-    }
     await Future.wait([
       _loadVersion(),
       _loadNotes(),
@@ -88,7 +94,7 @@ class _OtherScreenState extends State<OtherScreen> {
 
   String get _latestReleaseVersionText {
     if (_loadedReleaseNotes.isEmpty) {
-      return AppLocalizations.of(context).otherVersionFallback;
+      return _versionFallbackText;
     }
     return 'v${_loadedReleaseNotes.first.version}';
   }
@@ -101,7 +107,7 @@ class _OtherScreenState extends State<OtherScreen> {
     };
   }
 
-  Future<void> _showReleaseNotes() async {
+  Future<void> _showReleaseHistory() async {
     final l10n = AppLocalizations.of(context);
     await showModalBottomSheet<void>(
       context: context,
@@ -127,43 +133,55 @@ class _OtherScreenState extends State<OtherScreen> {
                     separatorBuilder: (_, __) => const Divider(height: 20),
                     itemBuilder: (context, index) {
                       final note = _loadedReleaseNotes[index];
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'v${note.version}',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                              ),
-                              Text(
-                                note.date,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color:
-                                          Theme.of(context).colorScheme.outline,
-                                    ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          ...note.changes.map(
-                            (change) => Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Text('• $change'),
-                            ),
-                          ),
-                        ],
-                      );
+                      return _ReleaseNoteContent(note: note);
                     },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showLatestReleaseDetails() async {
+    final l10n = AppLocalizations.of(context);
+    final latestNote = _latestReleaseNote;
+    if (latestNote == null) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.otherLatestUpdateDetails,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: _ReleaseNoteContent(note: latestNote),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _showReleaseHistory();
+                    },
+                    icon: const Icon(Icons.history),
+                    label: Text(l10n.otherViewAllUpdateHistory),
                   ),
                 ),
               ],
@@ -191,19 +209,25 @@ class _OtherScreenState extends State<OtherScreen> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
-              ListTile(
+              _buildSemanticTile(
                 leading: const Icon(Icons.bug_report_outlined),
-                title: Text(l10n.otherInquiryReportBug),
+                title: l10n.otherInquiryReportBug,
+                semanticLabel: l10n.otherInquiryReportBug,
+                semanticHint: l10n.otherInquiryBottomSheetHint,
                 onTap: () => _launchInquiry(InquiryCategory.bug),
               ),
-              ListTile(
+              _buildSemanticTile(
                 leading: const Icon(Icons.lightbulb_outline),
-                title: Text(l10n.otherInquiryRequestFeature),
+                title: l10n.otherInquiryRequestFeature,
+                semanticLabel: l10n.otherInquiryRequestFeature,
+                semanticHint: l10n.otherInquiryBottomSheetHint,
                 onTap: () => _launchInquiry(InquiryCategory.request),
               ),
-              ListTile(
+              _buildSemanticTile(
                 leading: const Icon(Icons.chat_outlined),
-                title: Text(l10n.otherInquiryElse),
+                title: l10n.otherInquiryElse,
+                semanticLabel: l10n.otherInquiryElse,
+                semanticHint: l10n.otherInquiryBottomSheetHint,
                 onTap: () => _launchInquiry(InquiryCategory.other),
               ),
               const SizedBox(height: 16),
@@ -236,7 +260,8 @@ class _OtherScreenState extends State<OtherScreen> {
     final Uri url = Uri.parse(formBaseUrl).replace(queryParameters: {
       'usp': 'pp_url',
       'entry.371796673': _inquiryLabel(l10n, category),
-      'entry.1693838828': l10n.otherInquiryTemplate(packageInfo.version, osVersion),
+      'entry.1693838828':
+          l10n.otherInquiryTemplate(packageInfo.version, osVersion),
     });
 
     if (await canLaunchUrl(url)) {
@@ -274,20 +299,28 @@ class _OtherScreenState extends State<OtherScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(l10n.otherPrivacySection1Title,
-                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          l10n.otherPrivacySection1Title,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         Text(l10n.otherPrivacySection1Body),
                         const SizedBox(height: 12),
-                        Text(l10n.otherPrivacySection2Title,
-                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          l10n.otherPrivacySection2Title,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         Text(l10n.otherPrivacySection2Body),
                         const SizedBox(height: 12),
-                        Text(l10n.otherPrivacySection3Title,
-                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          l10n.otherPrivacySection3Title,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         Text(l10n.otherPrivacySection3Body),
                         const SizedBox(height: 12),
-                        Text(l10n.otherPrivacySection4Title,
-                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          l10n.otherPrivacySection4Title,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         Text(l10n.otherPrivacySection4Body),
                       ],
                     ),
@@ -298,6 +331,70 @@ class _OtherScreenState extends State<OtherScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSemanticTile({
+    required Widget leading,
+    required String title,
+    String? subtitle,
+    required String semanticLabel,
+    required String semanticHint,
+    VoidCallback? onTap,
+    Widget? trailing,
+  }) {
+    return Semantics(
+      button: onTap != null,
+      label: semanticLabel,
+      hint: semanticHint,
+      child: ListTile(
+        leading: leading,
+        title: Text(title),
+        subtitle: subtitle == null ? null : Text(subtitle),
+        trailing: trailing ?? const Icon(Icons.chevron_right),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  Future<void> _openSupportPage() async {
+    final l10n = AppLocalizations.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.otherMoveToExternal),
+        content: Text(l10n.otherMoveToExternalDescription),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.otherMove),
+          ),
+        ],
+      ),
+    );
+
+    if (ok == true) {
+      final url = Uri.parse('https://ofuse.me/37202113/letter');
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    }
+  }
+
+  String _latestInlineSummary(AppLocalizations l10n) {
+    final latest = _latestReleaseNote;
+    if (latest == null) {
+      return l10n.otherNoReleaseHistory;
+    }
+    final firstChange = latest.changes.isEmpty ? '' : latest.changes.first;
+    return l10n.otherLatestUpdateInline(
+      latest.version,
+      latest.date,
+      firstChange,
     );
   }
 
@@ -316,89 +413,179 @@ class _OtherScreenState extends State<OtherScreen> {
         centerTitle: true,
       ),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
         children: [
-          ListTile(
-            leading: const Icon(Icons.menu_book_outlined),
-            title: Text(l10n.otherManual),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const ManualScreen(),
+          _SectionCard(
+            title: l10n.otherSupportSectionTitle,
+            subtitle: l10n.otherSupportSectionSubtitle,
+            children: [
+              _buildSemanticTile(
+                leading: const Icon(Icons.feedback_outlined),
+                title: l10n.otherInquiry,
+                subtitle: l10n.otherInquirySubtitle,
+                semanticLabel: l10n.otherInquirySemantic,
+                semanticHint: l10n.otherInquirySemanticHint,
+                trailing: FilledButton.tonalIcon(
+                  onPressed: _showInquiryOptions,
+                  icon: const Icon(Icons.arrow_forward),
+                  label: Text(l10n.otherInquiryCta),
                 ),
-              );
-            },
-          ),
-          const Divider(height: 0),
-          ListTile(
-            leading: const Icon(Icons.feedback_outlined),
-            title: Text(l10n.otherInquiry),
-            subtitle: Text(l10n.otherInquirySubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _showInquiryOptions,
-          ),
-          const Divider(height: 0),
-          ListTile(
-            leading: const Icon(Icons.tag_outlined),
-            title: Text(l10n.otherVersion),
-            subtitle: Text(l10n.otherVersionBuild(_versionText, AppConfig.buildDate)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _showReleaseNotes,
-          ),
-          const Divider(height: 0),
-          ListTile(
-            leading: const Icon(Icons.description_outlined),
-            title: Text(l10n.otherPrivacyPolicy),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _showPrivacyPolicy,
-          ),
-          const Divider(height: 0),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: Text(l10n.otherLicenseInfo),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              showLicensePage(
-                context: context,
-                applicationName: l10n.appTitle,
-                applicationVersion: _versionText,
-              );
-            },
-          ),
-          const Divider(height: 0),
-          ListTile(
-            leading: const Icon(Icons.volunteer_activism_outlined),
-            title: Text(l10n.otherSupportTitle),
-            subtitle: Text(l10n.otherSupportSubtitle),
-            onTap: () async {
-              final ok = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text(l10n.otherMoveToExternal),
-                  content: Text(l10n.otherMoveToExternalDescription),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: Text(l10n.commonCancel),
+                onTap: _showInquiryOptions,
+              ),
+              const Divider(height: 0),
+              _buildSemanticTile(
+                leading: const Icon(Icons.menu_book_outlined),
+                title: l10n.otherManual,
+                subtitle: l10n.otherManualSubtitle,
+                semanticLabel: l10n.otherManualSemantic,
+                semanticHint: l10n.otherOpenScreenSemanticHint,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ManualScreen(),
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: Text(l10n.otherMove),
-                    ),
-                  ],
-                ),
-              );
-
-              if (ok == true) {
-                final url = Uri.parse('https://ofuse.me/37202113/letter');
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                }
-              }
-            },
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _SectionCard(
+            title: l10n.otherAppInfoSectionTitle,
+            subtitle: l10n.otherAppInfoSectionSubtitle,
+            children: [
+              _buildSemanticTile(
+                leading: const Icon(Icons.tag_outlined),
+                title: l10n.otherVersion,
+                subtitle:
+                    '${l10n.otherVersionBuild(_versionText, AppConfig.buildDate)}\n${_latestInlineSummary(l10n)}',
+                semanticLabel: l10n.otherVersionSemantic(_versionText),
+                semanticHint: l10n.otherReleaseDetailsSemanticHint,
+                onTap: _showLatestReleaseDetails,
+              ),
+              const Divider(height: 0),
+              _buildSemanticTile(
+                leading: const Icon(Icons.description_outlined),
+                title: l10n.otherPrivacyPolicy,
+                subtitle: l10n.otherPrivacySubtitle,
+                semanticLabel: l10n.otherPrivacySemantic,
+                semanticHint: l10n.otherOpenSheetSemanticHint,
+                onTap: _showPrivacyPolicy,
+              ),
+              const Divider(height: 0),
+              _buildSemanticTile(
+                leading: const Icon(Icons.info_outline),
+                title: l10n.otherLicenseInfo,
+                subtitle: l10n.otherLicenseSubtitle,
+                semanticLabel: l10n.otherLicenseSemantic,
+                semanticHint: l10n.otherOpenScreenSemanticHint,
+                onTap: () {
+                  showLicensePage(
+                    context: context,
+                    applicationName: l10n.appTitle,
+                    applicationVersion: _versionText,
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _SectionCard(
+            title: l10n.otherCommunitySectionTitle,
+            subtitle: l10n.otherCommunitySectionSubtitle,
+            children: [
+              _buildSemanticTile(
+                leading: const Icon(Icons.volunteer_activism_outlined),
+                title: l10n.otherSupportTitle,
+                subtitle: l10n.otherSupportSubtitle,
+                semanticLabel: l10n.otherCommunitySupportSemantic,
+                semanticHint: l10n.otherExternalLinkSemanticHint,
+                onTap: _openSupportPage,
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.subtitle,
+    required this.children,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(subtitle, style: textTheme.bodySmall),
+              ],
+            ),
+          ),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class _ReleaseNoteContent extends StatelessWidget {
+  const _ReleaseNoteContent({required this.note});
+
+  final ReleaseNote note;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'v${note.version}',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              note.date,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...note.changes.map(
+          (change) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text('• $change'),
+          ),
+        ),
+      ],
     );
   }
 }
