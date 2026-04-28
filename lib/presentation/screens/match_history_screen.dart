@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/entities/court_settings.dart';
@@ -35,10 +38,13 @@ class MatchHistoryScreen extends StatefulWidget {
 
 class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   static const _coachMarkKey = 'coach_mark_swap_mode_v1_shown';
+  static const _kPostGenerateCooldown = Duration(milliseconds: 900);
 
   int? _currentIndex;
   Player? _selectedPlayer;
   bool _coachMarkCheckStarted = false;
+  bool _isActionCoolingDown = false;
+  Timer? _cooldownTimer;
 
   late final SessionNotifier _sessionNotifier;
   bool _providersBound = false;
@@ -88,6 +94,12 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
       );
       await prefs.setBool(_coachMarkKey, true);
     });
+  }
+
+  @override
+  void dispose() {
+    _cooldownTimer?.cancel();
+    super.dispose();
   }
 
   void _updateIndexSafely({int? targetIndex}) {
@@ -158,37 +170,92 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                     _buildPopupMenu(),
                   ],
           ),
-          body: AnimatedSwitcher(
-            duration: _kSessionAnimationDuration,
-            reverseDuration: _kSessionAnimationDuration,
-            switchInCurve: _kSessionAnimationCurve,
-            switchOutCurve: _kSessionAnimationCurve,
-            transitionBuilder: (child, animation) {
-              final offsetAnimation = Tween<Offset>(
-                begin: const Offset(0.0, 0.025),
-                end: Offset.zero,
-              ).animate(animation);
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: offsetAnimation,
-                  child: child,
+          body: Column(
+            children: [
+              _buildGenerationStatusBanner(colorScheme),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: _kSessionAnimationDuration,
+                  reverseDuration: _kSessionAnimationDuration,
+                  switchInCurve: _kSessionAnimationCurve,
+                  switchOutCurve: _kSessionAnimationCurve,
+                  transitionBuilder: (child, animation) {
+                    final offsetAnimation = Tween<Offset>(
+                      begin: const Offset(0.0, 0.025),
+                      end: Offset.zero,
+                    ).animate(animation);
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: offsetAnimation,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: session == null
+                      ? KeyedSubtree(
+                          key: const ValueKey('empty-history'),
+                          child: _buildEmpty(colorScheme),
+                        )
+                      : KeyedSubtree(
+                          key: ValueKey('session-${session.index}'),
+                          child: _buildContent(session),
+                        ),
                 ),
-              );
-            },
-            child: session == null
-                ? KeyedSubtree(
-                    key: const ValueKey('empty-history'),
-                    child: _buildEmpty(colorScheme),
-                  )
-                : KeyedSubtree(
-                    key: ValueKey('session-${session.index}'),
-                    child: _buildContent(session),
-                  ),
+              ),
+            ],
           ),
           floatingActionButton: _buildFABs(session, colorScheme),
         );
       },
+    );
+  }
+
+  Widget _buildGenerationStatusBanner(ColorScheme colorScheme) {
+    final isGenerating = _sessionNotifier.isGenerating;
+    if (!isGenerating && !_isActionCoolingDown) {
+      return const SizedBox.shrink();
+    }
+
+    final statusMessage = isGenerating
+        ? '組み合わせを計算中…'
+        : '完了しました。次の操作まで少しお待ちください…';
+
+    return Material(
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LinearProgressIndicator(
+            minHeight: 3,
+            value: isGenerating ? null : 1,
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            child: Row(
+              children: [
+                Icon(
+                  isGenerating
+                      ? Icons.autorenew_rounded
+                      : Icons.hourglass_top_rounded,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    statusMessage,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -239,7 +306,9 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: () => _showSettings(false),
+              onPressed: _sessionNotifier.isGenerating || _isActionCoolingDown
+                  ? null
+                  : () => _showSettings(false),
               icon: const Icon(Icons.play_arrow_rounded),
               label: const Text('最初の試合を作成'),
             ),
@@ -365,7 +434,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           ]),
       ...session.restingPlayers,
     ];
-    final uniquePlayers = <String, Player>{for (final p in players) p.id: p}.values
+    final uniquePlayers = <String, Player>{for (final p in players) p.id: p}
+        .values
         .toList()
       ..sort((a, b) => a.yomigana.compareTo(b.yomigana));
     if (uniquePlayers.isEmpty || !mounted) return;
@@ -395,40 +465,49 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     setState(() => _selectedPlayer = selected);
   }
 
-  Widget _buildFABs(Session? session, ColorScheme colorScheme) => Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.fabBottomOffset),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            if (session != null) ...[
-              FloatingActionButton.small(
-                heroTag: 'recalc',
-                tooltip: 'このセッションを再作成',
-                elevation: 2,
-                backgroundColor: colorScheme.secondaryContainer,
-                foregroundColor: colorScheme.onSecondaryContainer,
-                onPressed: _sessionNotifier.isGenerating
-                    ? null
-                    : () => _showSettings(true),
-                child: const Icon(Icons.refresh_rounded),
-              ),
-              const SizedBox(height: 12),
-            ],
-            FloatingActionButton(
-              heroTag: 'add_match',
-              elevation: 4,
-              tooltip: '試合を作成',
-              onPressed: _sessionNotifier.isGenerating
-                  ? null
-                  : () => _showSettings(false),
-              child: Icon(session == null
-                  ? Icons.play_arrow_rounded
-                  : Icons.add_rounded),
+  Widget _buildFABs(Session? session, ColorScheme colorScheme) {
+    final isActionBlocked =
+        _sessionNotifier.isGenerating || _isActionCoolingDown;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.fabBottomOffset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (session != null) ...[
+            FloatingActionButton.small(
+              heroTag: 'recalc',
+              tooltip: _resolveFabTooltip(isRecalc: true),
+              elevation: 2,
+              backgroundColor: colorScheme.secondaryContainer,
+              foregroundColor: colorScheme.onSecondaryContainer,
+              onPressed: isActionBlocked ? null : () => _showSettings(true),
+              child: const Icon(Icons.refresh_rounded),
             ),
+            const SizedBox(height: 12),
           ],
-        ),
-      );
+          FloatingActionButton(
+            heroTag: 'add_match',
+            elevation: 4,
+            tooltip: _resolveFabTooltip(isRecalc: false),
+            onPressed: isActionBlocked ? null : () => _showSettings(false),
+            child: Icon(
+                session == null ? Icons.play_arrow_rounded : Icons.add_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _resolveFabTooltip({required bool isRecalc}) {
+    if (_sessionNotifier.isGenerating) {
+      return '組み合わせを計算中です。完了までお待ちください';
+    }
+    if (_isActionCoolingDown) {
+      return '連続実行を防ぐため、少し待ってから操作してください';
+    }
+    return isRecalc ? 'このセッションを再作成' : '試合を作成';
+  }
 
   void _handleTap(Session session, Player p) async {
     if (_selectedPlayer == null) {
@@ -469,9 +548,37 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           _updateIndexSafely(targetIndex: _sessionNotifier.sessions.length - 1);
         }
       }
+      await _notifyGenerationCompleted();
+      _startActionCooldown();
     } catch (e) {
       _showError(e.toString());
     }
+  }
+
+  void _startActionCooldown() {
+    _cooldownTimer?.cancel();
+    if (!mounted) return;
+    setState(() => _isActionCoolingDown = true);
+    _cooldownTimer = Timer(_kPostGenerateCooldown, () {
+      if (!mounted) return;
+      setState(() => _isActionCoolingDown = false);
+    });
+  }
+
+  Future<void> _notifyGenerationCompleted() async {
+    if (!mounted) return;
+    await HapticFeedback.selectionClick();
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('組み合わせの作成が完了しました'),
+          duration: Duration(milliseconds: 1200),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   void _showError(String m) => showDialog(
