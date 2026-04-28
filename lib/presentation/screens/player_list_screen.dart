@@ -29,6 +29,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   int? _cachedPoolHash;
   String? _cachedQuery;
   _MemoizedPlayerListData? _cachedPlayerListData;
+  List<_PlayerSearchIndexEntry>? _cachedSearchIndex;
 
   @override
   void didChangeDependencies() {
@@ -233,6 +234,8 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSearchField(theme),
+                    const SizedBox(height: 8),
+                    _buildSearchMeta(theme),
                     const SizedBox(height: 12),
                     _buildQuickActions(theme),
                     const SizedBox(height: 8),
@@ -428,7 +431,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                         ),
                       );
                     },
-                    child: data.maleLabels.isEmpty && data.femaleLabels.isEmpty
+                    child: data.filteredPool.isEmpty
                         ? Padding(
                             key: const ValueKey('empty-search-result'),
                             padding: const EdgeInsets.symmetric(
@@ -443,14 +446,20 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                               ),
                             ),
                           )
-                        : _buildGroupedMembersSection(
-                            useSingleColumn: useSingleColumn,
-                            groupedMales: data.groupedMales,
-                            maleLabels: data.maleLabels,
-                            groupedFemales: data.groupedFemales,
-                            femaleLabels: data.femaleLabels,
-                            theme: theme,
-                          ),
+                        : data.hasSearchQuery
+                            ? _buildWrap(
+                                data.filteredPool,
+                                key: const ValueKey('search-results-list'),
+                                showCheckbox: true,
+                              )
+                            : _buildGroupedMembersSection(
+                                useSingleColumn: useSingleColumn,
+                                groupedMales: data.groupedMales,
+                                maleLabels: data.maleLabels,
+                                groupedFemales: data.groupedFemales,
+                                femaleLabels: data.femaleLabels,
+                                theme: theme,
+                              ),
                   ),
                 ],
               ),
@@ -544,6 +553,114 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     );
   }
 
+
+  Widget _buildSearchMeta(ThemeData theme) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        _playerNotifier,
+        _sessionNotifier,
+        _searchQueryNotifier,
+      ]),
+      builder: (context, _) {
+        final allPlayers = _sessionNotifier.playerStatsPool.all;
+        final data = _getMemoizedPlayerListData(
+          allPlayers: allPlayers,
+          query: _searchQueryNotifier.value,
+        );
+        final hitCount = data.filteredPool.length;
+        final totalCount = allPlayers.length;
+        final hasNoResult = hitCount == 0;
+
+        return Row(
+          children: [
+            Expanded(
+              child: Text(
+                '検索ヒット件数: $hitCount / 全$totalCount件',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: hasNoResult
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => _showAddMemberTypeSelector(context),
+              icon: const Icon(Icons.person_add_alt_1),
+              label: Text(hasNoResult ? '該当なし→新規追加' : '新規追加'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  List<_PlayerSearchIndexEntry> _buildSearchIndex(
+    List<PlayerWithStats> allPlayers,
+    int poolHash,
+  ) {
+    if (_cachedPoolHash == poolHash && _cachedSearchIndex != null) {
+      return _cachedSearchIndex!;
+    }
+
+    final index = allPlayers
+        .map(
+          (playerWithStats) => _PlayerSearchIndexEntry(
+            playerWithStats: playerWithStats,
+            nameIndex: _normalizeSearchText(playerWithStats.player.name),
+            yomiganaIndex: _normalizeSearchText(playerWithStats.player.yomigana),
+          ),
+        )
+        .toList(growable: false);
+    _cachedSearchIndex = index;
+    return index;
+  }
+
+  int _calculateMatchScore({
+    required String normalizedQuery,
+    required String nameIndex,
+    required String yomiganaIndex,
+  }) {
+    int scoreForTarget(String target) {
+      if (target.isEmpty || normalizedQuery.isEmpty) return 0;
+      if (target.startsWith(normalizedQuery)) {
+        return 200 + normalizedQuery.length;
+      }
+      if (target.contains(normalizedQuery)) {
+        return 100 + normalizedQuery.length;
+      }
+      return 0;
+    }
+
+    final nameScore = scoreForTarget(nameIndex);
+    final yomiganaScore = scoreForTarget(yomiganaIndex);
+    if (nameScore == 0 && yomiganaScore == 0) return 0;
+    final bothMatchBonus = nameScore > 0 && yomiganaScore > 0 ? 10 : 0;
+    return (nameScore > yomiganaScore ? nameScore : yomiganaScore) +
+        bothMatchBonus;
+  }
+
+  String _normalizeSearchText(String input) {
+    if (input.isEmpty) return '';
+
+    final widthNormalized = input
+        .replaceAllMapped(RegExp(r'[！-～]'),
+            (match) => String.fromCharCode(match.group(0)!.codeUnitAt(0) - 0xFEE0))
+        .replaceAll('　', ' ')
+        .toLowerCase();
+
+    final kanaNormalized = String.fromCharCodes(
+      widthNormalized.runes.map((rune) {
+        if (rune >= 0x30A1 && rune <= 0x30F6) {
+          return rune - 0x60;
+        }
+        return rune;
+      }),
+    );
+
+    return kanaNormalized.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
   _MemoizedPlayerListData _getMemoizedPlayerListData({
     required List<PlayerWithStats> allPlayers,
     required String query,
@@ -555,27 +672,48 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       return _cachedPlayerListData!;
     }
 
-    final filteredPool = query.isEmpty
-        ? allPlayers
-        : allPlayers
-            .where((p) =>
-                p.player.name.contains(query) || p.player.yomigana.contains(query))
+    final normalizedQuery = _normalizeSearchText(query);
+    final searchIndex = _buildSearchIndex(allPlayers, poolHash);
+
+    final filteredPlayers = normalizedQuery.isEmpty
+        ? (List<PlayerWithStats>.from(allPlayers)
+          ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana)))
+        : (searchIndex
+            .map(
+              (entry) => (
+                playerWithStats: entry.playerWithStats,
+                score: _calculateMatchScore(
+                  normalizedQuery: normalizedQuery,
+                  nameIndex: entry.nameIndex,
+                  yomiganaIndex: entry.yomiganaIndex,
+                ),
+              ),
+            )
+            .where((entry) => entry.score > 0)
+            .toList(growable: false)
+          ..sort((a, b) {
+            final scoreCompare = b.score.compareTo(a.score);
+            if (scoreCompare != 0) return scoreCompare;
+            return a.playerWithStats.player.yomigana
+                .compareTo(b.playerWithStats.player.yomigana);
+          }))
+            .map((entry) => entry.playerWithStats)
             .toList(growable: false);
 
-    final activeMales = filteredPool
+    final activeMales = filteredPlayers
         .where((p) => p.player.isActive && p.player.gender == Gender.male)
         .toList()
       ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
-    final activeFemales = filteredPool
+    final activeFemales = filteredPlayers
         .where((p) => p.player.isActive && p.player.gender == Gender.female)
         .toList()
       ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
 
     final groupedMales = _getGrouped(
-      filteredPool.where((p) => p.player.gender == Gender.male).toList(),
+      filteredPlayers.where((p) => p.player.gender == Gender.male).toList(),
     );
     final groupedFemales = _getGrouped(
-      filteredPool.where((p) => p.player.gender == Gender.female).toList(),
+      filteredPlayers.where((p) => p.player.gender == Gender.female).toList(),
     );
 
     final maleLabels = groupedMales.keys.toList()
@@ -584,13 +722,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       ..sort((a, b) => _labelOrder(a).compareTo(_labelOrder(b)));
 
     final memoized = _MemoizedPlayerListData(
-      filteredPool: filteredPool,
+      filteredPool: filteredPlayers,
       activeMales: activeMales,
       activeFemales: activeFemales,
       groupedMales: groupedMales,
       groupedFemales: groupedFemales,
       maleLabels: maleLabels,
       femaleLabels: femaleLabels,
+      hasSearchQuery: normalizedQuery.isNotEmpty,
     );
     _cachedPoolHash = poolHash;
     _cachedQuery = query;
@@ -609,14 +748,15 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       runSpacing: 8,
       children: [
         const AppSectionHeader(title: '全メンバー', subtitle: '五十音順'),
-        if (query.isNotEmpty)
-          Text(
-            '$hitCount件 / 全$totalCount件',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+        Text(
+          '$hitCount件 / 全$totalCount件',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: query.isNotEmpty
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
+        ),
       ],
     );
   }
@@ -624,9 +764,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
   Map<String, List<PlayerWithStats>> _getGrouped(
       List<PlayerWithStats> players) {
     final grouped = <String, List<PlayerWithStats>>{};
-    final sorted = List<PlayerWithStats>.from(players)
-      ..sort((a, b) => a.player.yomigana.compareTo(b.player.yomigana));
-    for (var p in sorted) {
+    for (final p in players) {
       final label = _getIndexLabel(p.player.yomigana);
       grouped.putIfAbsent(label, () => []).add(p);
     }
@@ -730,9 +868,14 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
     );
   }
 
-  Widget _buildWrap(List<PlayerWithStats> players,
-      {bool showCheckbox = false, bool showStats = false}) {
+  Widget _buildWrap(
+    List<PlayerWithStats> players, {
+    Key? key,
+    bool showCheckbox = false,
+    bool showStats = false,
+  }) {
     return Wrap(
+      key: key,
       spacing: 10,
       runSpacing: 10,
       children: players.map((p) {
@@ -1884,6 +2027,7 @@ class _MemoizedPlayerListData {
   final Map<String, List<PlayerWithStats>> groupedFemales;
   final List<String> maleLabels;
   final List<String> femaleLabels;
+  final bool hasSearchQuery;
 
   const _MemoizedPlayerListData({
     required this.filteredPool,
@@ -1893,7 +2037,20 @@ class _MemoizedPlayerListData {
     required this.groupedFemales,
     required this.maleLabels,
     required this.femaleLabels,
+    required this.hasSearchQuery,
   });
+}
+
+class _PlayerSearchIndexEntry {
+  const _PlayerSearchIndexEntry({
+    required this.playerWithStats,
+    required this.nameIndex,
+    required this.yomiganaIndex,
+  });
+
+  final PlayerWithStats playerWithStats;
+  final String nameIndex;
+  final String yomiganaIndex;
 }
 
 class _BulkAddRowInput {
