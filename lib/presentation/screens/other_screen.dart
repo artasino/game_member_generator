@@ -24,21 +24,24 @@ class OtherScreen extends StatefulWidget {
 
 class _OtherScreenState extends State<OtherScreen> {
   String _versionText = '';
+  String _versionFallbackText = '';
   List<ReleaseNote> _loadedReleaseNotes = [];
+  bool _isInitialized = false;
 
   ReleaseNote? get _latestReleaseNote =>
       _loadedReleaseNotes.isEmpty ? null : _loadedReleaseNotes.first;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInitialized) return;
+    _isInitialized = true;
+    _versionFallbackText = AppLocalizations.of(context).otherVersionFallback;
+    _versionText = _versionFallbackText;
     _loadInitialData();
   }
 
   Future<void> _loadInitialData() async {
-    if (mounted) {
-      _versionText = AppLocalizations.of(context).otherVersionFallback;
-    }
     await Future.wait([
       _loadVersion(),
       _loadNotes(),
@@ -91,7 +94,7 @@ class _OtherScreenState extends State<OtherScreen> {
 
   String get _latestReleaseVersionText {
     if (_loadedReleaseNotes.isEmpty) {
-      return AppLocalizations.of(context).otherVersionFallback;
+      return _versionFallbackText;
     }
     return 'v${_loadedReleaseNotes.first.version}';
   }
