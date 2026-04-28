@@ -434,7 +434,8 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
           ]),
       ...session.restingPlayers,
     ];
-    final uniquePlayers = <String, Player>{for (final p in players) p.id: p}.values
+    final uniquePlayers = <String, Player>{for (final p in players) p.id: p}
+        .values
         .toList()
       ..sort((a, b) => a.yomigana.compareTo(b.yomigana));
     if (uniquePlayers.isEmpty || !mounted) return;
@@ -468,34 +469,32 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
     final isActionBlocked =
         _sessionNotifier.isGenerating || _isActionCoolingDown;
     return Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.fabBottomOffset),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            if (session != null) ...[
-              FloatingActionButton.small(
-                heroTag: 'recalc',
-                tooltip: _resolveFabTooltip(isRecalc: true),
-                elevation: 2,
-                backgroundColor: colorScheme.secondaryContainer,
-                foregroundColor: colorScheme.onSecondaryContainer,
-                onPressed: isActionBlocked ? null : () => _showSettings(true),
-                child: const Icon(Icons.refresh_rounded),
-              ),
-              const SizedBox(height: 12),
-            ],
-            FloatingActionButton(
-              heroTag: 'add_match',
-              elevation: 4,
-              tooltip: _resolveFabTooltip(isRecalc: false),
-              onPressed: isActionBlocked ? null : () => _showSettings(false),
-              child: Icon(session == null
-                  ? Icons.play_arrow_rounded
-                  : Icons.add_rounded),
+      padding: const EdgeInsets.only(bottom: AppSpacing.fabBottomOffset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (session != null) ...[
+            FloatingActionButton.small(
+              heroTag: 'recalc',
+              tooltip: _resolveFabTooltip(isRecalc: true),
+              elevation: 2,
+              backgroundColor: colorScheme.secondaryContainer,
+              foregroundColor: colorScheme.onSecondaryContainer,
+              onPressed: isActionBlocked ? null : () => _showSettings(true),
+              child: const Icon(Icons.refresh_rounded),
             ),
+            const SizedBox(height: 12),
           ],
-        ),
+          FloatingActionButton(
+            heroTag: 'add_match',
+            elevation: 4,
+            tooltip: _resolveFabTooltip(isRecalc: false),
+            onPressed: isActionBlocked ? null : () => _showSettings(false),
+            child: Icon(
+                session == null ? Icons.play_arrow_rounded : Icons.add_rounded),
+          ),
+        ],
       ),
     );
   }
