@@ -1,6 +1,8 @@
 import 'dart:developer' as dev;
 import 'dart:isolate';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:game_member_generator/domain/entities/player.dart';
 import 'package:game_member_generator/domain/entities/player_stats_pool.dart';
 
@@ -67,24 +69,7 @@ class MatchMakingService {
 
     late final List<_GameDto> gameDtos;
     try {
-      gameDtos = await Isolate.run(
-        () {
-          final domainMatchTypes = matchDto.matchTypeIndexes
-              .map((index) => MatchType.values[index])
-              .toList(growable: false);
-
-          final domainPool = matchDto.toDomainPool();
-          final generatedGames = algorithm.generateMatches(
-            matchTypes: domainMatchTypes,
-            playerPool: domainPool,
-          );
-
-          return generatedGames
-              .map((game) => _GameDto.fromDomain(game))
-              .toList(growable: false);
-        },
-        debugName: 'matchmaking_search_isolate',
-      );
+      gameDtos = await _generateGameDtos(matchDto);
     } finally {
       final endAt = DateTime.now();
       dev.Timeline.instantSync(
@@ -114,6 +99,33 @@ class MatchMakingService {
     return MatchGenerationResult(
       games: games,
       restingPlayers: restingPlayers,
+    );
+  }
+
+  Future<List<_GameDto>> _generateGameDtos(_MatchGenerationInputDto matchDto) async {
+    List<_GameDto> runGeneration() {
+      final domainMatchTypes = matchDto.matchTypeIndexes
+          .map((index) => MatchType.values[index])
+          .toList(growable: false);
+
+      final domainPool = matchDto.toDomainPool();
+      final generatedGames = algorithm.generateMatches(
+        matchTypes: domainMatchTypes,
+        playerPool: domainPool,
+      );
+
+      return generatedGames
+          .map((game) => _GameDto.fromDomain(game))
+          .toList(growable: false);
+    }
+
+    if (kIsWeb) {
+      return runGeneration();
+    }
+
+    return Isolate.run(
+      runGeneration,
+      debugName: 'matchmaking_search_isolate',
     );
   }
 }
