@@ -4,6 +4,7 @@ enum MatchType {
   maleDoubles,
   femaleDoubles,
   mixedDoubles,
+  fixedDoubles,
 }
 
 extension MatchTypeX on MatchType {
@@ -15,6 +16,8 @@ extension MatchTypeX on MatchType {
         return 'WD';
       case MatchType.mixedDoubles:
         return 'XD';
+      case MatchType.fixedDoubles:
+        return 'FD';
     }
   }
 
@@ -27,6 +30,8 @@ extension MatchTypeX on MatchType {
         return 0;
       case MatchType.mixedDoubles:
         return 2;
+      case MatchType.fixedDoubles:
+        return 0;
     }
   }
 
@@ -39,6 +44,20 @@ extension MatchTypeX on MatchType {
         return 4;
       case MatchType.mixedDoubles:
         return 2;
+      case MatchType.fixedDoubles:
+        return 0;
+    }
+  }
+
+  /// 男女の指定があるか
+  bool get isFixedGender {
+    switch (this) {
+      case MatchType.maleDoubles:
+      case MatchType.femaleDoubles:
+      case MatchType.mixedDoubles:
+        return true;
+      case MatchType.fixedDoubles:
+        return false;
     }
   }
 
@@ -50,6 +69,7 @@ extension MatchTypeX on MatchType {
       case MatchType.femaleDoubles:
         return gender == Gender.female;
       case MatchType.mixedDoubles:
+      case MatchType.fixedDoubles:
         return true;
     }
   }

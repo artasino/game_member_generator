@@ -99,6 +99,7 @@ class PlayerChip extends StatelessWidget {
         ? (stats.typeCounts[MatchType.maleDoubles] ?? 0)
         : (stats.typeCounts[MatchType.femaleDoubles] ?? 0);
     final mxCount = stats.typeCounts[MatchType.mixedDoubles] ?? 0;
+    final fdCount = stats.typeCounts[MatchType.fixedDoubles] ?? 0;
 
     return InkWell(
       onTap: onTap,
@@ -155,6 +156,7 @@ class PlayerChip extends StatelessWidget {
                           stats: stats,
                           sameGenderCount: sameGenderCount,
                           mxCount: mxCount,
+                          fdCount: fdCount,
                           token: token,
                         ),
                       ]
@@ -227,6 +229,7 @@ class _PlayerChipStats extends StatelessWidget {
   final PlayerStats stats;
   final int sameGenderCount;
   final int mxCount;
+  final int fdCount;
   final _PlayerChipVisualToken token;
 
   const _PlayerChipStats({
@@ -234,6 +237,7 @@ class _PlayerChipStats extends StatelessWidget {
     required this.stats,
     required this.sameGenderCount,
     required this.mxCount,
+    required this.fdCount,
     required this.token,
   });
 
@@ -260,7 +264,7 @@ class _PlayerChipStats extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.sm),
             Text(
-              '${player.gender == Gender.male ? "男" : "女"}$sameGenderCount 混$mxCount',
+              '${player.gender == Gender.male ? "男" : "女"}$sameGenderCount 混$mxCount 他$fdCount',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: token.statsTextColor,
                 fontWeight: FontWeight.w600,

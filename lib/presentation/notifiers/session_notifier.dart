@@ -63,7 +63,7 @@ class SessionNotifier extends ChangeNotifier {
   RequirementResult checkRequirements(List<MatchType> types,
       {bool silent = false}) {
     final counts = _requirementService.calculateRequired(types);
-    final cacheKey = '${counts.male}-${counts.female}';
+    final cacheKey = '${counts.male}-${counts.female}-${counts.flexible}';
 
     if (!silent && _requirementCache.containsKey(cacheKey)) {
       return _requirementCache[cacheKey]!;

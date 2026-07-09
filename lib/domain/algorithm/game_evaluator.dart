@@ -41,6 +41,18 @@ class GameEvaluator {
     int maleOffset = 0;
     int femaleOffset = 0;
 
+    // FD枠のプレイヤーをまとめて取得し、固定シードでシャッフルして男女をランダムに混ぜる
+    final flexPlayers = [
+      ...selectedMales.skip(matchTypes
+          .where((t) => t != MatchType.fixedDoubles)
+          .fold(0, (sum, t) => sum + t.requiredMaleCount)),
+      ...selectedFemales.skip(matchTypes
+          .where((t) => t != MatchType.fixedDoubles)
+          .fold(0, (sum, t) => sum + t.requiredFemaleCount)),
+    ];
+    flexPlayers.shuffle(Random(42));
+    int flexOffset = 0;
+
     for (var type in matchTypes) {
       final GameScore gameScore;
       if (type == MatchType.maleDoubles) {
@@ -51,12 +63,21 @@ class GameEvaluator {
         final players = selectedFemales.skip(femaleOffset).take(4).toList();
         gameScore = getBestGameForFour(type, players);
         femaleOffset += 4;
-      } else {
+      } else if (type == MatchType.mixedDoubles) {
         final ms = selectedMales.skip(maleOffset).take(2).toList();
         final fs = selectedFemales.skip(femaleOffset).take(2).toList();
         gameScore = getBestMixedGame(type, ms, fs);
         maleOffset += 2;
         femaleOffset += 2;
+      } else if (type == MatchType.fixedDoubles) {
+        // FD: シャッフル済みの柔軟枠から4人取る
+        final players = flexPlayers.skip(flexOffset).take(4).toList();
+        gameScore = getBestGameForFour(type, players);
+        flexOffset += 4;
+        // FD自体にペナルティを課して、他の形式（MD/WD/XD）が組めるならそちらを優先するようにする
+        score += PenaltyWeights.typeImbalance * 2;
+      } else {
+        gameScore = GameScore(0, bestGames.first); // fallback
       }
       score += gameScore.score;
       bestGames.add(gameScore.game);
@@ -89,6 +110,12 @@ class GameEvaluator {
           PenaltyWeights.typeImbalance;
       penalty += _calculateSameTypeAsPrevious(ps, type);
     }
+
+    // FD (Fixed Doubles) の場合はペアや対戦相手の重複を評価しない（試合数・種目のみを考慮）
+    if (type == MatchType.fixedDoubles) {
+      return penalty;
+    }
+
     penalty += _calculatePairCountPenalty(p1, p2, p3, p4);
     penalty += _calculateOpponentCountPenalty(p1, p2, p3, p4);
     return penalty;
