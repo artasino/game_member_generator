@@ -20,6 +20,8 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
     required List<PlayerWithStats> mustFemales,
     required List<PlayerWithStats> candidateMales,
     required List<PlayerWithStats> candidateFemales,
+    required int requiredMale,
+    required int requiredFemale,
     List<Set<String>> previousMaleSelections = const [],
     List<Set<String>> previousFemaleSelections = const [],
   }) {
@@ -28,10 +30,10 @@ class StochasticCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
     var state = AlgorithmsState.initial(
       mustMales: mustMales,
       candidateMales: candidateMales,
-      requiredMale: types.requiredPlayerCount(isMale: true),
+      requiredMale: requiredMale,
       mustFemales: mustFemales,
       candidateFemales: candidateFemales,
-      requiredFemale: types.requiredPlayerCount(isMale: false),
+      requiredFemale: requiredFemale,
     );
 
     SessionScore bestSession = _evaluate(

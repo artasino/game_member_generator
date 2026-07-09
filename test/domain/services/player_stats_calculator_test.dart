@@ -70,5 +70,28 @@ void main() {
       expect(p2Stats.opponentCounts['p3'], 2);
       expect(p2Stats.lastMatchType, MatchType.maleDoubles);
     });
+
+    test('FixedDoubles (FD) 形式の試合は出場回数のみカウントし、ペア・対戦履歴は記録しない', () {
+      final calculator = PlayerStatsCalculator();
+      final fdSessions = [
+        Session(
+          1,
+          [Game(MatchType.fixedDoubles, Team(p1, p2), Team(p3, p4))],
+          restingPlayers: [p5],
+        ),
+      ];
+
+      final pool =
+          calculator.buildPool(allPlayers: players, sessions: fdSessions);
+      final p1Stats = pool.getPlayer('p1').stats;
+
+      // 出場回数とタイプ別カウントは記録される
+      expect(p1Stats.totalMatches, 1);
+      expect(p1Stats.typeCounts[MatchType.fixedDoubles], 1);
+
+      // ペア履歴や対戦履歴は空のまま
+      expect(p1Stats.partnerCounts, isEmpty);
+      expect(p1Stats.opponentCounts, isEmpty);
+    });
   });
 }

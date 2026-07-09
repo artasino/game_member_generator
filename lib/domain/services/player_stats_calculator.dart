@@ -166,6 +166,12 @@ class PlayerStatsCalculator {
         (accumulator.totalMatches[playerId] ?? 0) + 1;
     accumulator.typeCounts[playerId]![type] =
         (accumulator.typeCounts[playerId]![type] ?? 0) + 1;
+
+    // FD (Fixed Doubles) は詳細なペア・対戦履歴の集計をスキップ（出場回数のみカウント）
+    if (type == MatchType.fixedDoubles) {
+      return;
+    }
+
     accumulator.partnerCounts[playerId]![partner.id] =
         (accumulator.partnerCounts[playerId]![partner.id] ?? 0) + 1;
 
