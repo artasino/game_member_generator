@@ -351,5 +351,50 @@ void main() {
           selectedMales.map((e) => e.id).any((id) => id == 'm3' || id == 'm4'),
           isTrue);
     });
+
+    test('FD (Fixed Doubles) の生成: 男女比が偏っていても全員選出されること', () {
+      // 男性7人、女性1人。MD(4人) + FD(4人) の構成
+      final males = [
+        p('m1', Gender.male),
+        p('m2', Gender.male),
+        p('m3', Gender.male),
+        p('m4', Gender.male),
+        p('m5', Gender.male),
+        p('m6', Gender.male),
+        p('m7', Gender.male),
+      ];
+      final females = [
+        p('f1', Gender.female),
+      ];
+
+      final result = algorithm.generateMatches(
+        matchTypes: [MatchType.maleDoubles, MatchType.fixedDoubles],
+        playerPool: toPool([...males, ...females]),
+      );
+
+      expect(result.length, 2);
+      final playingIds = result
+          .expand((g) => [
+                g.teamA.player1.id,
+                g.teamA.player2.id,
+                g.teamB.player1.id,
+                g.teamB.player2.id
+              ])
+          .toSet();
+
+      // 全員（8人）が試合に入っていること
+      expect(playingIds.length, 8);
+      expect(playingIds, contains('f1'));
+
+      final fdGame = result.firstWhere((g) => g.type == MatchType.fixedDoubles);
+      // FDに女性(f1)が入っているはず（MDには入れないため）
+      final fdPlayerIds = [
+        fdGame.teamA.player1.id,
+        fdGame.teamA.player2.id,
+        fdGame.teamB.player1.id,
+        fdGame.teamB.player2.id
+      ];
+      expect(fdPlayerIds, contains('f1'));
+    });
   });
 }

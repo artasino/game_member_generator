@@ -46,10 +46,27 @@ void main() {
         MatchType.maleDoubles,
         MatchType.femaleDoubles,
         MatchType.mixedDoubles,
+        MatchType.fixedDoubles,
       ]);
 
       expect(counts.male, 6);
       expect(counts.female, 6);
+      expect(counts.flexible, 4);
+      expect(counts.total, 16);
+    });
+
+    test('check は全体の人数不足（FD含む）を判定できる', () {
+      final pool = PlayerStatsPool([
+        ps('m1', Gender.male),
+        ps('m2', Gender.male),
+        ps('f1', Gender.female),
+      ]);
+
+      // 合計4人必要な FD 1試合
+      final result = service.check([MatchType.fixedDoubles], pool);
+
+      expect(result.canGenerate, isFalse);
+      expect(result.errorMessage, contains('全体の人数が不足しています'));
     });
 
     test('check は inactive / isMustRest を除外して不足判定する', () {

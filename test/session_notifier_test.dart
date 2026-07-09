@@ -336,7 +336,30 @@ void main() {
 
         expect(maleOnly.canGenerate, isFalse);
       expect(maleOnly.errorMessage, contains('男性が不足します'));
-    });
+      });
+
+      test('FD (Fixed Doubles) を含む構成のバリデーションができること', () async {
+        const m1 =
+            Player(id: 'm1', name: 'M1', yomigana: 'm1', gender: Gender.male);
+        const m2 =
+            Player(id: 'm2', name: 'M2', yomigana: 'm2', gender: Gender.male);
+        const f1 =
+            Player(id: 'f1', name: 'F1', yomigana: 'f1', gender: Gender.female);
+        const f2 =
+            Player(id: 'f2', name: 'F2', yomigana: 'f2', gender: Gender.female);
+
+        playerRepo.players = [m1, m2, f1, f2];
+        await notifier.onPlayersUpdated();
+
+        // 合計4人いれば FD は生成可能
+        final fdOnly = notifier.checkRequirements([MatchType.fixedDoubles]);
+        expect(fdOnly.canGenerate, isTrue);
+
+        // 5人必要な構成（MD + FD など）は生成不可
+        final tooMany = notifier
+            .checkRequirements([MatchType.maleDoubles, MatchType.fixedDoubles]);
+        expect(tooMany.canGenerate, isFalse);
+      });
     });
   });
 }
