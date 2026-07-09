@@ -19,12 +19,11 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
     required List<PlayerWithStats> mustFemales,
     required List<PlayerWithStats> candidateMales,
     required List<PlayerWithStats> candidateFemales,
+    required int requiredMale,
+    required int requiredFemale,
     List<Set<String>> previousMaleSelections = const [],
     List<Set<String>> previousFemaleSelections = const [],
   }) {
-    var requiredMale = types.requiredPlayerCount(isMale: true);
-    var requiredFemale = types.requiredPlayerCount(isMale: false);
-
     final neededMale = requiredMale - mustMales.length;
     final neededFemale = requiredFemale - mustFemales.length;
 
@@ -124,6 +123,22 @@ class BestForceCourtAssignmentAlgorithm implements CourtAssignmentAlgorithm {
         final remaining = females.where((f) => !selected.contains(f)).toList();
         final gameScore = gameEvaluator.getBestGameForFour(type, selected);
         final next = _recurseAssignment(types, typeIndex + 1, males, remaining);
+        if (gameScore.score + next.score < bestScore) {
+          bestScore = gameScore.score + next.score;
+          bestGames = [gameScore.game, ...next.games];
+        }
+      }
+    } else if (type == MatchType.fixedDoubles) {
+      final combined = [...males, ...females];
+      final combos = _getCombinations(combined, 4);
+      for (final selected in combos) {
+        final selectedIds = selected.map((p) => p.player.id).toSet();
+        final remM =
+            males.where((m) => !selectedIds.contains(m.player.id)).toList();
+        final remF =
+            females.where((f) => !selectedIds.contains(f.player.id)).toList();
+        final gameScore = gameEvaluator.getBestGameForFour(type, selected);
+        final next = _recurseAssignment(types, typeIndex + 1, remM, remF);
         if (gameScore.score + next.score < bestScore) {
           bestScore = gameScore.score + next.score;
           bestGames = [gameScore.game, ...next.games];

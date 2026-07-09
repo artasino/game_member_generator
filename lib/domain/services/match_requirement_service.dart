@@ -43,11 +43,20 @@ class MatchRequirementService {
         allAvailable.where((p) => p.player.gender == Gender.female).toList();
 
     // 3. 基本的な人数チェック
+    // 3-1. 固定枠の性別チェック
     if (males.length < counts.male || females.length < counts.female) {
       return RequirementResult(
         canGenerate: false,
         errorMessage: _buildShortageMsg(
             counts.male - males.length, counts.female - females.length),
+      );
+    }
+    // 3-2. 全体の人数チェック (FD含む)
+    if (allAvailable.length < counts.total) {
+      return RequirementResult(
+        canGenerate: false,
+        errorMessage:
+            '全体の人数が不足しています (不足: ${counts.total - allAvailable.length}人)',
       );
     }
 
@@ -89,18 +98,20 @@ class MatchRequirementService {
 
   /// 必要人数を算出
   RequiredPlayerCounts calculateRequired(List<MatchType> types) {
-    int m = 0, f = 0;
+    int m = 0, f = 0, flex = 0;
     for (final t in types) {
       if (t == MatchType.maleDoubles) {
         m += 4;
       } else if (t == MatchType.femaleDoubles) {
         f += 4;
-      } else {
+      } else if (t == MatchType.mixedDoubles) {
         m += 2;
         f += 2;
+      } else if (t == MatchType.fixedDoubles) {
+        flex += 4;
       }
     }
-    return RequiredPlayerCounts(male: m, female: f);
+    return RequiredPlayerCounts(male: m, female: f, flexible: flex);
   }
 
   /// 同時出場制限を考慮した「実質的な」有効人数を計算する
@@ -227,8 +238,15 @@ class MatchRequirementService {
 class RequiredPlayerCounts {
   final int male;
   final int female;
+  final int flexible;
 
-  const RequiredPlayerCounts({required this.male, required this.female});
+  const RequiredPlayerCounts({
+    required this.male,
+    required this.female,
+    this.flexible = 0,
+  });
+
+  int get total => male + female + flexible;
 }
 
 class EffectivePlayerCounts {

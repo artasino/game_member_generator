@@ -46,6 +46,7 @@ Color _getMatchTypeColor(BuildContext context, MatchType type) {
     MatchType.maleDoubles => Colors.blue.shade800,
     MatchType.femaleDoubles => Colors.pink.shade700,
     MatchType.mixedDoubles => Colors.orange.shade900,
+    MatchType.fixedDoubles => Colors.teal.shade700,
   };
 }
 
@@ -894,9 +895,8 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     var activeMenCount = pool.activeMales.length;
     var activeWomenCount = pool.activeFemales.length;
 
-    switch (autoCourtPolicy) {
-      case AutoCourtPolicy.genderSeparated:
-        return _recommendGenderSeparated(
+    final List<MatchType> baseTypes = switch (autoCourtPolicy) {
+      AutoCourtPolicy.genderSeparated => _recommendGenderSeparated(
           effective.male,
           effective.female,
           activeMenCount,
@@ -905,11 +905,10 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           femaleGameCount,
           maxMaleDoublesNumPossible,
           maxFemaleDoublesNumPossible,
-        );
-      case AutoCourtPolicy.mix:
-        return List.filled(maxMixNumPossible, MatchType.mixedDoubles).toList();
-      case AutoCourtPolicy.balance:
-        return _recommendBalanced(
+        ),
+      AutoCourtPolicy.mix =>
+        List.filled(maxMixNumPossible, MatchType.mixedDoubles).toList(),
+      AutoCourtPolicy.balance => _recommendBalanced(
           effective.male,
           effective.female,
           activeMenCount,
@@ -919,8 +918,18 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           maxMaleDoublesNumPossible,
           maxFemaleDoublesNumPossible,
           maxMixNumPossible,
-        );
+        ),
+    };
+
+    // 他の形式（MD/WD/XD）では埋めきれないが、人数が足りている場合に FD (Fixed Doubles) を追加
+    final counts = _requirementService.calculateRequired(baseTypes);
+    int remaining = (effective.male + effective.female).floor() - counts.total;
+    while (remaining >= 4 && baseTypes.length < autoCourtCount) {
+      baseTypes.add(MatchType.fixedDoubles);
+      remaining -= 4;
     }
+
+    return baseTypes;
   }
 
   List<MatchType> _recommendGenderSeparated(
