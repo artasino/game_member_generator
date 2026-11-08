@@ -13,6 +13,7 @@ PlayerWithStats ps(
   String? excludedPartnerId,
   bool isActive = true,
   bool isMustRest = false,
+  bool isEarlyDeparture = false,
   int totalMatches = 0,
   int sessionsSinceLastRest = 0,
 }) {
@@ -24,6 +25,7 @@ PlayerWithStats ps(
       gender: gender,
       isActive: isActive,
       isMustRest: isMustRest,
+      isEarlyDeparture: isEarlyDeparture,
       excludedPartnerId: excludedPartnerId,
     ),
     stats: PlayerStats(
@@ -69,12 +71,12 @@ void main() {
       expect(result.errorMessage, contains('全体の人数が不足しています'));
     });
 
-    test('check は inactive / isMustRest を除外して不足判定する', () {
+    test('check は inactive / isMustRest / isEarlyDeparture を除外して不足判定する', () {
       final pool = PlayerStatsPool([
         ps('m1', Gender.male),
         ps('m2', Gender.male, isActive: false),
         ps('m3', Gender.male, isMustRest: true),
-        ps('m4', Gender.male),
+        ps('m4', Gender.male, isEarlyDeparture: true),
       ]);
 
       final result = service.check([MatchType.maleDoubles], pool);

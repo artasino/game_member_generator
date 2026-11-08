@@ -879,17 +879,20 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
       spacing: 10,
       runSpacing: 10,
       children: players.map((p) {
-        return PlayerChip(
-          playerWithStats: p,
-          onTap: () {
-            _showActivateDeactivateDialog(context, p.player);
-          },
-          onLongPress: () {
-            _showAddEditDialog(context, player: p.player);
-          },
-          onOpenMenu: () => _showPlayerQuickMenu(context, p.player),
-          showCheckbox: showCheckbox,
-          showStats: showStats,
+        return GestureDetector(
+          onSecondaryTap: () => _showPlayerQuickMenu(context, p.player),
+          child: PlayerChip(
+            playerWithStats: p,
+            onTap: () {
+              _showActivateDeactivateDialog(context, p.player);
+            },
+            onLongPress: () {
+              _showAddEditDialog(context, player: p.player);
+            },
+            onOpenMenu: () => _showPlayerQuickMenu(context, p.player),
+            showCheckbox: showCheckbox,
+            showStats: showStats,
+          ),
         );
       }).toList(),
     );
@@ -910,6 +913,33 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _showAddEditDialog(context, player: player);
+                },
+              ),
+              SwitchListTile(
+                secondary: const Icon(Icons.coffee_outlined),
+                title: const Text('一時休み'),
+                subtitle: const Text('次の1試合のみお休み（回数最適化の人数からは削除しない）'),
+                value: player.isMustRest,
+                onChanged: (v) async {
+                  Navigator.pop(sheetContext);
+                  await _playerNotifier.updatePlayer(player.copyWith(
+                    isMustRest: v,
+                    isEarlyDeparture: v ? false : player.isEarlyDeparture,
+                  ));
+                },
+              ),
+              SwitchListTile(
+                secondary: Icon(Icons.exit_to_app,
+                    color: Theme.of(context).colorScheme.error),
+                title: const Text('早退'),
+                subtitle: const Text('これ以降の全試合お休み（回数最適化の人数から削除）'),
+                value: player.isEarlyDeparture,
+                onChanged: (v) async {
+                  Navigator.pop(sheetContext);
+                  await _playerNotifier.updatePlayer(player.copyWith(
+                    isEarlyDeparture: v,
+                    isMustRest: v ? false : player.isMustRest,
+                  ));
                 },
               ),
               ListTile(
@@ -1098,6 +1128,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
         TextEditingController(text: player?.yomigana ?? '');
     Gender selectedGender = player?.gender ?? Gender.male;
     bool isMustRest = player?.isMustRest ?? false;
+    bool isEarlyDeparture = player?.isEarlyDeparture ?? false;
     String? currentExcludedPartnerId = player?.excludedPartnerId;
 
     showDialog(
@@ -1202,17 +1233,44 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                       },
                     ),
                     const Divider(height: 32),
-                    SwitchListTile(
-                      title: const Text('次の試合は必ず休み',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.bold)),
-                      subtitle: const Text('選出から除外します',
-                          style: TextStyle(fontSize: 12)),
-                      value: isMustRest,
-                      onChanged: (v) {
-                        setState(() => isMustRest = v);
-                      },
-                      activeThumbColor: Theme.of(context).colorScheme.tertiary,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('一時休み',
+                                style: TextStyle(
+                                    fontSize: 14, fontWeight: FontWeight.bold)),
+                            value: isMustRest,
+                            onChanged: (v) {
+                              setState(() {
+                                isMustRest = v;
+                                if (v) isEarlyDeparture = false;
+                              });
+                            },
+                            activeThumbColor:
+                                Theme.of(context).colorScheme.tertiary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('早退',
+                                style: TextStyle(
+                                    fontSize: 14, fontWeight: FontWeight.bold)),
+                            value: isEarlyDeparture,
+                            onChanged: (v) {
+                              setState(() {
+                                isEarlyDeparture = v;
+                                if (v) isMustRest = false;
+                              });
+                            },
+                            activeThumbColor:
+                                Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1249,6 +1307,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                         yomigana: yomigana,
                         gender: selectedGender,
                         isMustRest: isMustRest,
+                        isEarlyDeparture: isEarlyDeparture,
                       ));
                     } else {
                       finalPlayerId =
@@ -1259,6 +1318,7 @@ class _PlayerListScreenState extends State<PlayerListScreen> {
                         yomigana: yomigana,
                         gender: selectedGender,
                         isMustRest: isMustRest,
+                        isEarlyDeparture: isEarlyDeparture,
                       ));
                     }
 

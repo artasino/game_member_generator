@@ -207,7 +207,19 @@ class _PlayerChipHeader extends StatelessWidget {
         ),
         if (player.isMustRest) ...[
           const SizedBox(width: AppSpacing.xs),
-          Icon(Icons.coffee_outlined, size: 14, color: token.mustRestIconColor),
+          Tooltip(
+            message: '一時休み',
+            child: Icon(Icons.coffee_outlined,
+                size: 14, color: token.mustRestIconColor),
+          ),
+        ],
+        if (player.isEarlyDeparture) ...[
+          const SizedBox(width: AppSpacing.xs),
+          Tooltip(
+            message: '早退',
+            child: Icon(Icons.exit_to_app,
+                size: 14, color: Theme.of(context).colorScheme.error),
+          ),
         ],
         const SizedBox(width: AppSpacing.xs),
         InkResponse(
