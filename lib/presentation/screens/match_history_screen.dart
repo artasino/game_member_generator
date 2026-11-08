@@ -347,6 +347,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                       AppSpacing.lg, 8, AppSpacing.lg, AppSpacing.lg),
                   child: GamesArea(
                     session: session,
+                    allSessions: _sessionNotifier.sessions,
                     pool: scopedPool,
                     scale: scale,
                     screenWidth: (constraints.maxWidth -

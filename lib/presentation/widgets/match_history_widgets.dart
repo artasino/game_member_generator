@@ -52,6 +52,7 @@ Color _getMatchTypeColor(BuildContext context, MatchType type) {
 
 class GamesArea extends StatelessWidget {
   final Session session;
+  final List<Session>? allSessions;
   final PlayerStatsPool pool;
   final double scale;
   final double screenWidth;
@@ -63,6 +64,7 @@ class GamesArea extends StatelessWidget {
   const GamesArea({
     super.key,
     required this.session,
+    this.allSessions,
     required this.pool,
     required this.scale,
     required this.screenWidth,
@@ -86,11 +88,14 @@ class GamesArea extends StatelessWidget {
       runSpacing: spacing,
       alignment: WrapAlignment.center,
       children: session.games.asMap().entries.map((e) {
+        final game = e.value;
+        final fourPlayerCount = _calculateFourPlayerMatchCount(game);
         return SizedBox(
           width: cardWidth.clamp(0, screenWidth),
           child: GameCard(
             index: e.key,
-            game: e.value,
+            game: game,
+            fourPlayerCount: fourPlayerCount,
             pool: pool,
             scale: scale,
             session: session,
@@ -102,6 +107,34 @@ class GamesArea extends StatelessWidget {
         );
       }).toList(),
     );
+  }
+
+  int _calculateFourPlayerMatchCount(Game game) {
+    final targetIds = {
+      game.teamA.player1.id,
+      game.teamA.player2.id,
+      game.teamB.player1.id,
+      game.teamB.player2.id,
+    };
+    if (targetIds.length != 4) return 0;
+
+    final targetSessions = allSessions ?? [session];
+    var count = 0;
+    for (final s in targetSessions) {
+      if (s.index > session.index) continue;
+      for (final g in s.games) {
+        final gIds = {
+          g.teamA.player1.id,
+          g.teamA.player2.id,
+          g.teamB.player1.id,
+          g.teamB.player2.id,
+        };
+        if (gIds.length == 4 && gIds.containsAll(targetIds)) {
+          count++;
+        }
+      }
+    }
+    return count;
   }
 
   int _calculateCrossAxisCount(int gameCount, double spacing) {
@@ -171,6 +204,7 @@ class GamesArea extends StatelessWidget {
 class GameCard extends StatelessWidget {
   final int index;
   final Game game;
+  final int fourPlayerCount;
   final PlayerStatsPool pool;
   final double scale;
   final Session session;
@@ -183,6 +217,7 @@ class GameCard extends StatelessWidget {
     super.key,
     required this.index,
     required this.game,
+    this.fourPlayerCount = 0,
     required this.pool,
     required this.scale,
     required this.session,
@@ -239,7 +274,10 @@ class GameCard extends StatelessWidget {
                     showPairInfo: showPairInfo && !isPortrait,
                   ),
                 ),
-                _VSDivider(scale: scale),
+                _VSDivider(
+                  scale: scale,
+                  fourPlayerCount: fourPlayerCount,
+                ),
                 Expanded(
                   child: TeamColumn(
                     team: game.teamB,
@@ -337,8 +375,12 @@ class _SidePairInfo extends StatelessWidget {
 
 class _VSDivider extends StatelessWidget {
   final double scale;
+  final int fourPlayerCount;
 
-  const _VSDivider({required this.scale});
+  const _VSDivider({
+    required this.scale,
+    this.fourPlayerCount = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -346,6 +388,7 @@ class _VSDivider extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 8 * scale),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             'VS',
@@ -355,6 +398,38 @@ class _VSDivider extends StatelessWidget {
               color: theme.colorScheme.outline.withValues(alpha: 0.4),
             ),
           ),
+          if (fourPlayerCount > 0) ...[
+            SizedBox(height: 2 * scale),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: 5 * scale,
+                vertical: 1.5 * scale,
+              ),
+              decoration: BoxDecoration(
+                color: fourPlayerCount > 1
+                    ? Colors.orange.shade700
+                    : theme.colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(4 * scale),
+                border: Border.all(
+                  color: fourPlayerCount > 1
+                      ? Colors.orange.shade900
+                      : theme.colorScheme.outlineVariant,
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                '$fourPlayerCount',
+                style: TextStyle(
+                  fontSize: 10 * scale,
+                  fontWeight: FontWeight.bold,
+                  color: fourPlayerCount > 1
+                      ? Colors.white
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+          SizedBox(height: 2 * scale),
           Container(
             width: 1.5,
             height: MatchHistoryLayoutTokens.vsDividerHeightBase * scale,

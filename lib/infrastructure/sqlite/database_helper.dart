@@ -28,7 +28,7 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'game_member_generator.db');
     return await openDatabase(
       path,
-      version: 7, // バージョンを 7 に上げました (在庫の単位対応)
+      version: 8,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE players(
@@ -38,6 +38,7 @@ class DatabaseHelper {
             gender INTEGER,
             isActive INTEGER,
             isMustRest INTEGER DEFAULT 0,
+            isEarlyDeparture INTEGER DEFAULT 0,
             excludedPartnerId TEXT
           )
         ''');
@@ -123,6 +124,14 @@ class DatabaseHelper {
                 'UPDATE shuttle_stocks SET unit_price = price_per_dozens');
           } catch (e) {
             // カラムが既に存在する場合などのエラーを無視
+          }
+        }
+        if (oldVersion < 8) {
+          try {
+            await db.execute(
+                'ALTER TABLE players ADD COLUMN isEarlyDeparture INTEGER DEFAULT 0');
+          } catch (e) {
+            // ignore
           }
         }
       },

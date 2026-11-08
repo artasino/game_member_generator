@@ -12,6 +12,7 @@ class Player extends Equatable {
   final Gender gender;
   final bool isActive;
   final bool isMustRest;
+  final bool isEarlyDeparture;
 
   /// the flag for excluded partner(they can't be in session together, e.g. for childcare)
   final String? excludedPartnerId;
@@ -23,6 +24,7 @@ class Player extends Equatable {
     required this.gender,
     this.isActive = true,
     this.isMustRest = false,
+    this.isEarlyDeparture = false,
     this.excludedPartnerId,
   });
 
@@ -33,6 +35,7 @@ class Player extends Equatable {
     Gender? gender,
     bool? isActive,
     bool? isMustRest,
+    bool? isEarlyDeparture,
     Object? excludedPartnerId = _excludedPartnerIdSentinel,
   }) {
     return Player(
@@ -42,6 +45,7 @@ class Player extends Equatable {
       gender: gender ?? this.gender,
       isActive: isActive ?? this.isActive,
       isMustRest: isMustRest ?? this.isMustRest,
+      isEarlyDeparture: isEarlyDeparture ?? this.isEarlyDeparture,
       excludedPartnerId:
           identical(excludedPartnerId, _excludedPartnerIdSentinel)
               ? this.excludedPartnerId
@@ -57,6 +61,7 @@ class Player extends Equatable {
       'gender': gender.index,
       'isActive': isActive ? 1 : 0,
       'isMustRest': isMustRest ? 1 : 0,
+      'isEarlyDeparture': isEarlyDeparture ? 1 : 0,
       'excludedPartnerId': excludedPartnerId,
     };
   }
@@ -65,6 +70,7 @@ class Player extends Equatable {
     final genderValue = json['gender'];
     final isActiveValue = json['isActive'];
     final isMustRestValue = json['isMustRest'];
+    final isEarlyDepartureValue = json['isEarlyDeparture'];
 
     int parseGender(dynamic value) {
       if (value is int) return value;
@@ -96,11 +102,19 @@ class Player extends Equatable {
       gender: Gender.values[safeGenderIndex],
       isActive: parseBool(isActiveValue, defaultValue: true),
       isMustRest: parseBool(isMustRestValue, defaultValue: false),
+      isEarlyDeparture: parseBool(isEarlyDepartureValue, defaultValue: false),
       excludedPartnerId: json['excludedPartnerId'],
     );
   }
 
   @override
-  List<Object?> get props =>
-      [id, name, gender, isActive, isMustRest, excludedPartnerId];
+  List<Object?> get props => [
+        id,
+        name,
+        gender,
+        isActive,
+        isMustRest,
+        isEarlyDeparture,
+        excludedPartnerId
+      ];
 }

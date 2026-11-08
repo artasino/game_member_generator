@@ -71,7 +71,7 @@ void main() {
       expect(p2Stats.lastMatchType, MatchType.maleDoubles);
     });
 
-    test('FixedDoubles (FD) 形式の試合は出場回数のみカウントし、ペア・対戦履歴は記録しない', () {
+    test('FixedDoubles (FD) 形式の試合も出場回数、ペア・対戦履歴を記録する', () {
       final calculator = PlayerStatsCalculator();
       final fdSessions = [
         Session(
@@ -89,9 +89,10 @@ void main() {
       expect(p1Stats.totalMatches, 1);
       expect(p1Stats.typeCounts[MatchType.fixedDoubles], 1);
 
-      // ペア履歴や対戦履歴は空のまま
-      expect(p1Stats.partnerCounts, isEmpty);
-      expect(p1Stats.opponentCounts, isEmpty);
+      // ペア履歴や対戦履歴も記録される
+      expect(p1Stats.partnerCounts['p2'], 1);
+      expect(p1Stats.opponentCounts['p3'], 1);
+      expect(p1Stats.opponentCounts['p4'], 1);
     });
   });
 }

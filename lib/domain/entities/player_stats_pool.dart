@@ -74,10 +74,12 @@ class PlayerStatsPool {
     return _players.firstWhere((p) => p.player.id == id);
   }
 
-  /// 休み希望者(isMustRest)を除外したプールを返す
+  /// 休み希望者(isMustRest)および早退者(isEarlyDeparture)を除外したプールを返す
   PlayerStatsPool filterAvailable() {
     return PlayerStatsPool(
-      _players.where((p) => !p.player.isMustRest).toList(),
+      _players
+          .where((p) => !p.player.isMustRest && !p.player.isEarlyDeparture)
+          .toList(),
       previousMaleSelections: previousMaleSelections,
       previousFemaleSelections: previousFemaleSelections,
     );

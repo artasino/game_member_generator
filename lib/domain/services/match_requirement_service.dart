@@ -33,9 +33,12 @@ class MatchRequirementService {
     // 1. 必要人数の算出
     final counts = calculateRequired(types);
 
-    // 2. 有効プレイヤーの抽出 (Active かつ 休み希望でない)
+    // 2. 有効プレイヤーの抽出 (Active かつ 休み希望・早退でない)
     final allAvailable = pool.all
-        .where((p) => p.player.isActive && !p.player.isMustRest)
+        .where((p) =>
+            p.player.isActive &&
+            !p.player.isMustRest &&
+            !p.player.isEarlyDeparture)
         .toList();
     final males =
         allAvailable.where((p) => p.player.gender == Gender.male).toList();
@@ -117,7 +120,10 @@ class MatchRequirementService {
   /// 同時出場制限を考慮した「実質的な」有効人数を計算する
   EffectivePlayerCounts calculateEffectiveCounts(PlayerStatsPool pool) {
     final available = pool.all
-        .where((p) => p.player.isActive && !p.player.isMustRest)
+        .where((p) =>
+            p.player.isActive &&
+            !p.player.isMustRest &&
+            !p.player.isEarlyDeparture)
         .toList();
 
     final idMap = {for (final p in available) p.player.id: p};

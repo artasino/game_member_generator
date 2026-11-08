@@ -68,6 +68,7 @@ class PlayerExchangeService {
             'gender',
             'isActive',
             'isMustRest',
+            'isEarlyDeparture',
             'excludedPartnerId'
           ]
         ];
@@ -79,6 +80,7 @@ class PlayerExchangeService {
             p.gender.index,
             p.isActive ? 1 : 0,
             p.isMustRest ? 1 : 0,
+            p.isEarlyDeparture ? 1 : 0,
             p.excludedPartnerId ?? '',
           ]);
         }
@@ -222,6 +224,9 @@ class PlayerExchangeService {
       }
 
       return rows.sublist(1).map((row) {
+        final isEarlyDeparture =
+            row.length > 7 && (int.tryParse(row[6].toString()) ?? 0) == 1;
+        final excludedPartnerIdIdx = row.length > 7 ? 7 : 6;
         return Player(
           id: row[0].toString(),
           name: row[1].toString(),
@@ -229,8 +234,10 @@ class PlayerExchangeService {
           gender: Gender.values[int.tryParse(row[3].toString()) ?? 0],
           isActive: (int.tryParse(row[4].toString()) ?? 1) == 1,
           isMustRest: (int.tryParse(row[5].toString()) ?? 0) == 1,
-          excludedPartnerId: row.length > 6 && row[6].toString().isNotEmpty
-              ? row[6].toString()
+          isEarlyDeparture: isEarlyDeparture,
+          excludedPartnerId: row.length > excludedPartnerIdIdx &&
+                  row[excludedPartnerIdIdx].toString().isNotEmpty
+              ? row[excludedPartnerIdIdx].toString()
               : null,
         );
       }).toList();
