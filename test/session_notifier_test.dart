@@ -130,6 +130,65 @@ void main() {
     );
   });
 
+  for (final accept in [true, false]) {
+    test('rotation confirmation saves the selected option (accept=$accept)',
+        () async {
+      final players = List.generate(
+        8,
+        (i) => Player(
+          id: '$i',
+          name: 'P$i',
+          yomigana: '',
+          gender: Gender.male,
+        ),
+      );
+      final first = players.take(4).toList();
+      final second = players.skip(4).toList();
+      List<Game> games(List<Player> group) => [
+            Game(MatchType.maleDoubles, Team(group[0], group[1]),
+                Team(group[2], group[3])),
+          ];
+      playerRepo.players = players;
+      sessionRepo.sessions.addAll([
+        Session(1, games(first), restingPlayers: second),
+        Session(2, games(second), restingPlayers: first),
+      ]);
+      final rotationNotifier = SessionNotifier(
+        sessionRepository: sessionRepo,
+        courtSettingsRepository: courtRepo,
+        matchMakingService: MatchMakingService(FixedMatchAlgorithm(), playerRepo),
+      );
+      addTearDown(rotationNotifier.dispose);
+      await rotationNotifier.onPlayersUpdated();
+
+      final settings = CourtSettings([MatchType.maleDoubles]);
+      final index = await rotationNotifier.generateSessionWithSettings(
+        settings,
+        confirmRotationException: (longestRest, count) async {
+          expect(sessionRepo.sessions, hasLength(2));
+          expect(longestRest, 2);
+          expect(count, 1);
+          return accept;
+        },
+      );
+
+      expect(index, 3);
+      final restAfter = sessionRepo.sessions.last.restingPlayers.toSet();
+      expect(restAfter.intersection(first.toSet()), hasLength(accept ? 1 : 0));
+      expect(restAfter.intersection(second.toSet()), hasLength(accept ? 3 : 4));
+
+      if (!accept) {
+        for (var i = 0; i < 2; i++) {
+          await rotationNotifier.generateSessionWithSettings(
+            settings,
+            confirmRotationException: (_, _) async =>
+                throw StateError('同じ条件でダイアログを再表示しました。'),
+          );
+        }
+      }
+    });
+  }
+
   group('SessionNotifier - 統計計算', () {
     test('試合履歴に基づいて正しく出場回数と詳細統計が計算されること', () async {
       const p1 =
