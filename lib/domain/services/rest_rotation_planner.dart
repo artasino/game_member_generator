@@ -82,17 +82,15 @@ class RestRotationPlanner {
       pool.previousFemaleSelections.length,
     );
     final rotationWindow = (players.length / slots).ceil() + 1;
-    for (
-      var i = historyLength - 1;
-      i >= 0 && recent.length < rotationWindow;
-      i--
-    ) {
+    // Count actual rounds so alternating court counts can still be detected.
+    final firstRecentIndex = max(0, historyLength - rotationWindow);
+    for (var i = historyLength - 1; i >= firstRecentIndex; i--) {
       final ids = {
         ...pool.previousMaleSelections[i],
         ...pool.previousFemaleSelections[i],
       };
-      if (ids.length != slots || !availableIds.containsAll(ids)) break;
-      recent.add(ids);
+      if (!availableIds.containsAll(ids)) break;
+      if (ids.length == slots) recent.add(ids);
     }
 
     bool repeated(Set<String> ids) =>

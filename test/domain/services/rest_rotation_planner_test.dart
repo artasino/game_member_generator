@@ -78,6 +78,21 @@ void main() {
     expect(result.exception?.playerIds.intersection(first), hasLength(3));
   });
 
+  test('detects a repeated group when two courts alternate with one', () {
+    final first = ids(0, 8);
+    final second = ids(8, 4);
+    final result = planner.plan(
+      matchTypes: List.filled(2, MatchType.maleDoubles),
+      pool: pool(12, [first, second], {for (final id in first) id: 1}),
+      baselineIds: first,
+    );
+
+    expect(result.normal, isNull);
+    expect(result.exception?.longestRest, 2);
+    expect(result.exception?.consecutiveRestCount, 1);
+    expect(result.exception?.playerIds.intersection(second), hasLength(1));
+  });
+
   test('an unseen group with the same rest profile needs no confirmation', () {
     final first = ids(0, 4);
     final second = ids(4, 3);

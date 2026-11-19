@@ -181,7 +181,7 @@ void main() {
         for (var i = 0; i < 2; i++) {
           await rotationNotifier.generateSessionWithSettings(
             settings,
-            confirmRotationException: (_, _) async =>
+            confirmRotationException: (_, __) async =>
                 throw StateError('同じ条件でダイアログを再表示しました。'),
           );
         }
