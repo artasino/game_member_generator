@@ -12,6 +12,7 @@ import '../entities/match_type.dart';
 import '../entities/player_stats.dart';
 import '../entities/player_with_stats.dart';
 import '../repository/player_repository/player_repository.dart';
+import 'rest_rotation_planner.dart';
 
 class MatchGenerationResult {
   final List<Game> games;
@@ -100,6 +101,89 @@ class MatchMakingService {
       games: games,
       restingPlayers: restingPlayers,
     );
+  }
+
+  /// Evaluates an upcoming round before either option is saved.
+  Future<({
+    MatchGenerationResult normal,
+    MatchGenerationResult? alternative,
+    RotationSelection? exception,
+  })> planNextSession({
+    required List<MatchType> matchTypes,
+    required PlayerStatsPool playerStats,
+    bool offerException = true,
+  }) async {
+    final baseline = await generateMatchSession(
+      matchTypes: matchTypes,
+      playerStats: playerStats,
+    );
+    final pool = playerStats.active;
+    final baselineIds = {
+      for (final game in baseline.games) ...[
+        game.teamA.player1.id,
+        game.teamA.player2.id,
+        game.teamB.player1.id,
+        game.teamB.player2.id,
+      ],
+    };
+
+    final plan = await _planRotation(matchTypes, pool, baselineIds);
+
+    Future<MatchGenerationResult> arrange(RotationSelection selection) async {
+      final games = await generateMatches(
+        matchTypes: matchTypes,
+        playerStats: pool.filterByIds(selection.playerIds),
+      );
+      final actualIds = {
+        for (final game in games) ...[
+          game.teamA.player1.id,
+          game.teamA.player2.id,
+          game.teamB.player1.id,
+          game.teamB.player2.id,
+        ],
+      };
+      if (games.length != matchTypes.length ||
+          actualIds.length != selection.playerIds.length ||
+          !actualIds.containsAll(selection.playerIds)) {
+        throw StateError('選出したメンバーで試合を作成できませんでした。');
+      }
+      return MatchGenerationResult(
+        games: games,
+        restingPlayers: baseline.restingPlayers
+            .followedBy(
+              pool.all
+                  .where((p) => baselineIds.contains(p.id))
+                  .map((p) => p.player),
+            )
+            .where((p) => !selection.playerIds.contains(p.id))
+            .toList(growable: false),
+      );
+    }
+
+    final normal = plan.normal == null ? baseline : await arrange(plan.normal!);
+    final exception = offerException ? plan.exception : null;
+    return (
+      normal: normal,
+      alternative: exception == null ? null : await arrange(exception),
+      exception: exception,
+    );
+  }
+
+  static Future<({RotationSelection? normal, RotationSelection? exception})>
+      _planRotation(
+    List<MatchType> matchTypes,
+    PlayerStatsPool pool,
+    Set<String> baselineIds,
+  ) async {
+    ({RotationSelection? normal, RotationSelection? exception}) run() {
+      return RestRotationPlanner().plan(
+        matchTypes: matchTypes,
+        pool: pool,
+        baselineIds: baselineIds,
+      );
+    }
+
+    return kIsWeb ? run() : await Isolate.run(run);
   }
 
   Future<List<_GameDto>> _generateGameDtos(_MatchGenerationInputDto matchDto) async {

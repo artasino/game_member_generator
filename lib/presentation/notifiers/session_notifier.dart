@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/court_settings.dart';
@@ -43,6 +45,8 @@ class SessionNotifier extends ChangeNotifier {
 
   // 生成中フラグ
   bool _isGenerating = false;
+  String? _declinedRotationConfiguration;
+  late final Future<void> _initialRefresh;
 
   bool get isGenerating => _isGenerating;
 
@@ -56,7 +60,7 @@ class SessionNotifier extends ChangeNotifier {
             playerStatsCalculator ?? PlayerStatsCalculator(),
         _requirementService =
             requirementService ?? const MatchRequirementService() {
-    _refresh();
+    _initialRefresh = _refresh();
   }
 
   /// 現在のアクティブプレイヤーで、指定された試合形式が組めるかチェックする
@@ -191,14 +195,61 @@ class SessionNotifier extends ChangeNotifier {
     }
   }
 
-  Future<int?> generateSessionWithSettings(CourtSettings settings) async {
+  Future<int?> generateSessionWithSettings(
+    CourtSettings settings, {
+    Future<bool?> Function(int longestRest, int consecutiveRestCount)?
+        confirmRotationException,
+  }) async {
+    if (_isGenerating) return null;
     _isGenerating = true;
     notifyListeners();
 
-    await courtSettingsRepository.update(settings);
-
     try {
-      final generated = await _generateSessionData(settings);
+      await _initialRefresh;
+      final pool = _cachedPool;
+      final history = _sessions;
+      final activePlayers = pool.active.filterAvailable().all
+          .map((p) => p.player)
+          .toList()
+        ..sort((a, b) => a.id.compareTo(b.id));
+      final configuration = jsonEncode([
+        for (final player in activePlayers)
+          [player.id, player.gender.index, player.excludedPartnerId],
+        settings.matchTypes.map((type) => type.index).toList()..sort(),
+      ]);
+      var declined = _declinedRotationConfiguration == configuration;
+      final plan = await matchMakingService.planNextSession(
+        matchTypes: settings.matchTypes,
+        playerStats: pool,
+        offerException: !declined && confirmRotationException != null,
+      );
+      if (!identical(pool, _cachedPool) || !identical(history, _sessions)) {
+        return null;
+      }
+
+      var generated = plan.normal;
+      final exception = plan.exception;
+      final alternative = plan.alternative;
+      if (exception != null &&
+          alternative != null &&
+          confirmRotationException != null) {
+        final accepted = await confirmRotationException(
+          exception.longestRest,
+          exception.consecutiveRestCount,
+        );
+        if (accepted == null ||
+            !identical(pool, _cachedPool) ||
+            !identical(history, _sessions)) {
+          return null;
+        }
+        if (accepted) {
+          generated = alternative;
+        } else {
+          declined = true;
+        }
+      }
+
+      await courtSettingsRepository.update(settings);
       final nextIndex = _sessions.length + 1;
       final newSession = Session(
         nextIndex,
@@ -208,19 +259,13 @@ class SessionNotifier extends ChangeNotifier {
 
       _pushUndoState();
       await sessionRepository.add(newSession);
+      _declinedRotationConfiguration = declined ? configuration : null;
       await _refresh();
       return nextIndex;
     } finally {
       _isGenerating = false;
       notifyListeners();
     }
-  }
-
-  Future<MatchGenerationResult> _generateSessionData(CourtSettings settings) {
-    return matchMakingService.generateMatchSession(
-      matchTypes: settings.matchTypes,
-      playerStats: _cachedPool,
-    );
   }
 
   int getPairCount(Team team, {int? upToIndex}) {
@@ -276,6 +321,7 @@ class SessionNotifier extends ChangeNotifier {
     _pushUndoState();
     _invalidateStatsCaches();
     await sessionRepository.clear();
+    _declinedRotationConfiguration = null;
     await _refresh();
   }
 
