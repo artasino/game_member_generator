@@ -46,6 +46,7 @@ class SessionNotifier extends ChangeNotifier {
   // 生成中フラグ
   bool _isGenerating = false;
   String? _declinedRotationConfiguration;
+  late final Future<void> _initialRefresh;
 
   bool get isGenerating => _isGenerating;
 
@@ -59,7 +60,7 @@ class SessionNotifier extends ChangeNotifier {
             playerStatsCalculator ?? PlayerStatsCalculator(),
         _requirementService =
             requirementService ?? const MatchRequirementService() {
-    _refresh();
+    _initialRefresh = _refresh();
   }
 
   /// 現在のアクティブプレイヤーで、指定された試合形式が組めるかチェックする
@@ -204,6 +205,7 @@ class SessionNotifier extends ChangeNotifier {
     notifyListeners();
 
     try {
+      await _initialRefresh;
       final pool = _cachedPool;
       final history = _sessions;
       final activePlayers = pool.active.filterAvailable().all
