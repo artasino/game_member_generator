@@ -531,7 +531,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             isRecalc ? _sessionNotifier.sessions[_currentIndex!] : null,
       ),
     );
-    if (settings == null) return;
+    if (settings == null || !mounted) return;
 
     try {
       if (isRecalc) {
@@ -543,17 +543,43 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
         );
         _updateIndexSafely(targetIndex: targetIndexBefore);
       } else {
-        final newIndex =
-            await _sessionNotifier.generateSessionWithSettings(settings);
-        if (newIndex != null) {
-          _updateIndexSafely(targetIndex: _sessionNotifier.sessions.length - 1);
-        }
+        final newIndex = await _sessionNotifier.generateSessionWithSettings(
+          settings,
+          confirmRotationException: _confirmRotationException,
+        );
+        if (newIndex == null || !mounted) return;
+        _updateIndexSafely(targetIndex: _sessionNotifier.sessions.length - 1);
       }
       await _notifyGenerationCompleted();
       _startActionCooldown();
     } catch (e) {
       _showError(e.toString());
     }
+  }
+
+  Future<bool?> _confirmRotationException(int longestRest, int restingCount) {
+    if (!mounted) return Future.value(null);
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('出場メンバーを入れ替えますか？'),
+        content: Text(
+          '今の参加者とコート設定で連続休みを優先すると、直近と同じ出場メンバーになります。\n\n'
+          '今回だけ、$restingCount人の連続休み（最長$longestRest試合）を許容すると、'
+          '出場メンバーを入れ替えられます。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('今のルールを続ける'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('入れ替える'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _startActionCooldown() {
