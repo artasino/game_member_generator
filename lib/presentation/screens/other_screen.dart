@@ -24,28 +24,29 @@ class OtherScreen extends StatefulWidget {
 
 class _OtherScreenState extends State<OtherScreen> {
   String _versionText = '';
-  String _versionFallbackText = '';
+  String _appVersion = '';
   List<ReleaseNote> _loadedReleaseNotes = [];
   bool _isInitialized = false;
 
-  ReleaseNote? get _latestReleaseNote =>
-      _loadedReleaseNotes.isEmpty ? null : _loadedReleaseNotes.first;
+  ReleaseNote? get _latestReleaseNote => kIsWeb
+      ? _loadedReleaseNotes
+          .where((note) => note.version == _appVersion)
+          .firstOrNull
+      : _loadedReleaseNotes.firstOrNull;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_isInitialized) return;
     _isInitialized = true;
-    _versionFallbackText = AppLocalizations.of(context).otherVersionFallback;
-    _versionText = _versionFallbackText;
+    _versionText = AppLocalizations.of(context).otherVersionFallback;
     _loadInitialData();
   }
 
   Future<void> _loadInitialData() async {
-    await Future.wait([
-      _loadVersion(),
-      _loadNotes(),
-    ]);
+    // Load the bundled history first so native fallback is deterministic.
+    await _loadNotes();
+    if (mounted) await _loadVersion();
   }
 
   Future<void> _loadNotes() async {
@@ -67,36 +68,29 @@ class _OtherScreenState extends State<OtherScreen> {
   }
 
   Future<void> _loadVersion() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      final normalizedVersion = packageInfo.version.trim();
-      final normalizedBuild = packageInfo.buildNumber.trim();
-      final hasVersion =
-          normalizedVersion.isNotEmpty && normalizedVersion != '0.0.0';
-
-      if (!mounted) return;
-      setState(() {
-        if (hasVersion) {
-          _versionText = normalizedBuild.isEmpty
-              ? 'v$normalizedVersion'
-              : 'v$normalizedVersion+$normalizedBuild';
-          return;
-        }
-        _versionText = _latestReleaseVersionText;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _versionText = _latestReleaseVersionText;
-      });
+    const webVersion = String.fromEnvironment('APP_VERSION');
+    const webBuild = String.fromEnvironment('APP_BUILD_NUMBER');
+    var version = webVersion;
+    var build = webBuild;
+    if (!kIsWeb || version.isEmpty) {
+      try {
+        final packageInfo = await PackageInfo.fromPlatform();
+        version = packageInfo.version.trim();
+        build = packageInfo.buildNumber.trim();
+      } catch (e) {
+        debugPrint('Failed to load app version: $e');
+      }
     }
-  }
 
-  String get _latestReleaseVersionText {
-    if (_loadedReleaseNotes.isEmpty) {
-      return _versionFallbackText;
-    }
-    return 'v${_loadedReleaseNotes.first.version}';
+    if (!mounted) return;
+    setState(() {
+      if (version.isNotEmpty && (kIsWeb || version != '0.0.0')) {
+        _appVersion = version;
+        _versionText = build.isEmpty ? 'v$version' : 'v$version+$build';
+      } else if (!kIsWeb && _loadedReleaseNotes.isNotEmpty) {
+        _versionText = 'v${_loadedReleaseNotes.first.version}';
+      }
+    });
   }
 
   String _inquiryLabel(AppLocalizations l10n, InquiryCategory category) {
@@ -148,7 +142,10 @@ class _OtherScreenState extends State<OtherScreen> {
   Future<void> _showLatestReleaseDetails() async {
     final l10n = AppLocalizations.of(context);
     final latestNote = _latestReleaseNote;
-    if (latestNote == null) return;
+    if (latestNote == null) {
+      if (_loadedReleaseNotes.isNotEmpty) await _showReleaseHistory();
+      return;
+    }
 
     await showModalBottomSheet<void>(
       context: context,
@@ -385,10 +382,10 @@ class _OtherScreenState extends State<OtherScreen> {
     }
   }
 
-  String _latestInlineSummary(AppLocalizations l10n) {
+  String? _latestInlineSummary(AppLocalizations l10n) {
     final latest = _latestReleaseNote;
     if (latest == null) {
-      return l10n.otherNoReleaseHistory;
+      return null;
     }
     final firstChange = latest.changes.isEmpty ? '' : latest.changes.first;
     return l10n.otherLatestUpdateInline(
@@ -403,6 +400,7 @@ class _OtherScreenState extends State<OtherScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
+    final updateSummary = _latestInlineSummary(l10n);
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -457,8 +455,10 @@ class _OtherScreenState extends State<OtherScreen> {
               _buildSemanticTile(
                 leading: const Icon(Icons.tag_outlined),
                 title: l10n.otherVersion,
-                subtitle:
-                    '${l10n.otherVersionBuild(_versionText, AppConfig.buildDate)}\n${_latestInlineSummary(l10n)}',
+                subtitle: [
+                  l10n.otherVersionBuild(_versionText, AppConfig.buildDate),
+                  if (updateSummary != null) updateSummary,
+                ].join('\n'),
                 semanticLabel: l10n.otherVersionSemantic(_versionText),
                 semanticHint: l10n.otherReleaseDetailsSemanticHint,
                 onTap: _showLatestReleaseDetails,

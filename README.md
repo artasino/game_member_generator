@@ -32,4 +32,6 @@ flutter run -d chrome
 
 [GitHub Actions](.github/workflows/deploy_firebase_hosting.yml) は `master` へのpush、`v*.*.*` タグのpush、手動実行でWeb版とWindows版をビルドします。バージョンタグでの実行時は、Web版をFirebase Hostingへ公開し、Windows版のZIPをGitHub Releasesに添付します。
 
+Web版のバージョンは公開タグから取得します。公開タグと一致する変更概要が `assets/changelog.json` にあれば優先し、なければ前回のタグ以降のコミットから概要を作ります。Web版では **その他 → バージョン** で確認できます。
+
 Firebase Hostingへの公開には、プロジェクト `game-member-generator` にデプロイできるサービスアカウントのJSONを、GitHub Actionsのシークレット `FIREBASE_SERVICE_ACCOUNT_GAME_MEMBER_GENERATOR` に設定します。
