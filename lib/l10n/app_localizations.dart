@@ -134,131 +134,119 @@ abstract class AppLocalizations {
   /// **'使い方ガイド'**
   String get manualGuideTitle;
 
-  /// No description provided for @manualStep1Title.
+  /// No description provided for @manualPrepareTitle.
   ///
   /// In ja, this message translates to:
-  /// **'1. メンバー画面で準備する'**
-  String get manualStep1Title;
+  /// **'参加メンバーを準備する'**
+  String get manualPrepareTitle;
 
-  /// No description provided for @manualStep1Item1.
+  /// No description provided for @manualPrepareItem1.
   ///
   /// In ja, this message translates to:
-  /// **'「メンバー」タブで + ボタンから登録し、参加メンバーをONにします。'**
-  String get manualStep1Item1;
+  /// **'「メンバー」で名前・よみがな・性別を登録し、当日参加する人をオンにします。右上のメニューから、CSV・JSONの読み込みや書き出しもできます。'**
+  String get manualPrepareItem1;
 
-  /// No description provided for @manualStep1Item2.
+  /// No description provided for @manualPrepareItem2.
   ///
   /// In ja, this message translates to:
-  /// **'同時出場制限を設定すると、夫婦でどちらかが小さい子供を見る必要がある場合などにどちらかは必ず休みになります。'**
-  String get manualStep1Item2;
+  /// **'子守りなどで同時に出場できない2人は、メンバー編集の「同時出場制限」で相手を選びます。自動生成では2人を同じラウンドに出場させません。'**
+  String get manualPrepareItem2;
 
-  /// No description provided for @manualStep1Item3.
+  /// No description provided for @manualPrepareItem3.
   ///
   /// In ja, this message translates to:
-  /// **'検索バーで名前・よみがなをすぐに探せます。'**
-  String get manualStep1Item3;
+  /// **'次のラウンドだけ休む人は、メンバーのメニューから「一時休み」を選びます。以降のラウンドすべてを休む場合は「早退」を選びます。'**
+  String get manualPrepareItem3;
 
-  /// No description provided for @manualStep1Item4.
+  /// No description provided for @manualGenerateTitle.
   ///
   /// In ja, this message translates to:
-  /// **'右上メニューからCSV/JSONで保存・読み込み、複数メンバーの登録・削除ができます。'**
-  String get manualStep1Item4;
+  /// **'試合を作成する'**
+  String get manualGenerateTitle;
 
-  /// No description provided for @manualStep2Title.
+  /// No description provided for @manualGenerateItem1.
   ///
   /// In ja, this message translates to:
-  /// **'2. 試合履歴画面で進行する'**
-  String get manualStep2Title;
+  /// **'「試合履歴」で「最初の試合を作成」を押します。次のラウンドは右下の＋、表示中のラウンドを作り直すときは更新アイコンを使います。'**
+  String get manualGenerateItem1;
 
-  /// No description provided for @manualStep2Item1.
+  /// No description provided for @manualGenerateItem2.
   ///
   /// In ja, this message translates to:
-  /// **'自動で試合タイプを提案(男女の入る回数を平滑化)し、必要なら手動で編集できます。'**
-  String get manualStep2Item1;
+  /// **'設定画面の「自動」ではコート数から形式が提案され、「手動」ではコートごとに形式を選べます。「スタート」で作成し、コート別の組み合わせと休憩メンバーを確認します。'**
+  String get manualGenerateItem2;
 
-  /// No description provided for @manualStep2Item2.
+  /// No description provided for @manualGenerateItem3.
   ///
   /// In ja, this message translates to:
-  /// **'ペア回数の記録を見える化し、偏りの確認がしやすいです。'**
-  String get manualStep2Item2;
+  /// **'同じ出場メンバーが続くときに確認が表示されることがあります。連続休みを避けるルールを続けるか、表示された人数と休みの長さを確認して今回だけ入れ替えるかを選べます。'**
+  String get manualGenerateItem3;
 
-  /// No description provided for @manualStep2Item3.
+  /// No description provided for @manualSwapTitle.
   ///
   /// In ja, this message translates to:
-  /// **'できるだけ連続休みを避けつつ、種目バランス・ペア回数・敵になる回数を考慮して試合生成します。'**
-  String get manualStep2Item3;
+  /// **'選手を手動で交代する'**
+  String get manualSwapTitle;
 
-  /// No description provided for @manualStep2Item4.
+  /// No description provided for @manualSwapItem1.
   ///
   /// In ja, this message translates to:
-  /// **'履歴は時系列で追えるので、進行が見失いにくいです。'**
-  String get manualStep2Item4;
+  /// **'表示中のラウンドで、交代する選手を長押しします。「選手を入れ替える」から最初の選手を選ぶこともできます。次に交代相手をタップします。'**
+  String get manualSwapItem1;
 
-  /// No description provided for @manualStep3Title.
+  /// No description provided for @manualSwapItem2.
   ///
   /// In ja, this message translates to:
-  /// **'3. 費用計算画面で精算する'**
-  String get manualStep3Title;
+  /// **'例として、けがをした選手と休憩欄の選手を交代できます。手動交代では、試合形式や同時出場制限を外れる交代も運営者の判断で行えます。'**
+  String get manualSwapItem2;
 
-  /// No description provided for @manualStep3Item1.
+  /// No description provided for @manualSwapItem3.
   ///
   /// In ja, this message translates to:
-  /// **'予め買っておいたシャトル・ボールの価格を登録しておけます。'**
-  String get manualStep3Item1;
+  /// **'交代相手を選ぶ前なら「終了」で入れ替え操作を閉じます。交代後に直前の操作を取り消すには、画面上部の「やり直し」アイコンから「戻す」を押します。'**
+  String get manualSwapItem3;
 
-  /// No description provided for @manualStep3Item2.
+  /// No description provided for @manualTroubleshootTitle.
   ///
   /// In ja, this message translates to:
-  /// **'当日使った個数を入力すると、消耗分の費用を自動計算できます。'**
-  String get manualStep3Item2;
+  /// **'試合を生成できないとき'**
+  String get manualTroubleshootTitle;
 
-  /// No description provided for @manualStep3Item3.
+  /// No description provided for @manualTroubleshootItem1.
   ///
   /// In ja, this message translates to:
-  /// **'コート代など他の費用も追加して、1人あたり金額をまとめて算出できます。'**
-  String get manualStep3Item3;
+  /// **'人数不足が表示されたら、当日の参加設定と一時休み・早退を確認します。人数に合わせてコートを減らすか、試合形式を見直します。'**
+  String get manualTroubleshootItem1;
 
-  /// No description provided for @manualStep3Item4.
+  /// No description provided for @manualTroubleshootItem2.
   ///
   /// In ja, this message translates to:
-  /// **'男子/女子/全員など分担対象を切り替えられます。'**
-  String get manualStep3Item4;
+  /// **'同時出場制限で組めない場合は、ペアの片方が休めるようにコート数や形式を見直します。'**
+  String get manualTroubleshootItem2;
 
-  /// No description provided for @manualTipsTitle.
+  /// No description provided for @manualExpenseTitle.
   ///
   /// In ja, this message translates to:
-  /// **'使いこなしのコツ'**
-  String get manualTipsTitle;
+  /// **'練習会の費用を精算する'**
+  String get manualExpenseTitle;
 
-  /// No description provided for @manualTipsChipRegister.
+  /// No description provided for @manualExpenseItem1.
   ///
   /// In ja, this message translates to:
-  /// **'まずは8〜12人を登録'**
-  String get manualTipsChipRegister;
+  /// **'「費用計算」の「出費を追加」から、コート代やシャトル・ボール代などを入力します。消耗品は在庫から選ぶか、単価と使用数を入力できます。'**
+  String get manualExpenseItem1;
 
-  /// No description provided for @manualTipsChipCourt.
+  /// No description provided for @manualExpenseItem2.
   ///
   /// In ja, this message translates to:
-  /// **'今日のコート数を設定'**
-  String get manualTipsChipCourt;
+  /// **'明細をタップして立替者を設定します。費用ごとに分担対象を指定するときは「男女」を選び、明細で対象を指定します。'**
+  String get manualExpenseItem2;
 
-  /// No description provided for @manualTipsChipGenerate.
+  /// No description provided for @manualExpenseItem3.
   ///
   /// In ja, this message translates to:
-  /// **'試合生成画面で自動で試合生成！'**
-  String get manualTipsChipGenerate;
-
-  /// No description provided for @manualHeroTitle.
-  ///
-  /// In ja, this message translates to:
-  /// **'はじめてでも3ステップ'**
-  String get manualHeroTitle;
-
-  /// No description provided for @manualHeroSubtitle.
-  ///
-  /// In ja, this message translates to:
-  /// **'メンバー登録 → 試合生成 → 試合開始！'**
-  String get manualHeroSubtitle;
+  /// **'「支払調整」で1人あたりの集金額、収支、立替額を確認します。シャトルなどの使用数を入力した日は、日付を確認し「支払確定・記録を保存」で消費記録を残せます。'**
+  String get manualExpenseItem3;
 
   /// No description provided for @otherInquiryBug.
   ///
