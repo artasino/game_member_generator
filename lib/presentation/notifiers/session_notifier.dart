@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/court_settings.dart';
-import '../../domain/entities/gender.dart';
 import '../../domain/entities/match_type.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/player_stats_pool.dart';
@@ -11,6 +10,7 @@ import '../../domain/entities/session.dart';
 import '../../domain/entities/team.dart';
 import '../../domain/repository/court_settings_repository.dart';
 import '../../domain/repository/session_repository/session_history_repository.dart';
+import '../../domain/services/auto_match_type_service.dart';
 import '../../domain/services/match_making_service.dart';
 import '../../domain/services/match_requirement_service.dart';
 import '../../domain/services/player_stats_calculator.dart';
@@ -106,26 +106,6 @@ class SessionNotifier extends ChangeNotifier {
     return counts;
   }
 
-  /// 男女それぞれの延べ出場回数を取得する
-  Map<Gender, int> getGenderParticipationTotalCounts() {
-    int maleCount = 0;
-    int femaleCount = 0;
-    for (final session in _sessions) {
-      for (final game in session.games) {
-        for (final p in [
-          game.teamA.player1,
-          game.teamA.player2,
-          game.teamB.player1,
-          game.teamB.player2
-        ]) {
-          if (p.gender == Gender.male) maleCount++;
-          if (p.gender == Gender.female) femaleCount++;
-        }
-      }
-    }
-    return {Gender.male: maleCount, Gender.female: femaleCount};
-  }
-
   /// 指定セッション(含む)までの履歴のみを使って統計プールを作る
   PlayerStatsPool getPlayerStatsPoolUpToSession(int sessionIndex) {
     final cached = _scopedPoolCache[sessionIndex];
@@ -159,21 +139,36 @@ class SessionNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
+  PlayerStatsPool getPlayerStatsPoolForRecalculation(int sessionIndex) =>
+      playerStatsCalculator.buildPool(
+        allPlayers: _allPlayersCache,
+        sessions: _sessions.where((s) => s.index != sessionIndex).toList(),
+      );
+
+  Set<String>? _autoSelectedPlayers(
+    CourtSettings settings,
+    PlayerStatsPool pool,
+  ) {
+    if (!settings.isAutoRecommendMode) return null;
+    final ids =
+        const AutoMatchTypeService().selectPlayers(pool, settings.matchTypes);
+    if (ids == null) {
+      throw StateError('現在の出場条件で試合を作成できません。');
+    }
+    return ids;
+  }
+
   Future<void> recalculateSession(
       int sessionIndex, CourtSettings settings) async {
     _isGenerating = true;
     notifyListeners();
 
-    // 再生成対象を除外した統計情報プールを計算
-    final poolForGeneration = playerStatsCalculator.buildPool(
-      allPlayers: _allPlayersCache,
-      sessions: _sessions.where((s) => s.index != sessionIndex).toList(),
-    );
-
     try {
+      final poolForGeneration = getPlayerStatsPoolForRecalculation(sessionIndex);
       final generated = await matchMakingService.generateMatchSession(
         matchTypes: settings.matchTypes,
         playerStats: poolForGeneration,
+        selectedPlayerIds: _autoSelectedPlayers(settings, poolForGeneration),
       );
       final updatedSession = Session(
         sessionIndex,
@@ -219,6 +214,7 @@ class SessionNotifier extends ChangeNotifier {
       ]);
       var declined = _declinedRotationConfiguration == configuration;
       final plan = await matchMakingService.planNextSession(
+        preferredPlayerIds: _autoSelectedPlayers(settings, pool),
         matchTypes: settings.matchTypes,
         playerStats: pool,
         offerException: !declined && confirmRotationException != null,

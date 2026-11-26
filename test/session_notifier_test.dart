@@ -1,4 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:game_member_generator/domain/algorithm/balanced_match_algorithm.dart';
+import 'package:game_member_generator/domain/algorithm/court_assignment/stochastic_court_assignment_algorithm.dart';
+import 'package:game_member_generator/domain/algorithm/game_evaluator.dart';
 import 'package:game_member_generator/domain/algorithm/match_algorithm.dart';
 import 'package:game_member_generator/domain/entities/court_settings.dart';
 import 'package:game_member_generator/domain/entities/game.dart';
@@ -188,6 +191,57 @@ void main() {
       }
     });
   }
+
+  test('automatic generation saves the planned rested player', () async {
+    final players = List.generate(
+      6,
+      (i) => Player(
+        id: '$i',
+        name: 'P$i',
+        yomigana: '',
+        gender: i < 4 ? Gender.male : Gender.female,
+      ),
+    );
+    playerRepo.players = players;
+    final previousGame = Game(
+      MatchType.maleDoubles,
+      Team(players[0], players[1]),
+      Team(players[2], players[3]),
+    );
+    sessionRepo.sessions.add(
+      Session(1, [previousGame], restingPlayers: players.skip(4).toList()),
+    );
+
+    final evaluator = GameEvaluator();
+    final autoNotifier = SessionNotifier(
+      sessionRepository: sessionRepo,
+      courtSettingsRepository: courtRepo,
+      matchMakingService: MatchMakingService(
+        BalancedMatchAlgorithm(
+          gameEvaluator: evaluator,
+          courtAssignmentAlgorithm: StochasticCourtAssignmentAlgorithm(
+            gameEvaluator: evaluator,
+          ),
+        ),
+        playerRepo,
+      ),
+    );
+    addTearDown(autoNotifier.dispose);
+
+    final index = await autoNotifier.generateSessionWithSettings(
+      const CourtSettings(
+        [MatchType.mixedDoubles],
+        isAutoRecommendMode: true,
+      ),
+    );
+
+    expect(index, 2);
+    expect(sessionRepo.sessions.last.games.single.type, MatchType.mixedDoubles);
+    expect(
+      sessionRepo.sessions.last.restingPlayers.map((p) => p.gender),
+      everyElement(Gender.male),
+    );
+  });
 
   group('SessionNotifier - 統計計算', () {
     test('試合履歴に基づいて正しく出場回数と詳細統計が計算されること', () async {

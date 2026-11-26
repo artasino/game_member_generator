@@ -11,6 +11,7 @@ import '../../domain/entities/player.dart';
 import '../../domain/entities/player_stats_pool.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/entities/team.dart';
+import '../../domain/services/auto_match_type_service.dart';
 import '../../domain/services/match_requirement_service.dart';
 import '../notifiers/session_notifier.dart';
 import 'common_widgets.dart';
@@ -882,6 +883,7 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
   int autoCourtCount = 3;
   AutoCourtPolicy autoCourtPolicy = AutoCourtPolicy.balance;
   RequirementResult? _requirementResult;
+  final _autoMatchTypeService = const AutoMatchTypeService();
   final MatchRequirementService _requirementService =
       const MatchRequirementService();
 
@@ -917,11 +919,18 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     _updateRequirement();
   }
 
+  PlayerStatsPool get _recommendationPool {
+    final session = widget.currentSession;
+    return widget.isRecalc && session != null
+        ? widget.notifier.getPlayerStatsPoolForRecalculation(session.index)
+        : widget.notifier.playerStatsPool;
+  }
+
   void _updateRequirement() {
     final selectedTypes = isAutoRecommendMode ? currentRecommendTypes : types;
-    var res = widget.notifier.checkRequirements(selectedTypes);
+    var res = _checkRequirements(selectedTypes);
 
-    final pool = widget.notifier.playerStatsPool;
+    final pool = _recommendationPool;
     final effective = _requirementService.calculateEffectiveCounts(pool);
 
     if (effective.restrictedPlayerNames.isNotEmpty) {
@@ -948,157 +957,35 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     var selectedTypes = isAutoRecommendMode ? currentRecommendTypes : types;
     List<MatchType> newTypes = List.from(selectedTypes);
     newTypes.add(type);
-    return widget.notifier.checkRequirements(newTypes).canGenerate;
+    return _checkRequirements(newTypes).canGenerate;
   }
 
-  List<MatchType> _calculateAutoTypes() {
-    final pool = widget.notifier.playerStatsPool;
-    final effective = _requirementService.calculateEffectiveCounts(pool);
-
-    Map<Gender, int> genderHistory =
-        widget.notifier.getGenderParticipationTotalCounts();
-    var maleGameCount = genderHistory[Gender.male] ?? 0;
-    var femaleGameCount = genderHistory[Gender.female] ?? 0;
-
-    int maxMaleDoublesNumPossible =
-        min((effective.male / 4).floor(), autoCourtCount);
-    int maxFemaleDoublesNumPossible =
-        min((effective.female / 4).floor(), autoCourtCount);
-    int maxMixNumPossible = min(
-        min((effective.male / 2).floor(), (effective.female / 2).floor()),
-        autoCourtCount);
-    var activeMenCount = pool.activeMales.length;
-    var activeWomenCount = pool.activeFemales.length;
-
-    final List<MatchType> baseTypes = switch (autoCourtPolicy) {
-      AutoCourtPolicy.genderSeparated => _recommendGenderSeparated(
-          effective.male,
-          effective.female,
-          activeMenCount,
-          activeWomenCount,
-          maleGameCount,
-          femaleGameCount,
-          maxMaleDoublesNumPossible,
-          maxFemaleDoublesNumPossible,
-        ),
-      AutoCourtPolicy.mix =>
-        List.filled(maxMixNumPossible, MatchType.mixedDoubles).toList(),
-      AutoCourtPolicy.balance => _recommendBalanced(
-          effective.male,
-          effective.female,
-          activeMenCount,
-          activeWomenCount,
-          maleGameCount,
-          femaleGameCount,
-          maxMaleDoublesNumPossible,
-          maxFemaleDoublesNumPossible,
-          maxMixNumPossible,
-        ),
-    };
-
-    // 他の形式（MD/WD/XD）では埋めきれないが、人数が足りている場合に FD (Fixed Doubles) を追加
-    final counts = _requirementService.calculateRequired(baseTypes);
-    int remaining = (effective.male + effective.female).floor() - counts.total;
-    while (remaining >= 4 && baseTypes.length < autoCourtCount) {
-      baseTypes.add(MatchType.fixedDoubles);
-      remaining -= 4;
+  RequirementResult _checkRequirements(List<MatchType> matchTypes) {
+    final result = widget.notifier.checkRequirements(matchTypes);
+    if (!isAutoRecommendMode || matchTypes.isEmpty) return result;
+    final players = _autoMatchTypeService.selectPlayers(
+      _recommendationPool,
+      matchTypes,
+    );
+    if (players != null) {
+      return RequirementResult(
+        canGenerate: true,
+        predictedRestPlayerNames: result.predictedRestPlayerNames,
+      );
     }
-
-    return baseTypes;
+    return result.canGenerate
+        ? const RequirementResult(
+            canGenerate: false,
+            errorMessage: '現在の出場条件で試合を作成できません。',
+          )
+        : result;
   }
 
-  List<MatchType> _recommendGenderSeparated(
-      double effectiveMen,
-      double effectiveWomen,
-      int activeMen,
-      int activeWomen,
-      int mg,
-      int fg,
-      int maxM,
-      int maxF) {
-    double minScore = double.infinity;
-    List<MatchType> result = [];
-    for (int md = 0; md <= maxM; md++) {
-      for (int wd = 0; wd <= maxF; wd++) {
-        var courtNum = md + wd;
-        if (courtNum > autoCourtCount || courtNum < result.length) {
-          continue;
-        }
-        double score =
-            pow((mg + md * 4) / activeMen - (fg + wd * 4) / activeWomen, 2)
-                .toDouble();
-        if (courtNum > result.length) {
-          minScore = score;
-          result = [
-            ...List.filled(wd, MatchType.femaleDoubles),
-            ...List.filled(md, MatchType.maleDoubles)
-          ];
-        }
-        if (courtNum == result.length && score < minScore) {
-          minScore = score;
-          result = [
-            ...List.filled(wd, MatchType.femaleDoubles),
-            ...List.filled(md, MatchType.maleDoubles)
-          ];
-        }
-      }
-    }
-    return result;
-  }
-
-  List<MatchType> _recommendBalanced(
-      double effectiveMen,
-      double effectiveWomen,
-      int activeMen,
-      int activeWomen,
-      int mg,
-      int fg,
-      int maxM,
-      int maxF,
-      int maxMix) {
-    double minScore = double.infinity;
-    List<MatchType> result = [];
-    if (maxMix == 0) {
-      return _recommendGenderSeparated(effectiveMen, effectiveWomen, activeMen,
-          activeWomen, mg, fg, maxM, maxF);
-    }
-    for (int xd = 0; xd <= 1; xd++) {
-      for (int md = 0; md <= maxM; md++) {
-        for (int wd = 0; wd <= maxF; wd++) {
-          var courtNum = md + wd + xd;
-          if (courtNum > autoCourtCount || courtNum < result.length) {
-            continue;
-          }
-          if (md * 4 + xd * 2 > effectiveMen ||
-              wd * 4 + xd * 2 > effectiveWomen) {
-            continue;
-          }
-          int updatedMenGames = mg + md * 4 + xd * 2;
-          int updatedWomenGames = fg + wd * 4 + xd * 2;
-          double score = pow(
-                  updatedMenGames / activeMen - updatedWomenGames / activeWomen,
-                  2)
-              .toDouble();
-          if (courtNum > result.length) {
-            minScore = score;
-            result = [
-              ...List.filled(wd, MatchType.femaleDoubles),
-              ...List.filled(xd, MatchType.mixedDoubles),
-              ...List.filled(md, MatchType.maleDoubles)
-            ];
-          } else if (courtNum == result.length && score < minScore) {
-            minScore = score;
-            result = [
-              ...List.filled(wd, MatchType.femaleDoubles),
-              ...List.filled(xd, MatchType.mixedDoubles),
-              ...List.filled(md, MatchType.maleDoubles)
-            ];
-          }
-        }
-      }
-    }
-    return result;
-  }
+  List<MatchType> _calculateAutoTypes() => _autoMatchTypeService.recommend(
+        _recommendationPool,
+        autoCourtCount,
+        autoCourtPolicy,
+      );
 
   @override
   Widget build(BuildContext context) {
