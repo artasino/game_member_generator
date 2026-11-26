@@ -41,6 +41,22 @@ void main() {
   const service = AutoMatchTypeService();
   final men = List.generate(4, (i) => player('m$i', Gender.male));
 
+  test('balanced policy prefers fewer mixed courts when outcomes tie', () {
+    final pool = PlayerStatsPool([
+      ...men,
+      for (var i = 0; i < 4; i++) player('f$i', Gender.female),
+    ]);
+
+    expect(
+      service.recommend(pool, 2, AutoCourtPolicy.balance),
+      unorderedEquals([MatchType.maleDoubles, MatchType.femaleDoubles]),
+    );
+    expect(
+      service.recommend(pool, 2, AutoCourtPolicy.mix),
+      [MatchType.mixedDoubles, MatchType.mixedDoubles],
+    );
+  });
+
   test('avoids a longer rest even when the average gap would increase', () {
     final pool = PlayerStatsPool([
       ...men,

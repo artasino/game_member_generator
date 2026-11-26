@@ -21,6 +21,7 @@ class AutoMatchTypeService {
       List<MatchType> bestTypes = [];
       _AttendanceOption? best;
       var bestPreferred = -1;
+      var bestMixedCount = 0;
       for (var md = 0; md <= courts; md++) {
         for (var wd = 0; wd <= courts - md; wd++) {
           for (var xd = 0; xd <= courts - md - wd; xd++) {
@@ -42,9 +43,13 @@ class AutoMatchTypeService {
             );
             if (option == null) continue;
             final order = best == null ? -1 : attendance.compare(option, best);
-            if (preferred > bestPreferred || order < 0) {
+            final fewerMixedOnTie = policy == AutoCourtPolicy.balance &&
+                order == 0 &&
+                xd < bestMixedCount;
+            if (preferred > bestPreferred || order < 0 || fewerMixedOnTie) {
               best = option;
               bestPreferred = preferred;
+              bestMixedCount = xd;
               bestTypes = [
                 ...List.filled(wd, MatchType.femaleDoubles),
                 ...List.filled(xd, MatchType.mixedDoubles),
