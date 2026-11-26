@@ -53,6 +53,34 @@ void main() {
     expect(service.selectPlayers(pool, types), contains('f0'));
   });
 
+  test('prevents one three-round rest even if two players rest twice', () {
+    final pool = PlayerStatsPool([
+      for (var i = 0; i < 4; i++) player('m$i', Gender.male, streak: 1),
+      player('f0', Gender.female, played: 3, streak: 2),
+      player('f1', Gender.female, played: 3),
+    ]);
+
+    // MD leaves one three-round rest. XD leaves two two-round rests.
+    final types = service.recommend(pool, 1, AutoCourtPolicy.balance);
+    expect(types, [MatchType.mixedDoubles]);
+    final ids = service.selectPlayers(pool, types)!;
+    expect(ids, containsAll(['f0', 'f1']));
+    expect(ids.intersection({'m0', 'm1', 'm2', 'm3'}), hasLength(2));
+  });
+
+  test('minimizes the number of rests when the longest streak is equal', () {
+    final pool = PlayerStatsPool([
+      for (var i = 0; i < 4; i++) player('m$i', Gender.male, streak: 1),
+      player('f0', Gender.female, streak: 1),
+      player('f1', Gender.female),
+    ]);
+
+    // Both formats leave a longest rest of two rounds. MD leaves one
+    // such rest; XD leaves two despite having the smaller average gap.
+    expect(service.recommend(pool, 1, AutoCourtPolicy.balance),
+        [MatchType.maleDoubles]);
+  });
+
   test('uses projected averages when the rest profiles are equal', () {
     final pool = PlayerStatsPool([
       ...men,
@@ -100,5 +128,47 @@ void main() {
     final ids = service.selectPlayers(pool, types)!;
     expect(ids, hasLength(8));
     expect(ids, isNot(contains('f0')));
+  });
+
+  test('uses flexible doubles to fill a court under the mixed policy', () {
+    final pool = PlayerStatsPool([
+      ...men,
+      player('m4', Gender.male),
+      player('m5', Gender.male),
+      player('f0', Gender.female),
+      player('f1', Gender.female),
+    ]);
+
+    final types = service.recommend(pool, 2, AutoCourtPolicy.mix);
+    expect(types, [MatchType.mixedDoubles, MatchType.fixedDoubles]);
+    expect(
+        service.selectPlayers(pool, types),
+        unorderedEquals(
+          ['m0', 'm1', 'm2', 'm3', 'm4', 'm5', 'f0', 'f1'],
+        ));
+  });
+
+  test('uses assigned gender totals to compare flexible doubles', () {
+    final pool = PlayerStatsPool([
+      for (var i = 0; i < 3; i++) player('m$i', Gender.male),
+      for (var i = 0; i < 3; i++) player('f$i', Gender.female, played: 3),
+    ]);
+
+    final types = service.recommend(pool, 1, AutoCourtPolicy.genderSeparated);
+    expect(types, [MatchType.fixedDoubles]);
+    final ids = service.selectPlayers(pool, types)!;
+    expect(ids, hasLength(4));
+    expect(ids, containsAll(['m0', 'm1', 'm2']));
+  });
+
+  test('returns no recommendation when a restriction prevents a full court',
+      () {
+    final pool = PlayerStatsPool([
+      player('m0', Gender.male, excluded: 'm1'),
+      ...men.skip(1),
+    ]);
+
+    expect(service.recommend(pool, 1, AutoCourtPolicy.balance), isEmpty);
+    expect(service.selectPlayers(pool, [MatchType.maleDoubles]), isNull);
   });
 }
