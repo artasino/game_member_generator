@@ -21,6 +21,7 @@ class RestRotationPlanner {
     required List<MatchType> matchTypes,
     required PlayerStatsPool pool,
     required Set<String> baselineIds,
+    int? fixedMaleCount,
   }) {
     final players = pool.filterAvailable().all.toList()
       ..sort((a, b) {
@@ -42,8 +43,12 @@ class RestRotationPlanner {
     }
     final requiredMale = matchTypes.requiredPlayerCount(isMale: true);
     final requiredFemale = matchTypes.requiredPlayerCount(isMale: false);
-    final maxMale = slots - requiredFemale;
-    final maxFemale = slots - requiredMale;
+    final maxMale = fixedMaleCount ?? slots - requiredFemale;
+    final maxFemale =
+        fixedMaleCount == null ? slots - requiredMale : slots - fixedMaleCount;
+    final compareRest = fixedMaleCount == null
+        ? _compareRest
+        : compareConsecutiveRestStreaks;
 
     // A lower bound for the next round with the same court settings. Players
     // who already rested get the available places in longest-streak order.
@@ -112,8 +117,8 @@ class RestRotationPlanner {
       final currentFresh = fresh;
       if (currentFresh != null && bench.isNotEmpty) {
         final partialRests = _restStreaks(bench);
-        if (_compareRest(partialRests, currentFresh.restStreaks) > 0 &&
-            _compareRest(partialRests, best.restStreaks) > 0) {
+        if (compareRest(partialRests, currentFresh.restStreaks) > 0 &&
+            compareRest(partialRests, best.restStreaks) > 0) {
           return;
         }
       }
@@ -125,9 +130,9 @@ class RestRotationPlanner {
       }
       if (index == players.length) {
         final result = candidate(selected, bench);
-        if (result.compareTo(best, repeated) < 0) best = result;
+        if (result.compareTo(best, repeated, compareRest) < 0) best = result;
         if (!repeated(result.ids) &&
-            (fresh == null || result.compareTo(fresh!, repeated) < 0)) {
+            (fresh == null || result.compareTo(fresh!, repeated, compareRest) < 0)) {
           fresh = result;
         }
         return;
@@ -160,7 +165,7 @@ class RestRotationPlanner {
         budget > 0 &&
         alternative != null &&
         repeated(best.ids) &&
-        alternative.compareRest(best) > 0;
+        compareRest(alternative.restStreaks, best.restStreaks) > 0;
     return (
       normal: const SetEquality<String>().equals(best.ids, baselineIds)
           ? null
@@ -192,11 +197,12 @@ class _Candidate {
     consecutiveRestCount: restStreaks.length,
   );
 
-  int compareRest(_Candidate other) =>
-      _compareRest(restStreaks, other.restStreaks);
-
-  int compareTo(_Candidate other, bool Function(Set<String>) repeated) {
-    final rest = compareRest(other);
+  int compareTo(
+    _Candidate other,
+    bool Function(Set<String>) repeated,
+    int Function(List<int>, List<int>) compareRest,
+  ) {
+    final rest = compareRest(restStreaks, other.restStreaks);
     if (rest != 0) return rest;
     final rotation = (repeated(ids) ? 1 : 0).compareTo(
       repeated(other.ids) ? 1 : 0,
@@ -223,4 +229,14 @@ int _compareRest(List<int> left, List<int> right) {
     if (order != 0) return order;
   }
   return 0;
+}
+
+// The inputs are ordered longest-first. Additional rests of a given length
+// matter only after all longer streaks have been compared.
+int compareConsecutiveRestStreaks(List<int> left, List<int> right) {
+  for (var i = 0; i < min(left.length, right.length); i++) {
+    final order = left[i].compareTo(right[i]);
+    if (order != 0) return order;
+  }
+  return left.length.compareTo(right.length);
 }

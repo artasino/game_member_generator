@@ -47,10 +47,15 @@ class MatchMakingService {
   Future<MatchGenerationResult> generateMatchSession({
     required List<MatchType> matchTypes,
     required PlayerStatsPool playerStats,
+    Set<String>? selectedPlayerIds,
   }) async {
     final activePlayers = await playerRepository.getActive();
     final activeIds = activePlayers.map((player) => player.id).toSet();
-    final activePool = playerStats.filterByIds(activeIds);
+    final activePool = playerStats.filterByIds(
+      selectedPlayerIds == null
+          ? activeIds
+          : activeIds.intersection(selectedPlayerIds),
+    );
 
     final matchDto = _MatchGenerationInputDto.fromDomain(
       matchTypes: matchTypes,
@@ -93,6 +98,13 @@ class MatchMakingService {
         )
         .toSet();
 
+    if (selectedPlayerIds != null &&
+        (games.length != matchTypes.length ||
+            playingPlayerIds.length != selectedPlayerIds.length ||
+            !playingPlayerIds.containsAll(selectedPlayerIds))) {
+      throw StateError('選出したメンバーで試合を作成できませんでした。');
+    }
+
     final restingPlayers = activePlayers
         .where((player) => !playingPlayerIds.contains(player.id))
         .toList(growable: false);
@@ -112,10 +124,12 @@ class MatchMakingService {
     required List<MatchType> matchTypes,
     required PlayerStatsPool playerStats,
     bool offerException = true,
+    Set<String>? preferredPlayerIds,
   }) async {
     final baseline = await generateMatchSession(
       matchTypes: matchTypes,
       playerStats: playerStats,
+      selectedPlayerIds: preferredPlayerIds,
     );
     final pool = playerStats.active;
     final baselineIds = {
@@ -127,7 +141,11 @@ class MatchMakingService {
       ],
     };
 
-    final plan = await _planRotation(matchTypes, pool, baselineIds);
+    final fixedMaleCount = preferredPlayerIds == null
+        ? null
+        : pool.males.all.where((p) => baselineIds.contains(p.id)).length;
+    final plan =
+        await _planRotation(matchTypes, pool, baselineIds, fixedMaleCount);
 
     Future<MatchGenerationResult> arrange(RotationSelection selection) async {
       final games = await generateMatches(
@@ -174,12 +192,14 @@ class MatchMakingService {
     List<MatchType> matchTypes,
     PlayerStatsPool pool,
     Set<String> baselineIds,
+    int? fixedMaleCount,
   ) async {
     ({RotationSelection? normal, RotationSelection? exception}) run() {
       return RestRotationPlanner().plan(
         matchTypes: matchTypes,
         pool: pool,
         baselineIds: baselineIds,
+        fixedMaleCount: fixedMaleCount,
       );
     }
 
