@@ -30,7 +30,9 @@ flutter pub get
 flutter run -d chrome
 ```
 
-[GitHub Actions](.github/workflows/deploy_firebase_hosting.yml) は `master` へのpush、`v*.*.*` タグのpush、手動実行でWeb版とWindows版をビルドします。バージョンタグでの実行時は、Web版をFirebase Hostingへ公開し、Windows版のZIPをGitHub Releasesに添付します。
+[GitHub Actions](.github/workflows/deploy_firebase_hosting.yml) は `master` へのpush、`v*.*.*` タグのpush、手動実行でWeb版とWindows版をビルドします。タグのpushと手動実行はビルド確認に使えます。
+
+公開するには、GitHubの **Releases** でバージョンタグ（例 `v2.4.0`）を選び、**Publish release** を押します。公開イベントを受けて、Web版をFirebase Hostingへデプロイし、Windows版のZIPを公開済みのリリースに添付します。
 
 Web版のバージョンは公開タグから取得します。公開タグと一致する変更概要が `assets/changelog.json` にあれば優先し、なければ前回のタグ以降のコミットから概要を作ります。Web版では **その他 → バージョン** で確認できます。
 

@@ -7,12 +7,14 @@ on:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
   contents: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -95,13 +97,13 @@ jobs:
             --dart-define=BUILD_DATE="$BUILD_DATE"
 
       - name: Authenticate to Google Cloud
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v')
         uses: google-github-actions/auth@v2
         with:
           credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_GAME_MEMBER_GENERATOR }}'
 
       - name: Deploy to Firebase Hosting
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v')
         run: npx firebase-tools deploy --only hosting --project game-member-generator
 
   build-windows:
@@ -138,15 +140,15 @@ jobs:
           path: build/windows/x64/runner/Release
 
       - name: Zip build
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v')
         run: |
           mkdir release
           xcopy build\windows\x64\runner\Release\* release\ /E /I
           Compress-Archive -Path release\* -DestinationPath game_member_generator_windows.zip
 
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Release ${{ github.ref_name }}
-          files: game_member_generator_windows.zip
+      - name: Upload Windows ZIP to the published release
+        if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$env:RELEASE_TAG" game_member_generator_windows.zip --clobber
