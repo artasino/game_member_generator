@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <base href="$FLUTTER_BASE_HREF">
   <meta charset="UTF-8">
@@ -9,12 +9,15 @@
 
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="game_member_generator">
+  <meta name="apple-mobile-web-app-title" content="Game Member">
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="app-icon.png">
+  <link rel="icon" href="app-icon.png">
 
   <title>Game Member Generator</title>
   <style>
-    #sw-update-toast {
+    #sw-update-toast,
+    #offline-ready {
       position: fixed;
       left: 50%;
       bottom: 24px;
@@ -55,6 +58,7 @@
   </style>
 </head>
 <body>
+  <div id="offline-ready" role="status" aria-live="polite">オフラインで使う準備ができました。</div>
   <div id="sw-update-toast" role="status" aria-live="polite">
     <span>新しいバージョンがあります。更新しますか？</span>
     <button id="sw-reload-btn" type="button">更新する</button>
@@ -65,73 +69,75 @@
     (() => {
       if (!('serviceWorker' in navigator)) return;
 
-      let hasControllerChanged = false;
+      const serviceWorker = navigator.serviceWorker;
+      const workerUrl = new URL('offline_service_worker.js', document.baseURI);
+      const toast = document.getElementById('sw-update-toast');
+      const offlineReady = document.getElementById('offline-ready');
+      let previousController = serviceWorker.controller;
       let waitingWorker = null;
 
-      const toast = document.getElementById('sw-update-toast');
-      const reloadBtn = document.getElementById('sw-reload-btn');
-      const laterBtn = document.getElementById('sw-later-btn');
+      function showReady() {
+        const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+        const key = standalone ? 'gmg-offline-ready-standalone' : 'gmg-offline-ready';
+        if (sessionStorage.getItem(key)) return;
+        sessionStorage.setItem(key, 'true');
+        offlineReady.style.display = 'flex';
+        setTimeout(() => { offlineReady.style.display = 'none'; }, 6000);
+      }
 
-      const showToast = () => {
-        if (!toast) return;
-        toast.style.display = 'flex';
-      };
-
-      const hideToast = () => {
-        if (!toast) return;
-        toast.style.display = 'none';
-      };
-
-      const bindWaitingWorker = (registration) => {
-        if (!registration || !registration.waiting) return;
+      function showUpdate(registration) {
+        if (!serviceWorker.controller || !registration.waiting) return;
+        offlineReady.style.display = 'none';
         waitingWorker = registration.waiting;
-        showToast();
-      };
+        toast.style.display = 'flex';
+      }
 
-      const trackInstallingWorker = (registration) => {
-        if (!registration || !registration.installing) return;
+      function watchInstall(registration) {
+        const worker = registration.installing;
+        if (!worker) return;
+        worker.addEventListener('statechange', () => showUpdate(registration));
+      }
 
-        registration.installing.addEventListener('statechange', () => {
-          if (
-            registration.waiting &&
-            navigator.serviceWorker.controller
-          ) {
-            bindWaitingWorker(registration);
-          }
-        });
-      };
+      document.getElementById('sw-reload-btn').addEventListener('click', () => {
+        waitingWorker?.postMessage('skipWaiting');
+        toast.style.display = 'none';
+      });
 
-      reloadBtn?.addEventListener('click', () => {
-        if (waitingWorker) {
-          waitingWorker.postMessage('skipWaiting');
+      document.getElementById('sw-later-btn').addEventListener('click', () => {
+        toast.style.display = 'none';
+      });
+
+      serviceWorker.addEventListener('controllerchange', () => {
+        const controller = serviceWorker.controller;
+        if (controller?.scriptURL !== workerUrl.href) return;
+        if (previousController) {
+          window.location.reload();
+          return;
         }
-        hideToast();
-      });
-
-      laterBtn?.addEventListener('click', () => {
-        hideToast();
-      });
-
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (hasControllerChanged) return;
-        hasControllerChanged = true;
-        window.location.reload();
+        previousController = controller;
+        showReady();
       });
 
       window.addEventListener('load', async () => {
         try {
-          const registration = await navigator.serviceWorker.getRegistration();
-          if (!registration) return;
-
-          bindWaitingWorker(registration);
-          trackInstallingWorker(registration);
-          registration.addEventListener('updatefound', () => {
-            trackInstallingWorker(registration);
+          const registration = await serviceWorker.register(workerUrl.href, {
+            updateViaCache: 'none',
           });
-
-          setInterval(() => registration.update(), 60 * 1000);
-        } catch (_) {
-          // ignore service worker update UI errors
+          if (navigator.onLine && serviceWorker.controller?.scriptURL === workerUrl.href &&
+              !registration.waiting) showReady();
+          showUpdate(registration);
+          watchInstall(registration);
+          registration.addEventListener('updatefound', () => watchInstall(registration));
+          const checkForUpdate = () => {
+            if (navigator.onLine && document.visibilityState === 'visible') {
+              registration.update().catch(() => {});
+            }
+          };
+          document.addEventListener('visibilitychange', checkForUpdate);
+          window.addEventListener('online', checkForUpdate);
+          setInterval(checkForUpdate, 60000);
+        } catch (error) {
+          console.debug('Offline preparation unavailable:', error);
         }
       });
     })();

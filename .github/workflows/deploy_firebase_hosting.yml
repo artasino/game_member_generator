@@ -89,12 +89,14 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             python3 .github/scripts/prepare_web_changelog.py "$APP_VERSION" "$BUILD_DATE"
           fi
-          flutter build web --release \
+          flutter build web --release --pwa-strategy=none \
             --build-name="$APP_VERSION" \
             --build-number="$APP_BUILD_NUMBER" \
             --dart-define=APP_VERSION="$APP_VERSION" \
             --dart-define=APP_BUILD_NUMBER="$APP_BUILD_NUMBER" \
-            --dart-define=BUILD_DATE="$BUILD_DATE"
+            --dart-define=BUILD_DATE="$BUILD_DATE" \
+            --dart-define=OFFLINE_WEB_FONT=true
+          python3 .github/scripts/prepare_web_offline.py
 
       - name: Authenticate to Google Cloud
         if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v')

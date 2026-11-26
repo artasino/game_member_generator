@@ -26,7 +26,7 @@
         ]
       },
       {
-        "source": "/flutter_service_worker.js",
+        "source": "/offline_service_worker.js",
         "headers": [
           {
             "key": "Cache-Control",

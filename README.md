@@ -6,6 +6,8 @@
 - [Windows版をダウンロードする](https://github.com/artasino/game_member_generator/releases/latest)
 - [練習会の運営マニュアルを読む](docs/manual.md)
 
+iPhoneでは、初回に通信できる場所で準備すると圏外でも使えます。 [iPhoneでのオフライン準備](docs/manual.md#iphoneでオフラインに備える)
+
 ## 最初のラウンドを作る
 
 1. **メンバー**で参加者を登録し、当日参加する人をオンにします。
