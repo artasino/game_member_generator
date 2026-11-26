@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -25,21 +26,33 @@ class AppTheme {
       secondary: Colors.pink.shade600,
       tertiary: Colors.orange.shade700,
     );
-    final textTheme = GoogleFonts.notoSansJpTextTheme(
-      Theme.of(context).textTheme,
-    ).copyWith(
-      displayMedium: GoogleFonts.notoSansJp(
-        fontWeight: FontWeight.w900,
-        letterSpacing: 2.0,
-        color: const Color(0xFF2C3E50),
-      ),
-      labelLarge: GoogleFonts.kanit(
-        fontWeight: FontWeight.bold,
-      ),
-    );
+    const offlineFont = kIsWeb && bool.fromEnvironment('OFFLINE_WEB_FONT');
+    final baseTextTheme = Theme.of(context).textTheme;
+    final textTheme = offlineFont
+        ? baseTextTheme.apply(fontFamily: 'OfflineNotoSansJP').copyWith(
+              displayMedium: baseTextTheme.displayMedium?.copyWith(
+                fontFamily: 'OfflineNotoSansJP',
+                fontWeight: FontWeight.w900,
+                letterSpacing: 2.0,
+                color: const Color(0xFF2C3E50),
+              ),
+              labelLarge: baseTextTheme.labelLarge?.copyWith(
+                fontFamily: 'OfflineNotoSansJP',
+                fontWeight: FontWeight.bold,
+              ),
+            )
+        : GoogleFonts.notoSansJpTextTheme(baseTextTheme).copyWith(
+            displayMedium: GoogleFonts.notoSansJp(
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2.0,
+              color: const Color(0xFF2C3E50),
+            ),
+            labelLarge: GoogleFonts.kanit(fontWeight: FontWeight.bold),
+          );
 
     return ThemeData(
       colorScheme: colorScheme,
+      fontFamily: offlineFont ? 'OfflineNotoSansJP' : null,
       useMaterial3: true,
       appBarTheme: AppBarTheme(
         centerTitle: true,
