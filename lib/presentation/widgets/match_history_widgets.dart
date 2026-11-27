@@ -27,14 +27,12 @@ class MatchHistoryLayoutTokens {
   static const double maxCardWidthLarge = 620;
   static const double twoColumnBreakpoint = 760;
   static const double threeColumnBreakpoint = 1120;
-  static const double compactPlayerTagWidth = 180;
-  static const double tightPlayerTagWidth = 145;
   static const int longNameWarningLength = 8;
   static const double extremeNarrowWidth = 560;
   static const double extremeWideWidth = 1600;
 
   // Vertical spacing tokens for compactness
-  static const double playerTagHeightBase = 38.0;
+  static const double playerTagHeightBase = 44.0;
   static const double vsDividerHeightBase = 44.0;
   static const double cardHeaderVerticalPadding = 4.0;
   static const double cardBodyPadding = 8.0;
@@ -81,7 +79,10 @@ class GamesArea extends StatelessWidget {
     final double spacing = MatchHistoryLayoutTokens.gameCardSpacing * scale;
     final int cross = _calculateCrossAxisCount(count, spacing);
     final double cardWidth =
-        _calculateCardWidth(cross, spacing).clamp(0, _maxCardWidth);
+        _calculateCardWidth(cross, spacing).clamp(
+          0,
+          cross == 1 ? max(_maxCardWidth, 720.0) : _maxCardWidth,
+        );
     _logLayoutMetrics(gameCount: count, columns: cross, cardWidth: cardWidth);
 
     return Wrap(
@@ -468,15 +469,13 @@ class TeamColumn extends StatelessWidget {
       final availableWidth = constraints.maxWidth;
       return Column(
         children: [
-          IntrinsicWidth(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildPlayerTag(team.player1, availableWidth),
-                SizedBox(height: 4 * scale),
-                _buildPlayerTag(team.player2, availableWidth),
-              ],
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildPlayerTag(team.player1, availableWidth),
+              SizedBox(height: 4 * scale),
+              _buildPlayerTag(team.player2, availableWidth),
+            ],
           ),
           if (showPairInfo && pairCount > 0) ...[
             SizedBox(height: 4 * scale),
@@ -542,9 +541,6 @@ class PlayerTag extends StatelessWidget {
     final theme = Theme.of(context);
     final genderColor = GenderTheme.getColor(context, player.gender);
 
-    // 文字サイズを動的に調整するためのスケール計算
-    final textScale = _adaptivePlayerTextScale(maxWidth);
-
     return InkWell(
       onTap: onTap,
       onLongPress: onLongPress,
@@ -554,7 +550,6 @@ class PlayerTag extends StatelessWidget {
         alignment: Alignment.center,
         padding: EdgeInsets.symmetric(horizontal: 12 * scale),
         constraints: BoxConstraints(
-          minWidth: 80 * scale,
           maxWidth: maxWidth,
           minHeight: MatchHistoryLayoutTokens.playerTagHeightBase * scale,
         ),
@@ -576,7 +571,7 @@ class PlayerTag extends StatelessWidget {
             player.name,
             maxLines: 1,
             style: TextStyle(
-              fontSize: 20 * scale * textScale,
+              fontSize: 26 * scale,
               fontWeight: FontWeight.w900,
               color: isSelected
                   ? theme.colorScheme.onPrimaryContainer
@@ -586,14 +581,6 @@ class PlayerTag extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  double _adaptivePlayerTextScale(double width) {
-    if (width <= MatchHistoryLayoutTokens.tightPlayerTagWidth) return 0.75;
-    if (width <= MatchHistoryLayoutTokens.compactPlayerTagWidth) {
-      return 0.85;
-    }
-    return 1.0;
   }
 }
 
