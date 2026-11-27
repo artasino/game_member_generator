@@ -16,8 +16,7 @@
 
   <title>Game Member Generator</title>
   <style>
-    #sw-update-toast,
-    #offline-ready {
+    #sw-update-toast {
       position: fixed;
       left: 50%;
       bottom: 24px;
@@ -58,7 +57,6 @@
   </style>
 </head>
 <body>
-  <div id="offline-ready" role="status" aria-live="polite">オフラインで使う準備ができました。</div>
   <div id="sw-update-toast" role="status" aria-live="polite">
     <span>新しいバージョンがあります。更新しますか？</span>
     <button id="sw-reload-btn" type="button">更新する</button>
@@ -72,22 +70,11 @@
       const serviceWorker = navigator.serviceWorker;
       const workerUrl = new URL('offline_service_worker.js', document.baseURI);
       const toast = document.getElementById('sw-update-toast');
-      const offlineReady = document.getElementById('offline-ready');
       let previousController = serviceWorker.controller;
       let waitingWorker = null;
 
-      function showReady() {
-        const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
-        const key = standalone ? 'gmg-offline-ready-standalone' : 'gmg-offline-ready';
-        if (sessionStorage.getItem(key)) return;
-        sessionStorage.setItem(key, 'true');
-        offlineReady.style.display = 'flex';
-        setTimeout(() => { offlineReady.style.display = 'none'; }, 6000);
-      }
-
       function showUpdate(registration) {
         if (!serviceWorker.controller || !registration.waiting) return;
-        offlineReady.style.display = 'none';
         waitingWorker = registration.waiting;
         toast.style.display = 'flex';
       }
@@ -115,7 +102,6 @@
           return;
         }
         previousController = controller;
-        showReady();
       });
 
       window.addEventListener('load', async () => {
@@ -123,8 +109,6 @@
           const registration = await serviceWorker.register(workerUrl.href, {
             updateViaCache: 'none',
           });
-          if (navigator.onLine && serviceWorker.controller?.scriptURL === workerUrl.href &&
-              !registration.waiting) showReady();
           showUpdate(registration);
           watchInstall(registration);
           registration.addEventListener('updatefound', () => watchInstall(registration));
