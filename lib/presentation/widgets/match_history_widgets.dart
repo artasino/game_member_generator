@@ -25,6 +25,7 @@ class MatchHistoryLayoutTokens {
   static const double minCardWidthLarge = 380;
   static const double maxCardWidthBase = 520;
   static const double maxCardWidthLarge = 620;
+  static const double maxSingleColumnCardWidth = 680;
   static const double twoColumnBreakpoint = 760;
   static const double threeColumnBreakpoint = 1120;
   static const double compactPlayerTagWidth = 180;
@@ -80,8 +81,13 @@ class GamesArea extends StatelessWidget {
     final int count = session.games.length;
     final double spacing = MatchHistoryLayoutTokens.gameCardSpacing * scale;
     final int cross = _calculateCrossAxisCount(count, spacing);
-    final double cardWidth =
-        _calculateCardWidth(cross, spacing).clamp(0, _maxCardWidth);
+    final bool singleColumn = cross == 1;
+    final double cardWidth = _calculateCardWidth(cross, spacing).clamp(
+      0,
+      singleColumn
+          ? MatchHistoryLayoutTokens.maxSingleColumnCardWidth
+          : _maxCardWidth,
+    );
     _logLayoutMetrics(gameCount: count, columns: cross, cardWidth: cardWidth);
 
     return Wrap(
@@ -104,6 +110,7 @@ class GamesArea extends StatelessWidget {
             onPlayerTap: onPlayerTap,
             onPlayerLongPress: onPlayerLongPress,
             showPairInfo: showPairInfo,
+            singleColumn: singleColumn,
           ),
         );
       }).toList(),
@@ -213,6 +220,7 @@ class GameCard extends StatelessWidget {
   final Function(Player) onPlayerTap;
   final Function(Player) onPlayerLongPress;
   final bool showPairInfo;
+  final bool singleColumn;
 
   const GameCard({
     super.key,
@@ -226,6 +234,7 @@ class GameCard extends StatelessWidget {
     required this.onPlayerTap,
     required this.onPlayerLongPress,
     this.showPairInfo = true,
+    this.singleColumn = false,
   });
 
   @override
@@ -242,7 +251,12 @@ class GameCard extends StatelessWidget {
         pool.all.where((p) => p.player.id == game.teamB.player1.id).firstOrNull;
     final pairCountB = p2Stats?.stats.partnerCounts[game.teamB.player2.id] ?? 0;
 
+    final showSidePairInfo = isPortrait &&
+        showPairInfo &&
+        (!singleColumn || pairCountA > 0 || pairCountB > 0);
+
     return Card(
+      margin: singleColumn ? const EdgeInsets.symmetric(vertical: 4) : null,
       elevation: 2,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
@@ -258,7 +272,7 @@ class GameCard extends StatelessWidget {
                 MatchHistoryLayoutTokens.cardBodyPadding * scale),
             child: Row(
               children: [
-                if (isPortrait && showPairInfo)
+                if (showSidePairInfo)
                   _SidePairInfo(
                     count: pairCountA,
                     scale: scale,
@@ -278,6 +292,7 @@ class GameCard extends StatelessWidget {
                 _VSDivider(
                   scale: scale,
                   fourPlayerCount: fourPlayerCount,
+                  compact: singleColumn,
                 ),
                 Expanded(
                   child: TeamColumn(
@@ -290,7 +305,7 @@ class GameCard extends StatelessWidget {
                     showPairInfo: showPairInfo && !isPortrait,
                   ),
                 ),
-                if (isPortrait && showPairInfo)
+                if (showSidePairInfo)
                   _SidePairInfo(
                     count: pairCountB,
                     scale: scale,
@@ -377,17 +392,19 @@ class _SidePairInfo extends StatelessWidget {
 class _VSDivider extends StatelessWidget {
   final double scale;
   final int fourPlayerCount;
+  final bool compact;
 
   const _VSDivider({
     required this.scale,
     this.fourPlayerCount = 0,
+    required this.compact,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+      padding: EdgeInsets.symmetric(horizontal: (compact ? 4 : 8) * scale),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -554,7 +571,7 @@ class PlayerTag extends StatelessWidget {
         alignment: Alignment.center,
         padding: EdgeInsets.symmetric(horizontal: 12 * scale),
         constraints: BoxConstraints(
-          minWidth: 80 * scale,
+          minWidth: min(80 * scale, maxWidth),
           maxWidth: maxWidth,
           minHeight: MatchHistoryLayoutTokens.playerTagHeightBase * scale,
         ),
@@ -577,7 +594,7 @@ class PlayerTag extends StatelessWidget {
             maxLines: 1,
             style: TextStyle(
               fontSize: 20 * scale * textScale,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w600,
               color: isSelected
                   ? theme.colorScheme.onPrimaryContainer
                   : Colors.black87,
