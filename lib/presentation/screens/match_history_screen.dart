@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../domain/entities/court_settings.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/entities/session.dart';
 import '../di/app_scope.dart';
@@ -522,7 +521,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
 
   void _showSettings(bool isRecalc) async {
     final targetIndexBefore = _currentIndex;
-    final settings = await showDialog<CourtSettings>(
+    final selection = await showDialog<MatchSettingsSelection>(
       context: context,
       builder: (context) => MatchSettingsDialog(
         notifier: _sessionNotifier,
@@ -531,7 +530,7 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             isRecalc ? _sessionNotifier.sessions[_currentIndex!] : null,
       ),
     );
-    if (settings == null || !mounted) return;
+    if (selection == null || !mounted) return;
 
     try {
       if (isRecalc) {
@@ -539,12 +538,14 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
             _sessionNotifier.sessions[targetIndexBefore!].index;
         await _sessionNotifier.recalculateSession(
           sessionIndex,
-          settings,
+          selection.settings,
+          recommendation: selection.recommendation,
         );
         _updateIndexSafely(targetIndex: targetIndexBefore);
       } else {
         final newIndex = await _sessionNotifier.generateSessionWithSettings(
-          settings,
+          selection.settings,
+          recommendation: selection.recommendation,
           confirmRotationException: _confirmRotationException,
         );
         if (newIndex == null || !mounted) return;

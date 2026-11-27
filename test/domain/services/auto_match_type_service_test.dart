@@ -48,11 +48,11 @@ void main() {
     ]);
 
     expect(
-      service.recommend(pool, 2, AutoCourtPolicy.balance),
+      service.recommend(pool, 2, AutoCourtPolicy.balance)?.matchTypes,
       unorderedEquals([MatchType.maleDoubles, MatchType.femaleDoubles]),
     );
     expect(
-      service.recommend(pool, 2, AutoCourtPolicy.mix),
+      service.recommend(pool, 2, AutoCourtPolicy.mix)?.matchTypes,
       [MatchType.mixedDoubles, MatchType.mixedDoubles],
     );
   });
@@ -64,9 +64,10 @@ void main() {
       player('f1', Gender.female, played: 3),
     ]);
 
-    final types = service.recommend(pool, 1, AutoCourtPolicy.balance);
+    final recommendation = service.recommend(pool, 1, AutoCourtPolicy.balance)!;
+    final types = recommendation.matchTypes;
     expect(types, [MatchType.mixedDoubles]);
-    expect(service.selectPlayers(pool, types), contains('f0'));
+    expect(recommendation.playerIds, contains('f0'));
   });
 
   test('prevents one three-round rest even if two players rest twice', () {
@@ -77,9 +78,10 @@ void main() {
     ]);
 
     // MD leaves one three-round rest. XD leaves two two-round rests.
-    final types = service.recommend(pool, 1, AutoCourtPolicy.balance);
+    final recommendation = service.recommend(pool, 1, AutoCourtPolicy.balance)!;
+    final types = recommendation.matchTypes;
     expect(types, [MatchType.mixedDoubles]);
-    final ids = service.selectPlayers(pool, types)!;
+    final ids = recommendation.playerIds;
     expect(ids, containsAll(['f0', 'f1']));
     expect(ids.intersection({'m0', 'm1', 'm2', 'm3'}), hasLength(2));
   });
@@ -93,7 +95,7 @@ void main() {
 
     // Both formats leave a longest rest of two rounds. MD leaves one
     // such rest; XD leaves two despite having the smaller average gap.
-    expect(service.recommend(pool, 1, AutoCourtPolicy.balance),
+    expect(service.recommend(pool, 1, AutoCourtPolicy.balance)?.matchTypes,
         [MatchType.maleDoubles]);
   });
 
@@ -104,7 +106,7 @@ void main() {
       player('f1', Gender.female, played: 3),
     ]);
 
-    expect(service.recommend(pool, 1, AutoCourtPolicy.balance),
+    expect(service.recommend(pool, 1, AutoCourtPolicy.balance)?.matchTypes,
         [MatchType.maleDoubles]);
   });
 
@@ -119,12 +121,14 @@ void main() {
 
     final resting = pool(departed: false);
     final departed = pool(departed: true);
-    expect(service.recommend(resting, 1, AutoCourtPolicy.balance),
+    expect(service.recommend(resting, 1, AutoCourtPolicy.balance)?.matchTypes,
         [MatchType.maleDoubles]);
-    final types = service.recommend(departed, 1, AutoCourtPolicy.balance);
+    final recommendation =
+        service.recommend(departed, 1, AutoCourtPolicy.balance)!;
+    final types = recommendation.matchTypes;
     expect(types, [MatchType.mixedDoubles]);
-    expect(service.selectPlayers(departed, types), isNot(contains('f2')));
-    expect(service.selectPlayers(resting, [MatchType.mixedDoubles]),
+    expect(recommendation.playerIds, isNot(contains('f2')));
+    expect(service.evaluate(resting, [MatchType.mixedDoubles])?.playerIds,
         isNot(contains('f2')));
   });
 
@@ -139,11 +143,13 @@ void main() {
       player('f4', Gender.female),
     ]);
 
-    final types = service.recommend(pool, 2, AutoCourtPolicy.mix);
+    final recommendation = service.recommend(pool, 2, AutoCourtPolicy.mix)!;
+    final types = recommendation.matchTypes;
     expect(types, [MatchType.mixedDoubles, MatchType.mixedDoubles]);
-    final ids = service.selectPlayers(pool, types)!;
+    final ids = recommendation.playerIds;
     expect(ids, hasLength(8));
     expect(ids, isNot(contains('f0')));
+    expect(recommendation.restrictedRestPlayerNames, ['f0']);
   });
 
   test('uses flexible doubles to fill a court under the mixed policy', () {
@@ -155,10 +161,11 @@ void main() {
       player('f1', Gender.female),
     ]);
 
-    final types = service.recommend(pool, 2, AutoCourtPolicy.mix);
+    final recommendation = service.recommend(pool, 2, AutoCourtPolicy.mix)!;
+    final types = recommendation.matchTypes;
     expect(types, [MatchType.mixedDoubles, MatchType.fixedDoubles]);
     expect(
-        service.selectPlayers(pool, types),
+        recommendation.playerIds,
         unorderedEquals(
           ['m0', 'm1', 'm2', 'm3', 'm4', 'm5', 'f0', 'f1'],
         ));
@@ -170,11 +177,33 @@ void main() {
       for (var i = 0; i < 3; i++) player('f$i', Gender.female, played: 3),
     ]);
 
-    final types = service.recommend(pool, 1, AutoCourtPolicy.genderSeparated);
+    final recommendation =
+        service.recommend(pool, 1, AutoCourtPolicy.genderSeparated)!;
+    final types = recommendation.matchTypes;
     expect(types, [MatchType.fixedDoubles]);
-    final ids = service.selectPlayers(pool, types)!;
+    final ids = recommendation.playerIds;
     expect(ids, hasLength(4));
     expect(ids, containsAll(['m0', 'm1', 'm2']));
+  });
+
+  test('reports projected averages and rest streaks for the chosen IDs', () {
+    final pool = PlayerStatsPool([
+      for (var i = 0; i < 4; i++) player('m$i', Gender.male, streak: 1),
+      player('f0', Gender.female, played: 3, streak: 2),
+      player('f1', Gender.female, played: 3),
+      player('f2', Gender.female, played: 3, oneRoundRest: true, streak: 4),
+      player('f3', Gender.female, played: 10, departed: true),
+    ]);
+
+    final result = service.recommend(pool, 1, AutoCourtPolicy.balance)!;
+    expect(result.matchTypes, [MatchType.mixedDoubles]);
+    expect(result.playerIds, containsAll(['f0', 'f1']));
+    expect(result.consecutiveRestStreaks, [2, 2]);
+    expect(result.maleCount, 4);
+    expect(result.femaleCount, 3);
+    expect(result.projectedMaleAverage, 0.5);
+    expect(result.projectedFemaleAverage, closeTo(11 / 3, 1e-9));
+    expect(result.projectedAverageGap, closeTo(11 / 3 - 0.5, 1e-9));
   });
 
   test('returns no recommendation when a restriction prevents a full court',
@@ -184,7 +213,7 @@ void main() {
       ...men.skip(1),
     ]);
 
-    expect(service.recommend(pool, 1, AutoCourtPolicy.balance), isEmpty);
-    expect(service.selectPlayers(pool, [MatchType.maleDoubles]), isNull);
+    expect(service.recommend(pool, 1, AutoCourtPolicy.balance), isNull);
+    expect(service.evaluate(pool, [MatchType.maleDoubles]), isNull);
   });
 }

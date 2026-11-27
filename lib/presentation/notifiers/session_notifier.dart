@@ -36,6 +36,7 @@ class SessionNotifier extends ChangeNotifier {
   PlayerStatsPool _cachedPool = PlayerStatsPool([]);
   List<Player> _allPlayersCache = [];
   final Map<int, PlayerStatsPool> _scopedPoolCache = {};
+  final Map<int, PlayerStatsPool> _recalculationPoolCache = {};
 
   /// 全プレイヤーの出場統計プールを返す
   PlayerStatsPool get playerStatsPool => _cachedPool;
@@ -91,8 +92,7 @@ class SessionNotifier extends ChangeNotifier {
     final allPlayers = await matchMakingService.playerRepository.getAll();
     _allPlayersCache = allPlayers;
     _cachedPool = _buildPoolForSessions(allPlayers, _sessions);
-    _scopedPoolCache.clear();
-    _requirementCache.clear();
+    _invalidateStatsCaches();
   }
 
   /// 各形式（MatchType）の累計試合数を取得する
@@ -140,18 +140,27 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   PlayerStatsPool getPlayerStatsPoolForRecalculation(int sessionIndex) =>
-      playerStatsCalculator.buildPool(
-        allPlayers: _allPlayersCache,
-        sessions: _sessions.where((s) => s.index != sessionIndex).toList(),
+      _recalculationPoolCache.putIfAbsent(
+        sessionIndex,
+        () => _buildPoolForSessions(
+          _allPlayersCache,
+          _sessions.where((s) => s.index != sessionIndex).toList(),
+        ),
       );
 
   Set<String>? _autoSelectedPlayers(
     CourtSettings settings,
     PlayerStatsPool pool,
+    AutoMatchRecommendation? recommendation,
   ) {
     if (!settings.isAutoRecommendMode) return null;
-    final ids =
-        const AutoMatchTypeService().selectPlayers(pool, settings.matchTypes);
+    if (recommendation != null &&
+        recommendation.matches(pool, settings.matchTypes)) {
+      return recommendation.playerIds;
+    }
+    final ids = const AutoMatchTypeService()
+        .evaluate(pool, settings.matchTypes)
+        ?.playerIds;
     if (ids == null) {
       throw StateError('現在の出場条件で試合を作成できません。');
     }
@@ -159,16 +168,24 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   Future<void> recalculateSession(
-      int sessionIndex, CourtSettings settings) async {
+    int sessionIndex,
+    CourtSettings settings, {
+    AutoMatchRecommendation? recommendation,
+  }) async {
     _isGenerating = true;
     notifyListeners();
 
     try {
+      await _initialRefresh;
       final poolForGeneration = getPlayerStatsPoolForRecalculation(sessionIndex);
       final generated = await matchMakingService.generateMatchSession(
         matchTypes: settings.matchTypes,
         playerStats: poolForGeneration,
-        selectedPlayerIds: _autoSelectedPlayers(settings, poolForGeneration),
+        selectedPlayerIds: _autoSelectedPlayers(
+          settings,
+          poolForGeneration,
+          recommendation,
+        ),
       );
       final updatedSession = Session(
         sessionIndex,
@@ -192,6 +209,7 @@ class SessionNotifier extends ChangeNotifier {
 
   Future<int?> generateSessionWithSettings(
     CourtSettings settings, {
+    AutoMatchRecommendation? recommendation,
     Future<bool?> Function(int longestRest, int consecutiveRestCount)?
         confirmRotationException,
   }) async {
@@ -214,7 +232,8 @@ class SessionNotifier extends ChangeNotifier {
       ]);
       var declined = _declinedRotationConfiguration == configuration;
       final plan = await matchMakingService.planNextSession(
-        preferredPlayerIds: _autoSelectedPlayers(settings, pool),
+        preferredPlayerIds:
+            _autoSelectedPlayers(settings, pool, recommendation),
         matchTypes: settings.matchTypes,
         playerStats: pool,
         offerException: !declined && confirmRotationException != null,
@@ -352,6 +371,7 @@ class SessionNotifier extends ChangeNotifier {
 
   void _invalidateStatsCaches() {
     _scopedPoolCache.clear();
+    _recalculationPoolCache.clear();
     _requirementCache.clear();
   }
 
@@ -379,6 +399,7 @@ class SessionNotifier extends ChangeNotifier {
   }
 
   Future<CourtSettings> getCurrentSettings() async {
-    return await courtSettingsRepository.get();
+    await _initialRefresh;
+    return courtSettingsRepository.get();
   }
 }
