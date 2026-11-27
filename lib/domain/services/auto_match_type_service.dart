@@ -1,3 +1,5 @@
+import 'package:collection/collection.dart';
+
 import '../entities/court_settings.dart';
 import '../entities/gender.dart';
 import '../entities/match_type.dart';
@@ -7,11 +9,75 @@ import 'rest_rotation_planner.dart';
 
 typedef _Counts = ({int men, int women});
 
+/// The attendance and projected statistics for one recommended court setup.
+class AutoMatchRecommendation {
+  final List<MatchType> matchTypes;
+  final Set<String> playerIds;
+  final List<int> consecutiveRestStreaks;
+  final List<String> restrictedRestPlayerNames;
+  final int maleCount;
+  final int femaleCount;
+  final double? projectedMaleAverage;
+  final double? projectedFemaleAverage;
+  final double? projectedAverageGap;
+  final PlayerStatsPool _pool;
+
+  AutoMatchRecommendation._({
+    required List<MatchType> matchTypes,
+    required _AttendanceOption option,
+    required _Attendance attendance,
+    required PlayerStatsPool pool,
+  })  : matchTypes = List.unmodifiable(matchTypes),
+        playerIds = Set.unmodifiable(option.selection.ids),
+        consecutiveRestStreaks =
+            List.unmodifiable(option.selection.restStreaks),
+        restrictedRestPlayerNames = List.unmodifiable(
+          _restrictedRestNames(pool, option.selection.ids.toSet()),
+        ),
+        maleCount = attendance.participants.men,
+        femaleCount = attendance.participants.women,
+        projectedMaleAverage = attendance.participants.men == 0
+            ? null
+            : (attendance.totals.men + option.counts.men) /
+                attendance.participants.men,
+        projectedFemaleAverage = attendance.participants.women == 0
+            ? null
+            : (attendance.totals.women + option.counts.women) /
+                attendance.participants.women,
+        projectedAverageGap = attendance.participants.men == 0 ||
+                attendance.participants.women == 0
+            ? null
+            : attendance._averageGap(option.counts) /
+                (attendance.participants.men * attendance.participants.women),
+        _pool = pool;
+
+  static Iterable<String> _restrictedRestNames(
+    PlayerStatsPool pool,
+    Set<String> selectedIds,
+  ) {
+    final available = pool.active.filterAvailable().all;
+    final partnersOfSelected = {
+      for (final player in available)
+        if (selectedIds.contains(player.id)) player.player.excludedPartnerId,
+    };
+    return available
+        .where((p) =>
+            !selectedIds.contains(p.id) &&
+            (partnersOfSelected.contains(p.id) ||
+                selectedIds.contains(p.player.excludedPartnerId)))
+        .map((p) => p.name);
+  }
+
+  bool matches(PlayerStatsPool pool, List<MatchType> types) =>
+      identical(_pool, pool) &&
+      const ListEquality<MatchType>().equals(matchTypes, types);
+}
+
 /// Compares court formats using feasible attendance, before pairing teams.
 class AutoMatchTypeService {
   const AutoMatchTypeService();
 
-  List<MatchType> recommend(
+  AutoMatchRecommendation? recommend(
     PlayerStatsPool pool,
     int courtCount,
     AutoCourtPolicy policy,
@@ -60,23 +126,35 @@ class AutoMatchTypeService {
           }
         }
       }
-      if (best != null) return bestTypes;
+      if (best != null) {
+        return AutoMatchRecommendation._(
+          matchTypes: bestTypes,
+          option: best,
+          attendance: attendance,
+          pool: pool,
+        );
+      }
     }
-    return [];
+    return null;
   }
 
-  Set<String>? selectPlayers(PlayerStatsPool pool, List<MatchType> types) {
-    if (types.isEmpty) return {};
+  AutoMatchRecommendation? evaluate(
+      PlayerStatsPool pool, List<MatchType> types) {
+    if (types.isEmpty) return null;
     final slots = types.length * 4;
-    return _Attendance(pool, slots)
-        .bestFor(
-          slots,
-          types.requiredPlayerCount(isMale: true),
-          types.requiredPlayerCount(isMale: false),
-        )
-        ?.selection
-        .ids
-        .toSet();
+    final attendance = _Attendance(pool, slots);
+    final option = attendance.bestFor(
+      slots,
+      types.requiredPlayerCount(isMale: true),
+      types.requiredPlayerCount(isMale: false),
+    );
+    if (option == null) return null;
+    return AutoMatchRecommendation._(
+      matchTypes: types,
+      option: option,
+      attendance: attendance,
+      pool: pool,
+    );
   }
 }
 

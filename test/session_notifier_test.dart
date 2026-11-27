@@ -14,6 +14,7 @@ import 'package:game_member_generator/domain/entities/team.dart';
 import 'package:game_member_generator/domain/repository/court_settings_repository.dart';
 import 'package:game_member_generator/domain/repository/player_repository/player_repository.dart';
 import 'package:game_member_generator/domain/repository/session_repository/session_history_repository.dart';
+import 'package:game_member_generator/domain/services/auto_match_type_service.dart';
 import 'package:game_member_generator/domain/services/match_making_service.dart';
 import 'package:game_member_generator/presentation/notifiers/session_notifier.dart';
 
@@ -192,56 +193,81 @@ void main() {
     });
   }
 
-  test('automatic generation saves the planned rested player', () async {
-    final players = List.generate(
-      6,
-      (i) => Player(
-        id: '$i',
-        name: 'P$i',
-        yomigana: '',
-        gender: i < 4 ? Gender.male : Gender.female,
-      ),
-    );
-    playerRepo.players = players;
-    final previousGame = Game(
-      MatchType.maleDoubles,
-      Team(players[0], players[1]),
-      Team(players[2], players[3]),
-    );
-    sessionRepo.sessions.add(
-      Session(1, [previousGame], restingPlayers: players.skip(4).toList()),
-    );
-
-    final evaluator = GameEvaluator();
-    final autoNotifier = SessionNotifier(
-      sessionRepository: sessionRepo,
-      courtSettingsRepository: courtRepo,
-      matchMakingService: MatchMakingService(
-        BalancedMatchAlgorithm(
-          gameEvaluator: evaluator,
-          courtAssignmentAlgorithm: StochasticCourtAssignmentAlgorithm(
-            gameEvaluator: evaluator,
-          ),
+  for (final changePlayers in [false, true]) {
+    test('generation uses a current recommendation (stale=$changePlayers)',
+        () async {
+      final players = List.generate(
+        7,
+        (i) => Player(
+          id: '$i',
+          name: 'P$i',
+          yomigana: '',
+          gender: i < 5 ? Gender.male : Gender.female,
         ),
-        playerRepo,
-      ),
-    );
-    addTearDown(autoNotifier.dispose);
+      );
+      playerRepo.players = players;
+      final previousGame = Game(
+        MatchType.maleDoubles,
+        Team(players[0], players[1]),
+        Team(players[2], players[3]),
+      );
+      sessionRepo.sessions.add(
+        Session(1, [previousGame], restingPlayers: players.skip(4).toList()),
+      );
 
-    final index = await autoNotifier.generateSessionWithSettings(
-      const CourtSettings(
-        [MatchType.mixedDoubles],
-        isAutoRecommendMode: true,
-      ),
-    );
+      final evaluator = GameEvaluator();
+      final autoNotifier = SessionNotifier(
+        sessionRepository: sessionRepo,
+        courtSettingsRepository: courtRepo,
+        matchMakingService: MatchMakingService(
+          BalancedMatchAlgorithm(
+            gameEvaluator: evaluator,
+            courtAssignmentAlgorithm: StochasticCourtAssignmentAlgorithm(
+              gameEvaluator: evaluator,
+            ),
+          ),
+          playerRepo,
+        ),
+      );
+      addTearDown(autoNotifier.dispose);
 
-    expect(index, 2);
-    expect(sessionRepo.sessions.last.games.single.type, MatchType.mixedDoubles);
-    expect(
-      sessionRepo.sessions.last.restingPlayers.map((p) => p.gender),
-      everyElement(Gender.male),
-    );
-  });
+      await autoNotifier.onPlayersUpdated();
+      final recommendation = const AutoMatchTypeService().recommend(
+        autoNotifier.playerStatsPool,
+        1,
+        AutoCourtPolicy.mix,
+      )!;
+      final selectedMan =
+          recommendation.playerIds.firstWhere((id) => int.parse(id) < 5);
+      if (changePlayers) {
+        await playerRepo.update(
+          players[int.parse(selectedMan)].copyWith(isMustRest: true),
+        );
+        await autoNotifier.onPlayersUpdated();
+      }
+
+      final index = await autoNotifier.generateSessionWithSettings(
+        CourtSettings(recommendation.matchTypes, isAutoRecommendMode: true),
+        recommendation: recommendation,
+      );
+
+      expect(index, 2);
+      final game = sessionRepo.sessions.last.games.single;
+      expect(game.type, MatchType.mixedDoubles);
+      final actual = {
+        game.teamA.player1.id,
+        game.teamA.player2.id,
+        game.teamB.player1.id,
+        game.teamB.player2.id,
+      };
+      expect(actual, containsAll(['5', '6']));
+      if (changePlayers) {
+        expect(actual, isNot(contains(selectedMan)));
+      } else {
+        expect(actual, unorderedEquals(recommendation.playerIds));
+      }
+    });
+  }
 
   group('SessionNotifier - 統計計算', () {
     test('試合履歴に基づいて正しく出場回数と詳細統計が計算されること', () async {

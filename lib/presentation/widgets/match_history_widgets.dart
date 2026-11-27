@@ -859,6 +859,11 @@ class MatchHistoryHeader extends StatelessWidget {
   }
 }
 
+typedef MatchSettingsSelection = ({
+  CourtSettings settings,
+  AutoMatchRecommendation? recommendation,
+});
+
 class MatchSettingsDialog extends StatefulWidget {
   final SessionNotifier notifier;
   final bool isRecalc;
@@ -878,6 +883,7 @@ class MatchSettingsDialog extends StatefulWidget {
 class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
   List<MatchType> types = [];
   List<MatchType> currentRecommendTypes = [];
+  AutoMatchRecommendation? _recommendation;
   bool loading = true;
   bool isAutoRecommendMode = false;
   int autoCourtCount = 3;
@@ -928,51 +934,63 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
 
   void _updateRequirement() {
     final selectedTypes = isAutoRecommendMode ? currentRecommendTypes : types;
-    var res = _checkRequirements(selectedTypes);
-
     final pool = _recommendationPool;
-    final effective = _requirementService.calculateEffectiveCounts(pool);
-
-    if (effective.restrictedPlayerNames.isNotEmpty) {
-      res = RequirementResult(
-        canGenerate: res.canGenerate,
-        errorMessage: res.errorMessage,
-        predictedRestPlayerNames: {
-          ...res.predictedRestPlayerNames,
-          ...effective.restrictedPlayerNames
-        }.toList(),
-      );
+    final previous = _recommendation;
+    final recommendation = !isAutoRecommendMode
+        ? null
+        : previous != null && previous.matches(pool, selectedTypes)
+            ? previous
+            : _autoMatchTypeService.evaluate(pool, selectedTypes);
+    var res = _checkRequirements(selectedTypes, recommendation);
+    if (recommendation == null) {
+      final effective = _requirementService.calculateEffectiveCounts(pool);
+      if (effective.restrictedPlayerNames.isNotEmpty) {
+        res = RequirementResult(
+          canGenerate: res.canGenerate,
+          errorMessage: res.errorMessage,
+          predictedRestPlayerNames: {
+            ...res.predictedRestPlayerNames,
+            ...effective.restrictedPlayerNames,
+          }.toList(),
+        );
+      }
     }
 
     setState(() {
+      _recommendation = recommendation;
       _requirementResult = res;
     });
   }
 
   void _refreshAutoRecommendedTypes() {
-    currentRecommendTypes = _calculateAutoTypes();
+    _recommendation = _autoMatchTypeService.recommend(
+      _recommendationPool,
+      autoCourtCount,
+      autoCourtPolicy,
+    );
+    currentRecommendTypes = [...?_recommendation?.matchTypes];
   }
 
   bool _checkRequirementWithAddType(MatchType type) {
-    var selectedTypes = isAutoRecommendMode ? currentRecommendTypes : types;
-    List<MatchType> newTypes = List.from(selectedTypes);
-    newTypes.add(type);
-    return _checkRequirements(newTypes).canGenerate;
+    final selectedTypes = isAutoRecommendMode ? currentRecommendTypes : types;
+    final newTypes = [...selectedTypes, type];
+    return isAutoRecommendMode
+        ? _autoMatchTypeService.evaluate(_recommendationPool, newTypes) != null
+        : widget.notifier.checkRequirements(newTypes).canGenerate;
   }
 
-  RequirementResult _checkRequirements(List<MatchType> matchTypes) {
-    final result = widget.notifier.checkRequirements(matchTypes);
-    if (!isAutoRecommendMode || matchTypes.isEmpty) return result;
-    final players = _autoMatchTypeService.selectPlayers(
-      _recommendationPool,
-      matchTypes,
-    );
-    if (players != null) {
+  RequirementResult _checkRequirements(
+    List<MatchType> matchTypes,
+    AutoMatchRecommendation? recommendation,
+  ) {
+    if (recommendation != null) {
       return RequirementResult(
         canGenerate: true,
-        predictedRestPlayerNames: result.predictedRestPlayerNames,
+        predictedRestPlayerNames: recommendation.restrictedRestPlayerNames,
       );
     }
+    final result = widget.notifier.checkRequirements(matchTypes);
+    if (!isAutoRecommendMode || matchTypes.isEmpty) return result;
     return result.canGenerate
         ? const RequirementResult(
             canGenerate: false,
@@ -980,12 +998,6 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
           )
         : result;
   }
-
-  List<MatchType> _calculateAutoTypes() => _autoMatchTypeService.recommend(
-        _recommendationPool,
-        autoCourtCount,
-        autoCourtPolicy,
-      );
 
   @override
   Widget build(BuildContext context) {
@@ -1030,11 +1042,14 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
               ? null
               : () => Navigator.pop(
                     context,
-                    CourtSettings(
-                      selectedTypes,
-                      autoCourtCount: autoCourtCount,
-                      autoCourtPolicy: autoCourtPolicy,
-                      isAutoRecommendMode: isAutoRecommendMode,
+                    (
+                      settings: CourtSettings(
+                        List.unmodifiable(selectedTypes),
+                        autoCourtCount: autoCourtCount,
+                        autoCourtPolicy: autoCourtPolicy,
+                        isAutoRecommendMode: isAutoRecommendMode,
+                      ),
+                      recommendation: _recommendation,
                     ),
                   ),
           isPrimary: true,
@@ -1050,33 +1065,30 @@ class _MatchSettingsDialogState extends State<MatchSettingsDialog> {
     final maleMatchCount = selectedTypes.requiredPlayerCount(isMale: true);
     final femaleMatchCount = selectedTypes.requiredPlayerCount(isMale: false);
 
-    final maleAvg = pool.activeMales.length > 0
-        ? (pool.activeMales.all
-                    .fold<int>(0, (sum, p) => sum + p.stats.totalMatches) +
-                maleMatchCount) /
-            pool.activeMales.length
-        : 0.0;
-    final femaleAvg = pool.activeFemales.length > 0
-        ? (pool.activeFemales.all
-                    .fold<int>(0, (sum, p) => sum + p.stats.totalMatches) +
-                femaleMatchCount) /
-            pool.activeFemales.length
-        : 0.0;
+    final recommendation = _recommendation;
+    final maleCount = recommendation?.maleCount ?? pool.activeMales.length;
+    final femaleCount = recommendation?.femaleCount ?? pool.activeFemales.length;
+    final maleAvg = recommendation == null
+        ? pool.activeMales.averageMatches +
+            (maleCount > 0 ? maleMatchCount / maleCount : 0)
+        : recommendation.projectedMaleAverage ?? 0.0;
+    final femaleAvg = recommendation == null
+        ? pool.activeFemales.averageMatches +
+            (femaleCount > 0 ? femaleMatchCount / femaleCount : 0)
+        : recommendation.projectedFemaleAverage ?? 0.0;
 
     return Column(
       children: [
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           _CompactBadge(
             icon: Icons.male,
-            label:
-                '${pool.activeMales.length} 名 (${maleAvg.toStringAsFixed(1)}回/人)',
+            label: '$maleCount 名 (${maleAvg.toStringAsFixed(1)}回/人)',
             color: Colors.blue.shade700,
           ),
           const SizedBox(width: 6),
           _CompactBadge(
             icon: Icons.female,
-            label:
-                '${pool.activeFemales.length} 名 (${femaleAvg.toStringAsFixed(1)}回/人)',
+            label: '$femaleCount 名 (${femaleAvg.toStringAsFixed(1)}回/人)',
             color: Colors.pink.shade600,
           ),
         ]),
