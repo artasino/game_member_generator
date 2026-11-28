@@ -20,12 +20,15 @@ class MatchHistoryLayoutTokens {
   const MatchHistoryLayoutTokens._();
 
   static const int maxColumns = 3;
-  static const double contentHorizontalPadding = 32;
   static const double minCardWidthBase = 280;
   static const double minCardWidthLarge = 380;
   static const double maxCardWidthBase = 520;
   static const double maxCardWidthLarge = 620;
   static const double maxSingleColumnCardWidth = 680;
+  static const double standardNameFontSize = 20;
+  static const double maxSingleColumnNameFontSize = 26;
+  // Includes the header, two name rows, card padding and vertical margins.
+  static const double singleColumnCardHeightBudget = 144;
   static const double twoColumnBreakpoint = 760;
   static const double threeColumnBreakpoint = 1120;
   static const double compactPlayerTagWidth = 180;
@@ -58,6 +61,7 @@ class GamesArea extends StatelessWidget {
   final PlayerStatsPool pool;
   final double scale;
   final double screenWidth;
+  final double availableHeight;
   final Player? selectedPlayer;
   final Function(Player) onPlayerTap;
   final Function(Player) onPlayerLongPress;
@@ -70,6 +74,7 @@ class GamesArea extends StatelessWidget {
     required this.pool,
     required this.scale,
     required this.screenWidth,
+    this.availableHeight = 0,
     this.selectedPlayer,
     required this.onPlayerTap,
     required this.onPlayerLongPress,
@@ -82,6 +87,9 @@ class GamesArea extends StatelessWidget {
     final double spacing = MatchHistoryLayoutTokens.gameCardSpacing * scale;
     final int cross = _calculateCrossAxisCount(count, spacing);
     final bool singleColumn = cross == 1;
+    final nameFontSize = singleColumn && count > 0
+        ? _singleColumnNameFontSize(context, count, spacing)
+        : null;
     final double cardWidth = _calculateCardWidth(cross, spacing).clamp(
       0,
       singleColumn
@@ -111,10 +119,31 @@ class GamesArea extends StatelessWidget {
             onPlayerLongPress: onPlayerLongPress,
             showPairInfo: showPairInfo,
             singleColumn: singleColumn,
+            nameFontSize: nameFontSize,
           ),
         );
       }).toList(),
     );
+  }
+
+  double _singleColumnNameFontSize(
+    BuildContext context,
+    int count,
+    double spacing,
+  ) {
+    final base = MatchHistoryLayoutTokens.standardNameFontSize;
+    // Users who enlarge system text already control the size.
+    if (MediaQuery.textScalerOf(context).scale(base) > base) return base * scale;
+
+    final heightPerCard = (availableHeight - (count - 1) * spacing) / count;
+    final extraHeight = heightPerCard -
+        MatchHistoryLayoutTokens.singleColumnCardHeightBudget * scale;
+    // Reserve three pixels of height per added font pixel for two name rows.
+    final increase = (extraHeight / 3).clamp(
+      0.0,
+      (MatchHistoryLayoutTokens.maxSingleColumnNameFontSize - base) * scale,
+    );
+    return base * scale + increase;
   }
 
   int _calculateFourPlayerMatchCount(Game game) {
@@ -221,6 +250,7 @@ class GameCard extends StatelessWidget {
   final Function(Player) onPlayerLongPress;
   final bool showPairInfo;
   final bool singleColumn;
+  final double? nameFontSize;
 
   const GameCard({
     super.key,
@@ -235,6 +265,7 @@ class GameCard extends StatelessWidget {
     required this.onPlayerLongPress,
     this.showPairInfo = true,
     this.singleColumn = false,
+    this.nameFontSize,
   });
 
   @override
@@ -287,6 +318,7 @@ class GameCard extends StatelessWidget {
                     onPlayerTap: onPlayerTap,
                     onPlayerLongPress: onPlayerLongPress,
                     showPairInfo: showPairInfo && !isPortrait,
+                    nameFontSize: nameFontSize,
                   ),
                 ),
                 _VSDivider(
@@ -303,6 +335,7 @@ class GameCard extends StatelessWidget {
                     onPlayerTap: onPlayerTap,
                     onPlayerLongPress: onPlayerLongPress,
                     showPairInfo: showPairInfo && !isPortrait,
+                    nameFontSize: nameFontSize,
                   ),
                 ),
                 if (showSidePairInfo)
@@ -467,6 +500,7 @@ class TeamColumn extends StatelessWidget {
   final Function(Player) onPlayerTap;
   final Function(Player) onPlayerLongPress;
   final bool showPairInfo;
+  final double? nameFontSize;
 
   const TeamColumn({
     super.key,
@@ -477,6 +511,7 @@ class TeamColumn extends StatelessWidget {
     required this.onPlayerTap,
     required this.onPlayerLongPress,
     required this.showPairInfo,
+    this.nameFontSize,
   });
 
   @override
@@ -515,6 +550,7 @@ class TeamColumn extends StatelessWidget {
           onLongPress: () => onPlayerLongPress(player),
           scale: scale,
           maxWidth: maxWidth,
+          preferredFontSize: nameFontSize,
         ),
         if (player.isMustRest)
           Positioned(
@@ -543,6 +579,7 @@ class PlayerTag extends StatelessWidget {
   final VoidCallback onLongPress;
   final double scale;
   final double maxWidth;
+  final double? preferredFontSize;
 
   const PlayerTag({
     super.key,
@@ -552,6 +589,7 @@ class PlayerTag extends StatelessWidget {
     required this.onLongPress,
     required this.scale,
     required this.maxWidth,
+    this.preferredFontSize,
   });
 
   @override
@@ -559,8 +597,12 @@ class PlayerTag extends StatelessWidget {
     final theme = Theme.of(context);
     final genderColor = GenderTheme.getColor(context, player.gender);
 
-    // 文字サイズを動的に調整するためのスケール計算
-    final textScale = _adaptivePlayerTextScale(maxWidth);
+    final fontSize = preferredFontSize ??
+        MatchHistoryLayoutTokens.standardNameFontSize *
+            scale *
+            _adaptivePlayerTextScale(maxWidth);
+    final horizontalPadding =
+        min((preferredFontSize == null ? 12 : 8) * scale, maxWidth / 2);
 
     return InkWell(
       onTap: onTap,
@@ -569,7 +611,7 @@ class PlayerTag extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         alignment: Alignment.center,
-        padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
         constraints: BoxConstraints(
           minWidth: min(80 * scale, maxWidth),
           maxWidth: maxWidth,
@@ -593,7 +635,8 @@ class PlayerTag extends StatelessWidget {
             player.name,
             maxLines: 1,
             style: TextStyle(
-              fontSize: 20 * scale * textScale,
+              fontSize: fontSize,
+              height: preferredFontSize == null ? null : 1.5,
               fontWeight: FontWeight.w600,
               color: isSelected
                   ? theme.colorScheme.onPrimaryContainer

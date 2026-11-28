@@ -75,4 +75,52 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('extra viewport height enlarges names without hiding court three',
+      (tester) async {
+    const width = 744.0;
+    await tester.binding.setSurfaceSize(const Size(width, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final pool = PlayerStatsCalculator().buildPool(
+      allPlayers: players,
+      sessions: [session],
+    );
+
+    Future<void> showCards(double height) => tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                height: height,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: GamesArea(
+                    session: session,
+                    allSessions: [session],
+                    pool: pool,
+                    scale: 1,
+                    screenWidth: width - 32,
+                    availableHeight: height,
+                    onPlayerTap: (_) {},
+                    onPlayerLongPress: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+    await showCards(390);
+    final shortName = find.text(players[1].name);
+    final originalNameHeight = tester.getRect(shortName).height;
+    expect(tester.widget<Text>(shortName).style?.fontSize, 20);
+
+    await showCards(600);
+    await tester.pumpAndSettle();
+    final style = tester.widget<Text>(shortName).style!;
+    expect(style.fontSize, 26);
+    expect(style.fontWeight, FontWeight.w600);
+    expect(tester.getRect(shortName).height, greaterThan(originalNameHeight));
+    expect(tester.getRect(find.byType(GameCard).last).bottom, lessThan(600));
+    expect(tester.takeException(), isNull);
+  });
 }

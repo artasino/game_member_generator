@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -340,24 +341,32 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
                 session: session,
               ),
               Expanded(
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg, 8, AppSpacing.lg, AppSpacing.lg),
-                  child: GamesArea(
-                    session: session,
-                    allSessions: _sessionNotifier.sessions,
-                    pool: scopedPool,
-                    scale: scale,
-                    screenWidth: (constraints.maxWidth -
-                            MatchHistoryLayoutTokens.contentHorizontalPadding)
-                        .clamp(0, double.infinity),
-                    selectedPlayer: _selectedPlayer,
-                    onPlayerTap: (p) => _handleTap(session, p),
-                    onPlayerLongPress: (p) =>
-                        setState(() => _selectedPlayer = p),
-                  ),
-                ),
+                child: LayoutBuilder(builder: (context, viewport) {
+                  const padding = EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    8,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  );
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: padding,
+                    child: GamesArea(
+                      session: session,
+                      allSessions: _sessionNotifier.sessions,
+                      pool: scopedPool,
+                      scale: scale,
+                      screenWidth:
+                          max(0.0, viewport.maxWidth - padding.horizontal),
+                      availableHeight:
+                          max(0.0, viewport.maxHeight - padding.vertical),
+                      selectedPlayer: _selectedPlayer,
+                      onPlayerTap: (p) => _handleTap(session, p),
+                      onPlayerLongPress: (p) =>
+                          setState(() => _selectedPlayer = p),
+                    ),
+                  );
+                }),
               ),
               if (session.restingPlayers.isNotEmpty)
                 RestingContainer(
